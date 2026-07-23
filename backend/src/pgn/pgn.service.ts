@@ -1,5 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Chess, type Square } from 'chess.js';
+import { GameLedgerService } from '../chess/game-ledger.service';
+import type { GameLedger } from '../chess/models/game-ledger';
 
 export type PieceCode = 'p' | 'n' | 'b' | 'r' | 'q' | 'k';
 
@@ -48,12 +50,15 @@ export type ParsedPgn = {
   startFen: string;
   positions: ParsedPosition[];
   realms: Realms;
+  ledger: GameLedger;
 };
 
 const NEAR_DISTANCE = 2;
 
 @Injectable()
 export class PgnService {
+  constructor(private readonly gameLedger: GameLedgerService) {}
+
   parse(pgn: string): ParsedPgn {
     const trimmed = pgn?.trim();
     if (!trimmed) {
@@ -81,7 +86,8 @@ export class PgnService {
     }
 
     const realms = this.buildRealms(headers);
-    const replay = new Chess();
+    const initialFen = headers['FEN'];
+    const replay = initialFen ? new Chess(initialFen) : new Chess();
     const startFen = replay.fen();
     const positions: ParsedPosition[] = [];
 
@@ -100,7 +106,7 @@ export class PgnService {
         san: result.san,
         fen: replay.fen(),
         color: result.color,
-        piece: result.piece as PieceCode,
+        piece: result.piece,
         from: result.from,
         to: result.to,
         isCapture:
@@ -110,31 +116,27 @@ export class PgnService {
         isCheck,
         isCheckmate,
         isCastle,
-        nearbyEnemies: this.findNearbyEnemies(
-          replay,
-          result.to,
-          result.color,
-        ),
+        nearbyEnemies: this.findNearbyEnemies(replay, result.to, result.color),
         targetedEnemies: this.findTargetedEnemies(
           replay,
           result.to,
           result.color,
-          (result.promotion as PieceCode | undefined) ??
-            (result.piece as PieceCode),
+          result.promotion ?? result.piece,
         ),
       };
 
       if (result.captured) {
-        position.captured = result.captured as PieceCode;
+        position.captured = result.captured;
       }
       if (result.promotion) {
-        position.promotion = result.promotion as PieceCode;
+        position.promotion = result.promotion;
       }
 
       positions.push(position);
     }
 
-    return { headers, startFen, positions, realms };
+    const ledger = this.gameLedger.build(headers, history, startFen);
+    return { headers, startFen, positions, realms, ledger };
   }
 
   private findNearbyEnemies(
@@ -158,7 +160,7 @@ export class PgnService {
           continue;
         }
         const square = `${String.fromCharCode(97 + f)}${r + 1}` as Square;
-        const piece = squarePiece.type as PieceCode;
+        const piece = squarePiece.type;
         const enemy: NearbyEnemy = {
           piece,
           square,
@@ -172,7 +174,9 @@ export class PgnService {
       }
     }
 
-    enemies.sort((a, b) => a.distance - b.distance || a.square.localeCompare(b.square));
+    enemies.sort(
+      (a, b) => a.distance - b.distance || a.square.localeCompare(b.square),
+    );
     return enemies;
   }
 
@@ -193,14 +197,19 @@ export class PgnService {
       p: 1,
     };
 
-    for (const square of this.attackSquares(chess, fromSquare, piece, moverColor)) {
+    for (const square of this.attackSquares(
+      chess,
+      fromSquare,
+      piece,
+      moverColor,
+    )) {
       const file = square.charCodeAt(0) - 'a'.charCodeAt(0);
       const rank = Number(square[1]) - 1;
       const squarePiece = board[7 - rank]?.[file];
       if (!squarePiece || squarePiece.color === moverColor) {
         continue;
       }
-      const enemyPiece = squarePiece.type as PieceCode;
+      const enemyPiece = squarePiece.type;
       const enemy: TargetedEnemy = {
         piece: enemyPiece,
         square,

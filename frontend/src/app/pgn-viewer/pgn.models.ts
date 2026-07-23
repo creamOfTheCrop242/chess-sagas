@@ -45,6 +45,30 @@ export type ParsedPgn = {
   startFen: string;
   positions: ParsedPosition[];
   realms: Realms;
+  ledger: GameLedger;
+};
+
+export type PieceIdentity = {
+  id: string; chessColor: 'w' | 'b'; side: 'north' | 'south';
+  originalSquare: string; chessType: PieceCode; currentChessType: PieceCode;
+  fantasyType: string; permanentName: string; alive: boolean;
+  capturedAtPly?: number; promotedFromPawnId?: string;
+};
+
+export type ChessEvent = {
+  ply: number; moveNumber: number; side: 'north' | 'south'; san: string;
+  from: string; to: string; pieceId: string; pieceType: string;
+  isCapture: boolean; capturedPieceId?: string; capturedPieceType?: string;
+  isCheck: boolean; isCheckmate: boolean; isCastle: boolean;
+  castleSide?: 'king' | 'queen'; isPromotion: boolean; promotionType?: string;
+  isEnPassant: boolean; isQuietMove: boolean; boardFenAfterMove: string;
+};
+
+export type GameLedger = {
+  metadata: Record<string, string | number | undefined>;
+  initialFen: string; finalFen: string; pieces: PieceIdentity[];
+  events: ChessEvent[]; survivors: string[]; capturedPieces: string[];
+  promotedPieces: string[];
 };
 
 export type NarrateRequest = {

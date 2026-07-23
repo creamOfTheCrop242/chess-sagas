@@ -94,7 +94,13 @@ describe('GamesService', () => {
     });
     expect(gameFindUnique).toHaveBeenCalledWith({
       where: { id: 'game-1' },
-      include: { ledger: true, generationRuns: true },
+      include: {
+        ledger: true,
+        generationRuns: {
+          include: { narrativeAnalysis: true },
+          orderBy: { createdAt: 'desc' },
+        },
+      },
     });
   });
 

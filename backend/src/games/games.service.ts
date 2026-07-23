@@ -56,7 +56,13 @@ export class GamesService {
   async findOne(id: string) {
     const game = await this.prisma.game.findUnique({
       where: { id },
-      include: { ledger: true, generationRuns: true },
+      include: {
+        ledger: true,
+        generationRuns: {
+          include: { narrativeAnalysis: true },
+          orderBy: { createdAt: 'desc' },
+        },
+      },
     });
     if (!game) {
       throw new NotFoundException(`Game ${id} was not found`);

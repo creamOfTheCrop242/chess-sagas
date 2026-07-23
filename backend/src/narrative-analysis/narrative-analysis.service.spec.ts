@@ -60,7 +60,10 @@ describe('NarrativeAnalysisService', () => {
     runCreate.mockResolvedValue({ id: 'run-1' });
     runUpdate.mockResolvedValue({ id: 'run-1' });
     analysisCreate.mockResolvedValue({ id: 'analysis-1' });
-    transaction.mockResolvedValue([]);
+    transaction.mockImplementation(
+      (callback: (client: PrismaService) => Promise<unknown>) =>
+        callback(prisma),
+    );
     runFindUnique.mockResolvedValue({
       id: 'run-1',
       status: 'COMPLETED',
@@ -95,6 +98,10 @@ describe('NarrativeAnalysisService', () => {
       }),
     });
     expect(transaction).toHaveBeenCalledTimes(1);
+    expect(transaction).toHaveBeenCalledWith(expect.any(Function), {
+      maxWait: 15_000,
+      timeout: 10_000,
+    });
     expect(runUpdate).toHaveBeenCalledWith({
       where: { id: 'run-1' },
       data: expect.objectContaining({ status: 'COMPLETED', error: null }),

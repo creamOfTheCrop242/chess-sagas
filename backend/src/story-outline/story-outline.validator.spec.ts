@@ -90,4 +90,38 @@ describe('StoryOutlineValidator', () => {
       new StoryOutlineValidator().validate(invalid, ledger, analysis),
     ).toThrow(BadGatewayException);
   });
+
+  it('allows scene numbering to restart in each act', () => {
+    const twoActAnalysis = {
+      acts: [
+        { startPly: 1, endPly: 1 },
+        { startPly: 2, endPly: 2 },
+      ],
+    } as NarrativeAnalysis;
+    const twoActOutline = structuredClone(outline);
+    const [approach, fall] = twoActOutline.acts[0].scenes;
+    twoActOutline.acts = [
+      {
+        ...twoActOutline.acts[0],
+        endPly: 1,
+        scenes: [approach],
+      },
+      {
+        ...twoActOutline.acts[0],
+        actNumber: 2,
+        title: 'The Fall',
+        startPly: 2,
+        endPly: 2,
+        scenes: [{ ...fall, sceneNumber: 1 }],
+      },
+    ];
+
+    expect(() =>
+      new StoryOutlineValidator().validate(
+        twoActOutline,
+        ledger,
+        twoActAnalysis,
+      ),
+    ).not.toThrow();
+  });
 });

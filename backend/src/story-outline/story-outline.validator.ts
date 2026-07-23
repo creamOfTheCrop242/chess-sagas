@@ -14,7 +14,6 @@ export class StoryOutlineValidator {
     const pieceIds = new Set(ledger.pieces.map((piece) => piece.id));
     const errors: string[] = [];
     let nextPly = 1;
-    let expectedSceneNumber = 1;
     const representedEvents = new Set<number>();
 
     if (outline.acts.length !== analysis.acts.length) {
@@ -31,16 +30,15 @@ export class StoryOutlineValidator {
       ) {
         errors.push('Outline act numbers and boundaries must match analysis');
       }
-      for (const scene of act.scenes) {
+      act.scenes.forEach((scene, sceneIndex) => {
         if (
-          scene.sceneNumber !== expectedSceneNumber ||
+          scene.sceneNumber !== sceneIndex + 1 ||
           scene.startPly !== nextPly ||
           scene.endPly < scene.startPly ||
           scene.endPly > act.endPly
         ) {
           errors.push('Scenes must be numbered, chronological, and contiguous');
         }
-        expectedSceneNumber += 1;
         nextPly = scene.endPly + 1;
         scene.requiredEventPlies.forEach((ply) => {
           if (ply < scene.startPly || ply > scene.endPly) {
@@ -53,7 +51,7 @@ export class StoryOutlineValidator {
             errors.push(`Unknown piece ID: ${pieceId}`);
           }
         });
-      }
+      });
       if (nextPly !== act.endPly + 1) {
         errors.push('Scenes must cover their complete act');
       }

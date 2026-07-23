@@ -7,5 +7,6 @@ import { PieceIdentityService } from '../chess/piece-identity.service';
 @Module({
   controllers: [PgnController],
   providers: [PgnService, GameLedgerService, PieceIdentityService],
+  exports: [PgnService],
 })
 export class PgnModule {}

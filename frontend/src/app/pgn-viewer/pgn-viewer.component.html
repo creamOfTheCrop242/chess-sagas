@@ -1,0 +1,70 @@
+<main class="page">
+  <header class="hero">
+    <p class="brand">Chess Sagas</p>
+    <h1>Chronicles of the Calamity</h1>
+    <p class="lede">
+      Paste a battle record. Step through each clash as the Light Kingdom of the north
+      and the Dark Kingdom of the south pour power into their seals.
+    </p>
+    <div class="realm-band" aria-hidden="true">
+      <span class="realm north">Light · North</span>
+      <span class="seal"></span>
+      <span class="realm south">Dark · South</span>
+    </div>
+  </header>
+
+  <section class="input-panel">
+    <label for="pgn">Battle record (PGN)</label>
+    <textarea
+      id="pgn"
+      rows="10"
+      [(ngModel)]="pgnText"
+      placeholder="Inscribe the moves of the war here…"
+      [disabled]="loading"
+    ></textarea>
+    <div class="actions">
+      <button type="button" class="primary" (click)="submit()" [disabled]="loading || !pgnText.trim()">
+        {{ loading ? 'Unsealing the record…' : 'Begin the saga' }}
+      </button>
+    </div>
+    @if (error) {
+      <p class="error" role="alert">{{ error }}</p>
+    }
+  </section>
+
+  @if (game) {
+    <section class="viewer">
+      <h2>{{ gameTitle }}</h2>
+      @if (game.headers['Event'] && game.headers['Event'] !== '?') {
+        <p class="event">{{ game.headers['Event'] }}</p>
+      }
+
+      <div class="board-frame">
+        <app-chessboard [fen]="currentFen" />
+      </div>
+
+      <p class="move-label">{{ currentMoveLabel }}</p>
+      <p class="ply-meta">Beat {{ currentPly }} of {{ game.positions.length }}</p>
+
+      <div class="nav">
+        <button type="button" (click)="back()" [disabled]="!canGoBack" aria-label="Previous move">
+          ← Retreat
+        </button>
+        <button type="button" class="primary" (click)="forward()" [disabled]="!canGoForward" aria-label="Next move">
+          Advance →
+        </button>
+      </div>
+
+      <aside class="story-panel" aria-live="polite">
+        <h3>The chronicler’s ink</h3>
+        @if (storyLoading) {
+          <p class="story-status">The quill moves across the seal…</p>
+        } @else if (storyError) {
+          <p class="error" role="alert">{{ storyError }}</p>
+        } @else if (currentStory) {
+          <p class="story-text">{{ currentStory }}</p>
+        }
+      </aside>
+    </section>
+  }
+</main>

@@ -51,6 +51,16 @@ curl -X POST http://localhost:3000/games/GAME_ID/outline
 curl http://localhost:3000/games/GAME_ID/outline
 ```
 
+Phase 4 requires a completed analysis and outline:
+
+```bash
+# Generate and persist one cohesive story
+curl -X POST http://localhost:3000/games/GAME_ID/story
+
+# Read the latest story without another model request
+curl http://localhost:3000/games/GAME_ID/story
+```
+
 ## Project setup
 
 ```bash

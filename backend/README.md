@@ -41,6 +41,16 @@ curl http://localhost:3000/games/GAME_ID/analysis
 Set `OPENAI_API_KEY` and, optionally, `NARRATIVE_ANALYSIS_MODEL` in `.env`.
 The default model is `gpt-5.6-sol`.
 
+Phase 3 requires a completed narrative analysis:
+
+```bash
+# Generate and persist a validated story outline
+curl -X POST http://localhost:3000/games/GAME_ID/outline
+
+# Read the latest completed outline without another model request
+curl http://localhost:3000/games/GAME_ID/outline
+```
+
 ## Project setup
 
 ```bash

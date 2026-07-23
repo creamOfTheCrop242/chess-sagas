@@ -7,6 +7,7 @@ import { StoryModule } from './story/story.module';
 import { DatabaseModule } from './database/database.module';
 import { GamesModule } from './games/games.module';
 import { NarrativeAnalysisModule } from './narrative-analysis/narrative-analysis.module';
+import { StoryOutlineModule } from './story-outline/story-outline.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { NarrativeAnalysisModule } from './narrative-analysis/narrative-analysis
     PgnModule,
     StoryModule,
     NarrativeAnalysisModule,
+    StoryOutlineModule,
   ],
   controllers: [AppController],
   providers: [AppService],

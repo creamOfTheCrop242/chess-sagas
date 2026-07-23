@@ -1,0 +1,11 @@
+{
+  "name": "chess-sagas",
+  "private": true,
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "heroku-postbuild": "npm --prefix backend ci --include=dev && npm --prefix backend run prisma:generate && npm --prefix backend run build",
+    "start": "npm --prefix backend run start:prod"
+  }
+}

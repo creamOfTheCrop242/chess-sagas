@@ -16,6 +16,9 @@ if (!isLocal && !databaseUrl.searchParams.has('sslmode')) {
   databaseUrl.searchParams.set('sslmode', 'require');
   databaseUrl.searchParams.set('sslaccept', 'accept_invalid_certs');
 }
+if (!isLocal && !databaseUrl.searchParams.has('connect_timeout')) {
+  databaseUrl.searchParams.set('connect_timeout', '30');
+}
 
 export default defineConfig({
   schema: 'prisma/schema.prisma',

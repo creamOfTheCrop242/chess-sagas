@@ -4,10 +4,71 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+enum GenerationStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum GenerationStage {
+  LEDGER
+  NARRATIVE_ANALYSIS
+  OUTLINE
+  STORY
+  VALIDATION
+  REPAIR
+}
+
+model Game {
+  id             String          @id @default(cuid())
+  ownerId        String?
+  pgnHash        String
+  rawPgn         String          @db.Text
+  whitePlayer    String
+  blackPlayer    String
+  result         String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  ledger         GameLedger?
+  generationRuns GenerationRun[]
+
+  @@index([ownerId, createdAt])
+  @@index([pgnHash])
+}
+
+model GameLedger {
+  id            String   @id @default(cuid())
+  gameId        String   @unique
+  schemaVersion Int      @default(1)
+  initialFen    String
+  finalFen      String
+  data          Json
+  createdAt     DateTime @default(now())
+  game          Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+}
+
+model GenerationRun {
+  id            String           @id @default(cuid())
+  gameId        String
+  status        GenerationStatus @default(QUEUED)
+  currentStage  GenerationStage  @default(LEDGER)
+  model         String?
+  promptVersion String?
+  options       Json?
+  error         String?          @db.Text
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  completedAt   DateTime?
+  game          Game             @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@index([gameId, createdAt])
+  @@index([status, createdAt])
 }

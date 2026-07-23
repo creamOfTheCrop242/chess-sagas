@@ -25,6 +25,22 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
+## Narrative analysis API
+
+Phase 2 analyzes a saved game's complete deterministic ledger in one model
+request and stores validated JSON. It does not generate story prose.
+
+```bash
+# Generate and persist a new analysis
+curl -X POST http://localhost:3000/games/GAME_ID/analysis
+
+# Read the latest completed analysis
+curl http://localhost:3000/games/GAME_ID/analysis
+```
+
+Set `OPENAI_API_KEY` and, optionally, `NARRATIVE_ANALYSIS_MODEL` in `.env`.
+The default model is `gpt-5.6-sol`.
+
 ## Project setup
 
 ```bash

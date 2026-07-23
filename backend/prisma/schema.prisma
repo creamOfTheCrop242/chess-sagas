@@ -56,19 +56,29 @@ model GameLedger {
 }
 
 model GenerationRun {
-  id            String           @id @default(cuid())
-  gameId        String
-  status        GenerationStatus @default(QUEUED)
-  currentStage  GenerationStage  @default(LEDGER)
-  model         String?
-  promptVersion String?
-  options       Json?
-  error         String?          @db.Text
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-  completedAt   DateTime?
-  game          Game             @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  id                String             @id @default(cuid())
+  gameId            String
+  status            GenerationStatus   @default(QUEUED)
+  currentStage      GenerationStage    @default(LEDGER)
+  model             String?
+  promptVersion     String?
+  options           Json?
+  error             String?            @db.Text
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  completedAt       DateTime?
+  game              Game               @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  narrativeAnalysis NarrativeAnalysis?
 
   @@index([gameId, createdAt])
   @@index([status, createdAt])
+}
+
+model NarrativeAnalysis {
+  id              String        @id @default(cuid())
+  generationRunId String        @unique
+  schemaVersion   Int           @default(1)
+  data            Json
+  createdAt       DateTime      @default(now())
+  generationRun   GenerationRun @relation(fields: [generationRunId], references: [id], onDelete: Cascade)
 }

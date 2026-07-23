@@ -26,8 +26,6 @@ describe('NarrativeAnalysisService', () => {
   const runUpdate = jest.fn();
   const runFindUnique = jest.fn();
   const runFindFirst = jest.fn();
-  const analysisCreate = jest.fn();
-  const transaction = jest.fn();
   const prisma = {
     game: { findUnique: gameFindUnique },
     generationRun: {
@@ -36,8 +34,6 @@ describe('NarrativeAnalysisService', () => {
       findUnique: runFindUnique,
       findFirst: runFindFirst,
     },
-    narrativeAnalysis: { create: analysisCreate },
-    $transaction: transaction,
   } as unknown as PrismaService;
   const provider: NarrativeAnalysisProvider = {
     model: 'test-model',
@@ -59,11 +55,6 @@ describe('NarrativeAnalysisService', () => {
     });
     runCreate.mockResolvedValue({ id: 'run-1' });
     runUpdate.mockResolvedValue({ id: 'run-1' });
-    analysisCreate.mockResolvedValue({ id: 'analysis-1' });
-    transaction.mockImplementation(
-      (callback: (client: PrismaService) => Promise<unknown>) =>
-        callback(prisma),
-    );
     runFindUnique.mockResolvedValue({
       id: 'run-1',
       status: 'COMPLETED',
@@ -90,21 +81,18 @@ describe('NarrativeAnalysisService', () => {
         model: 'test-model',
       }),
     });
-    expect(analysisCreate).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        generationRunId: 'run-1',
-        schemaVersion: 1,
-        data: analysis,
-      }),
-    });
-    expect(transaction).toHaveBeenCalledTimes(1);
-    expect(transaction).toHaveBeenCalledWith(expect.any(Function), {
-      maxWait: 15_000,
-      timeout: 10_000,
-    });
     expect(runUpdate).toHaveBeenCalledWith({
       where: { id: 'run-1' },
-      data: expect.objectContaining({ status: 'COMPLETED', error: null }),
+      data: expect.objectContaining({
+        status: 'COMPLETED',
+        error: null,
+        narrativeAnalysis: {
+          create: {
+            schemaVersion: 1,
+            data: analysis,
+          },
+        },
+      }),
     });
   });
 
@@ -124,7 +112,7 @@ describe('NarrativeAnalysisService', () => {
       where: { id: 'run-1' },
       data: expect.objectContaining({ status: 'FAILED' }),
     });
-    expect(transaction).not.toHaveBeenCalled();
+    expect(runUpdate).toHaveBeenCalledTimes(1);
   });
 
   it('rejects generation when the saved ledger does not exist', async () => {

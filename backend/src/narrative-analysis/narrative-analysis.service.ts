@@ -48,29 +48,20 @@ export class NarrativeAnalysisService {
         JSON.stringify(analysis),
       ) as Prisma.InputJsonValue;
 
-      await this.prisma.$transaction(
-        async (transaction) => {
-          await transaction.narrativeAnalysis.create({
-            data: {
-              generationRunId: run.id,
+      await this.prisma.generationRun.update({
+        where: { id: run.id },
+        data: {
+          status: 'COMPLETED',
+          completedAt: new Date(),
+          error: null,
+          narrativeAnalysis: {
+            create: {
               schemaVersion: 1,
               data,
             },
-          });
-          await transaction.generationRun.update({
-            where: { id: run.id },
-            data: {
-              status: 'COMPLETED',
-              completedAt: new Date(),
-              error: null,
-            },
-          });
+          },
         },
-        {
-          maxWait: 15_000,
-          timeout: 10_000,
-        },
-      );
+      });
 
       return this.prisma.generationRun.findUnique({
         where: { id: run.id },

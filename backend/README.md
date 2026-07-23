@@ -61,6 +61,13 @@ curl -X POST http://localhost:3000/games/GAME_ID/story
 curl http://localhost:3000/games/GAME_ID/story
 ```
 
+Phase 5 validates the latest story and repairs affected passages when needed:
+
+```bash
+curl -X POST http://localhost:3000/games/GAME_ID/validation
+curl http://localhost:3000/games/GAME_ID/validation
+```
+
 ## Project setup
 
 ```bash

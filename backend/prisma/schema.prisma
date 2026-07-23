@@ -71,9 +71,22 @@ model GenerationRun {
   narrativeAnalysis NarrativeAnalysis?
   storyOutline      StoryOutline?
   generatedStory    GeneratedStory?
+  storyValidation   StoryValidation?
 
   @@index([gameId, createdAt])
   @@index([status, createdAt])
+}
+
+model StoryValidation {
+  id                    String        @id @default(cuid())
+  generationRunId       String        @unique
+  sourceStoryId         String
+  schemaVersion         Int           @default(1)
+  valid                 Boolean
+  findings              Json
+  repairedStoryMarkdown String?       @db.Text
+  createdAt             DateTime      @default(now())
+  generationRun         GenerationRun @relation(fields: [generationRunId], references: [id], onDelete: Cascade)
 }
 
 model GeneratedStory {

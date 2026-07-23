@@ -63,6 +63,7 @@ export class GamesService {
             narrativeAnalysis: true,
             storyOutline: true,
             generatedStory: true,
+            storyValidation: true,
           },
           orderBy: { createdAt: 'desc' },
         },

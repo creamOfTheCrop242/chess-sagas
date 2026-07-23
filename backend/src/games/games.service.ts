@@ -59,7 +59,11 @@ export class GamesService {
       include: {
         ledger: true,
         generationRuns: {
-          include: { narrativeAnalysis: true, storyOutline: true },
+          include: {
+            narrativeAnalysis: true,
+            storyOutline: true,
+            generatedStory: true,
+          },
           orderBy: { createdAt: 'desc' },
         },
       },

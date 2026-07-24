@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, HostListener } from '@angular/core';
+import { Component, HostListener, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { ChessboardComponent } from './chessboard.component';
@@ -19,7 +19,7 @@ import {
   templateUrl: './pgn-viewer.component.html',
   styleUrl: './pgn-viewer.component.css',
 })
-export class PgnViewerComponent {
+export class PgnViewerComponent implements OnDestroy {
   pgnText = '';
   loading = false;
   error: string | null = null;
@@ -29,6 +29,9 @@ export class PgnViewerComponent {
   scenes: PlaybackScene[] = [];
   sagaGenerating = false;
   storyError: string | null = null;
+  generationElapsedSeconds = 0;
+  private generationStartedAt: number | null = null;
+  private generationTimer: ReturnType<typeof setInterval> | null = null;
   readonly pipelineSteps: Array<{ id: SagaStage; label: string }> = [
     { id: 'analysis', label: 'Narrative analysis' },
     { id: 'outline', label: 'Story outline' },
@@ -95,6 +98,15 @@ export class PgnViewerComponent {
       ['completed', 'reused'].includes(this.pipelineState[step.id]),
     ).length;
   }
+  get formattedGenerationTime(): string {
+    const hours = Math.floor(this.generationElapsedSeconds / 3600);
+    const minutes = Math.floor((this.generationElapsedSeconds % 3600) / 60);
+    const seconds = this.generationElapsedSeconds % 60;
+    const clock = `${minutes.toString().padStart(2, '0')}:${seconds
+      .toString()
+      .padStart(2, '0')}`;
+    return hours ? `${hours.toString().padStart(2, '0')}:${clock}` : clock;
+  }
   pipelineIcon(state: SagaStageState): string {
     if (state === 'completed') return '✓';
     if (state === 'reused') return '↻';
@@ -120,6 +132,7 @@ export class PgnViewerComponent {
         this.currentPly = 0;
         this.scenes = [];
         this.pipelineState = this.initialPipelineState();
+        this.resetGenerationTimer();
         this.loading = false;
       },
       error: (error: unknown) => {
@@ -132,6 +145,7 @@ export class PgnViewerComponent {
   generateSaga(): void {
     if (!this.gameId) return;
     this.sagaGenerating = true;
+    this.startGenerationTimer();
     this.storyError = null;
     this.pipelineState = this.initialPipelineState();
     this.pgnApi
@@ -142,12 +156,18 @@ export class PgnViewerComponent {
         next: (response) => {
           this.scenes = response.sceneBreakdown.data.scenes;
           this.sagaGenerating = false;
+          this.stopGenerationTimer();
         },
         error: (error: unknown) => {
           this.sagaGenerating = false;
+          this.stopGenerationTimer();
           this.storyError = this.extractError(error, 'Failed to generate saga');
         },
       });
+  }
+
+  ngOnDestroy(): void {
+    this.clearGenerationInterval();
   }
 
   back(): void {
@@ -193,5 +213,39 @@ export class PgnViewerComponent {
       validation: 'pending',
       scenes: 'pending',
     };
+  }
+
+  private startGenerationTimer(): void {
+    this.clearGenerationInterval();
+    this.generationElapsedSeconds = 0;
+    this.generationStartedAt = Date.now();
+    this.generationTimer = setInterval(() => {
+      if (this.generationStartedAt === null) return;
+      this.generationElapsedSeconds = Math.floor(
+        (Date.now() - this.generationStartedAt) / 1000,
+      );
+    }, 1000);
+  }
+
+  private stopGenerationTimer(): void {
+    if (this.generationStartedAt !== null) {
+      this.generationElapsedSeconds = Math.floor(
+        (Date.now() - this.generationStartedAt) / 1000,
+      );
+    }
+    this.generationStartedAt = null;
+    this.clearGenerationInterval();
+  }
+
+  private resetGenerationTimer(): void {
+    this.generationStartedAt = null;
+    this.generationElapsedSeconds = 0;
+    this.clearGenerationInterval();
+  }
+
+  private clearGenerationInterval(): void {
+    if (this.generationTimer === null) return;
+    clearInterval(this.generationTimer);
+    this.generationTimer = null;
   }
 }

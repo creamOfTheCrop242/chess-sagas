@@ -20,7 +20,7 @@ export class OpenAiStoryOutlineProvider implements StoryOutlineProvider {
 
   constructor(config: ConfigService) {
     const apiKey = config.get<string>('OPENAI_API_KEY');
-    this.model = config.get<string>('STORY_OUTLINE_MODEL') || 'gpt-5.6-sol';
+    this.model = config.get<string>('STORY_OUTLINE_MODEL') || 'gpt-5.6-luna';
     this.client = apiKey ? new OpenAI({ apiKey }) : null;
   }
 

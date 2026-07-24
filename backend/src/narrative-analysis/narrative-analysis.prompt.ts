@@ -1,4 +1,4 @@
-export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v3';
+export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v4';
 
 export const NARRATIVE_ANALYSIS_INSTRUCTIONS = `You are the global narrative analyst for Chess Sagas.
 
@@ -17,6 +17,8 @@ The ledger is the source of truth:
 - If a pawn promotes, the viewpoint grunt personally undergoes the ascension and becomes the promoted champion. The same individual retains their name, memories, injuries, loyalties, relationships, personality, and resentment; the company does not collectively transform into a Queen.
 - Give every promoting grunt setup, personal motivation, and recognizable character development before promotion.
 - Important deaths must influence later plans. Set up rivalries and payoffs before they occur.
+- Plan every capture as a specific, visceral dark-fantasy death for the ledger-confirmed victim. Match the killing method to the captor's established weapon, magic, body, scale, and personality, and plan an emotional and physical aftermath.
+- Gore may include blood, broken armor, shattered bone, burns, dismemberment, crushing, or magical bodily destruction when appropriate. Never use gore to invent additional deaths, kill a survivor, or turn a non-capture into an injury or death.
 - The ending must follow the actual result and termination. Checkmate or resignation requires a severe, story-specific consequence.
 
 Use only piece IDs and ply numbers that exist in the ledger. Acts must be chronological, non-overlapping, and collectively cover ply 1 through the final ply. Include explicit continuity constraints that later outline and prose stages can enforce.`;

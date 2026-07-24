@@ -23,7 +23,7 @@ export class OpenAiFullStoryProvider implements FullStoryProvider {
 
   constructor(config: ConfigService) {
     const apiKey = config.get<string>('OPENAI_API_KEY');
-    this.model = config.get<string>('FULL_STORY_MODEL') || 'gpt-5.6-sol';
+    this.model = config.get<string>('FULL_STORY_MODEL') || 'gpt-5.6-terra';
     this.client = apiKey ? new OpenAI({ apiKey }) : null;
   }
 

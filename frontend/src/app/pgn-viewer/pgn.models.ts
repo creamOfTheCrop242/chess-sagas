@@ -49,25 +49,50 @@ export type ParsedPgn = {
 };
 
 export type PieceIdentity = {
-  id: string; chessColor: 'w' | 'b'; side: 'north' | 'south';
-  originalSquare: string; chessType: PieceCode; currentChessType: PieceCode;
-  fantasyType: string; permanentName: string; alive: boolean;
-  capturedAtPly?: number; promotedFromPawnId?: string;
+  id: string;
+  chessColor: 'w' | 'b';
+  side: 'north' | 'south';
+  originalSquare: string;
+  chessType: PieceCode;
+  currentChessType: PieceCode;
+  fantasyType: string;
+  permanentName: string;
+  alive: boolean;
+  capturedAtPly?: number;
+  promotedFromPawnId?: string;
 };
 
 export type ChessEvent = {
-  ply: number; moveNumber: number; side: 'north' | 'south'; san: string;
-  from: string; to: string; pieceId: string; pieceType: string;
-  isCapture: boolean; capturedPieceId?: string; capturedPieceType?: string;
-  isCheck: boolean; isCheckmate: boolean; isCastle: boolean;
-  castleSide?: 'king' | 'queen'; isPromotion: boolean; promotionType?: string;
-  isEnPassant: boolean; isQuietMove: boolean; boardFenAfterMove: string;
+  ply: number;
+  moveNumber: number;
+  side: 'north' | 'south';
+  san: string;
+  from: string;
+  to: string;
+  pieceId: string;
+  pieceType: string;
+  isCapture: boolean;
+  capturedPieceId?: string;
+  capturedPieceType?: string;
+  isCheck: boolean;
+  isCheckmate: boolean;
+  isCastle: boolean;
+  castleSide?: 'king' | 'queen';
+  isPromotion: boolean;
+  promotionType?: string;
+  isEnPassant: boolean;
+  isQuietMove: boolean;
+  boardFenAfterMove: string;
 };
 
 export type GameLedger = {
   metadata: Record<string, string | number | undefined>;
-  initialFen: string; finalFen: string; pieces: PieceIdentity[];
-  events: ChessEvent[]; survivors: string[]; capturedPieces: string[];
+  initialFen: string;
+  finalFen: string;
+  pieces: PieceIdentity[];
+  events: ChessEvent[];
+  survivors: string[];
+  capturedPieces: string[];
   promotedPieces: string[];
 };
 
@@ -94,3 +119,35 @@ export type NarrateResponse = {
   ply: number;
   story: string;
 };
+
+export type SavedGame = { id: string };
+
+export type PlaybackScene = {
+  id: string;
+  actNumber: number;
+  sceneNumber: number;
+  startPly: number;
+  endPly: number;
+  involvedMoves: string[];
+  fantasyNarration: string;
+  chessExplanation: string;
+  characters: string[];
+  locations: string[];
+  deaths: string[];
+  promotions: string[];
+  visualPrompt: string;
+  videoPrompt: string;
+  estimatedDurationSeconds: number;
+  continuityNotes: string[];
+};
+
+export type SceneBreakdownResponse = {
+  status: 'COMPLETED';
+  sceneBreakdown: { data: { scenes: PlaybackScene[] } };
+};
+
+export type SagaStage =
+  'analysis' | 'outline' | 'story' | 'validation' | 'scenes';
+
+export type SagaStageState =
+  'pending' | 'checking' | 'reused' | 'generating' | 'completed' | 'failed';

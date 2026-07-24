@@ -3,8 +3,8 @@
     <p class="brand">Chess Sagas</p>
     <h1>Chronicles of the Calamity</h1>
     <p class="lede">
-      Paste a battle record. Step through each clash as the Light Kingdom of the north
-      and the Dark Kingdom of the south pour power into their seals.
+      Paste a battle record. Step through each clash as the Light Kingdom of the
+      north and the Dark Kingdom of the south pour power into their seals.
     </p>
     <div class="realm-band" aria-hidden="true">
       <span class="realm north">Light · North</span>
@@ -23,8 +23,13 @@
       [disabled]="loading"
     ></textarea>
     <div class="actions">
-      <button type="button" class="primary" (click)="submit()" [disabled]="loading || !pgnText.trim()">
-        {{ loading ? 'Unsealing the record…' : 'Begin the saga' }}
+      <button
+        type="button"
+        class="primary"
+        (click)="submit()"
+        [disabled]="loading || !pgnText.trim()"
+      >
+        {{ loading ? "Unsealing the record…" : "Begin the saga" }}
       </button>
     </div>
     @if (error) {
@@ -35,8 +40,8 @@
   @if (game) {
     <section class="viewer">
       <h2>{{ gameTitle }}</h2>
-      @if (game.headers['Event'] && game.headers['Event'] !== '?') {
-        <p class="event">{{ game.headers['Event'] }}</p>
+      @if (game.headers["Event"] && game.headers["Event"] !== "?") {
+        <p class="event">{{ game.headers["Event"] }}</p>
       }
 
       <div class="board-frame">
@@ -44,25 +49,93 @@
       </div>
 
       <p class="move-label">{{ currentMoveLabel }}</p>
-      <p class="ply-meta">Beat {{ currentPly }} of {{ game.positions.length }}</p>
+      <p class="ply-meta">
+        Beat {{ currentPly }} of {{ game.positions.length }}
+      </p>
 
       <div class="nav">
-        <button type="button" (click)="back()" [disabled]="!canGoBack" aria-label="Previous move">
+        <button
+          type="button"
+          (click)="back()"
+          [disabled]="!canGoBack"
+          aria-label="Previous move"
+        >
           ← Retreat
         </button>
-        <button type="button" class="primary" (click)="forward()" [disabled]="!canGoForward" aria-label="Next move">
+        <button
+          type="button"
+          class="primary"
+          (click)="forward()"
+          [disabled]="!canGoForward"
+          aria-label="Next move"
+        >
           Advance →
         </button>
       </div>
 
+      <div class="actions">
+        <button
+          type="button"
+          class="primary"
+          (click)="generateSaga()"
+          [disabled]="sagaGenerating || !gameId"
+        >
+          {{
+            sagaGenerating
+              ? "Forging the complete saga…"
+              : scenes.length
+                ? "Refresh story beats"
+                : "Forge cohesive saga"
+          }}
+        </button>
+      </div>
+      @if (sagaGenerating) {
+        <p class="story-status">
+          The chronicler is analyzing, outlining, writing, validating, and
+          aligning the saga…
+        </p>
+      }
+
+      @if (pipelineVisible) {
+        <section class="pipeline-progress" aria-live="polite">
+          <div class="pipeline-heading">
+            <h3>Saga pipeline</h3>
+            <span
+              >{{ completedPipelineSteps }} of {{ pipelineSteps.length }}</span
+            >
+          </div>
+          <ol>
+            @for (step of pipelineSteps; track step.id) {
+              <li [class]="'pipeline-' + pipelineState[step.id]">
+                <span class="pipeline-icon" aria-hidden="true">
+                  {{ pipelineIcon(pipelineState[step.id]) }}
+                </span>
+                <span class="pipeline-label">{{ step.label }}</span>
+                <span class="pipeline-state">
+                  {{ pipelineStatus(pipelineState[step.id]) }}
+                </span>
+              </li>
+            }
+          </ol>
+        </section>
+      }
+
       <aside class="story-panel" aria-live="polite">
         <h3>The chronicler’s ink</h3>
-        @if (storyLoading) {
-          <p class="story-status">The quill moves across the seal…</p>
-        } @else if (storyError) {
+        @if (storyError) {
           <p class="error" role="alert">{{ storyError }}</p>
-        } @else if (currentStory) {
+        } @else if (currentScene) {
+          <p class="ply-meta">
+            Act {{ currentScene.actNumber }} · Scene
+            {{ currentScene.sceneNumber }}
+          </p>
           <p class="story-text">{{ currentStory }}</p>
+        } @else if (currentPly === 0) {
+          <p class="story-text">{{ currentStory }}</p>
+        } @else if (!sagaGenerating) {
+          <p class="story-status">
+            Forge the cohesive saga to reveal this chapter.
+          </p>
         }
       </aside>
     </section>

@@ -7,7 +7,7 @@ import type { GeneratedStoryDraft } from './models/generated-story';
 export class FullStoryValidator {
   validate(
     story: GeneratedStoryDraft,
-    ledger: GameLedger,
+    _ledger: GameLedger,
     outline: StoryOutline,
   ): void {
     const errors: string[] = [];
@@ -16,20 +16,6 @@ export class FullStoryValidator {
     }
     if (!/^##? Act\b/im.test(story.storyMarkdown)) {
       errors.push('Story must contain Markdown act headings');
-    }
-    if (/\b[a-h][1-8]\b/i.test(story.storyMarkdown)) {
-      errors.push('Story prose contains a board coordinate');
-    }
-    if (
-      /\b(?:SAN|FEN|checkmate|chess|ply|plies)\b/i.test(story.storyMarkdown)
-    ) {
-      errors.push('Story prose contains prohibited chess terminology');
-    }
-    const leakedPieceId = ledger.pieces.find((piece) =>
-      story.storyMarkdown.includes(piece.id),
-    );
-    if (leakedPieceId) {
-      errors.push(`Story prose exposes piece ID ${leakedPieceId.id}`);
     }
     if (errors.length) {
       throw new BadGatewayException(

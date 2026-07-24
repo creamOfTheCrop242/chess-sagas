@@ -1,9 +1,11 @@
-export const SCENE_BREAKDOWN_PROMPT_VERSION = 'phase-6-v1';
+export const SCENE_BREAKDOWN_PROMPT_VERSION = 'phase-6-v2';
 export const SCENE_BREAKDOWN_INSTRUCTIONS = `Split the validated cohesive story into move-aligned playback scenes. Return structured JSON only.
 
+- Create exactly one playback scene for every ledger ply. Never group multiple plies into one scene.
+- Every scene must have startPly equal to endPly and cover exactly one move.
 - Cover every ledger ply exactly once with chronological, contiguous scenes.
-- A scene may group related quiet moves; major captures, checks, checkmate, and promotions deserve focused scenes.
-- involvedMoves must contain the exact SAN strings for every ply in the scene, in order.
+- involvedMoves must contain exactly the one SAN string for that scene's ply.
+- Quiet moves still need their own distinct narrative beat, focused on movement, positioning, tension, preparation, or consequence without inventing combat.
 - fantasyNarration must be an excerpt or faithful localized adaptation of the validated story, not a new contradictory story.
 - Use piece IDs only in structured character, death, and promotion arrays; never expose them in fantasyNarration.
 - deaths must exactly list capturedPieceId values within the scene.

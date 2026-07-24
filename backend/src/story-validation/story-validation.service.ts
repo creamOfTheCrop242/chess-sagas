@@ -1,4 +1,9 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadGatewayException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import type { GameLedger } from '../chess/models/game-ledger';
 import { PrismaService } from '../database/prisma.service';
@@ -99,6 +104,24 @@ export class StoryValidationService {
         (finding) => finding.severity === 'error',
       );
       const repairApplied = Boolean(result.repairedStoryMarkdown);
+      if (hasErrors && !result.repairedStoryMarkdown) {
+        throw new BadGatewayException(
+          'Validation found errors but OpenAI returned no repaired story',
+        );
+      }
+      if (result.repairedStoryMarkdown) {
+        const remainingFindings = this.deterministic.validate(
+          result.repairedStoryMarkdown,
+          ledger,
+        );
+        if (remainingFindings.length > 0) {
+          throw new BadGatewayException(
+            `Repaired story still has deterministic errors: ${remainingFindings
+              .map((finding) => finding.message)
+              .join('; ')}`,
+          );
+        }
+      }
       const valid = !hasErrors || repairApplied;
       const findingsJson = JSON.parse(
         JSON.stringify(findings),

@@ -138,7 +138,9 @@ export class FullStoryService {
         title: storyPackage.title,
         storyMarkdown: assembleStoryMarkdown(
           scenes,
-          outline.acts.map((act) => act.title),
+          outline.acts.map((act) =>
+            this.cleanReaderFacingProse(act.title, [...pieceIds]),
+          ),
         ),
       };
       this.validator.validate(story, ledger, outline);
@@ -245,7 +247,8 @@ export class FullStoryService {
   private cleanReaderFacingProse(prose: string, pieceIds: string[]): string {
     let cleaned = this.deterministic
       .repairProhibitedTerminology(prose)
-      .replace(/\b[a-h][1-8]\b/gi, 'the battlefield');
+      .replace(/\b[a-h][1-8]\b/gi, 'the battlefield')
+      .replace(/\bthe\s+the battlefield\b/gi, 'the battlefield');
     pieceIds.forEach((pieceId) => {
       cleaned = cleaned.replaceAll(pieceId, 'the warrior');
     });
@@ -262,7 +265,10 @@ export function assembleStoryMarkdown(
   scenes.forEach((scene) => {
     if (scene.actNumber !== currentAct) {
       currentAct = scene.actNumber;
-      const title = actTitles[currentAct - 1] || `Act ${currentAct}`;
+      const title = (actTitles[currentAct - 1] || `Act ${currentAct}`).replace(
+        /\b[a-h][1-8]\b/gi,
+        'battlefield',
+      );
       sections.push(`## Act ${currentAct}: ${title}`);
     }
     sections.push(scene.fantasyNarration);

@@ -89,4 +89,17 @@ The Southern King poured his strength into the Royal Seal, but every remaining r
       ].join('\n\n'),
     );
   });
+
+  it('allows sanitized act titles to be assembled without coordinates', () => {
+    const scenes = [
+      {
+        actNumber: 1,
+        fantasyNarration: 'The company crossed the broken valley.',
+      },
+    ] as SceneBreakdown['scenes'];
+    const markdown = assembleStoryMarkdown(scenes, ['The E4 Ambush']);
+
+    expect(markdown).toContain('## Act 1: The battlefield Ambush');
+    expect(markdown).not.toMatch(/\b[a-h][1-8]\b/i);
+  });
 });

@@ -35,6 +35,7 @@ export class OpenAiSceneBreakdownProvider implements SceneBreakdownProvider {
         input: JSON.stringify(input),
         max_output_tokens: 16000,
         text: {
+          verbosity: 'high',
           format: zodTextFormat(sceneBreakdownSchema, 'scene_breakdown'),
         },
       });

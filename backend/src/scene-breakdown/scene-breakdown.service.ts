@@ -102,7 +102,12 @@ export class SceneBreakdownService {
 
   async findLatest(gameId: string) {
     const run = await this.prisma.generationRun.findFirst({
-      where: { gameId, currentStage: 'SCENE_BREAKDOWN', status: 'COMPLETED' },
+      where: {
+        gameId,
+        currentStage: 'SCENE_BREAKDOWN',
+        status: 'COMPLETED',
+        promptVersion: SCENE_BREAKDOWN_PROMPT_VERSION,
+      },
       orderBy: { createdAt: 'desc' },
       include: { sceneBreakdown: true },
     });

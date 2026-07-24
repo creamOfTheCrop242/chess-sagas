@@ -100,9 +100,19 @@
         <section class="pipeline-progress" aria-live="polite">
           <div class="pipeline-heading">
             <h3>Saga pipeline</h3>
-            <span
-              >{{ completedPipelineSteps }} of {{ pipelineSteps.length }}</span
-            >
+            <div class="pipeline-summary">
+              <span
+                >{{ completedPipelineSteps }} of
+                {{ pipelineSteps.length }}</span
+              >
+              <time
+                class="generation-timer"
+                [attr.datetime]="'PT' + generationElapsedSeconds + 'S'"
+              >
+                {{ sagaGenerating ? "Elapsed" : "Finished in" }}
+                {{ formattedGenerationTime }}
+              </time>
+            </div>
           </div>
           <ol>
             @for (step of pipelineSteps; track step.id) {

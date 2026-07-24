@@ -8,14 +8,27 @@ export class SceneBreakdownValidator {
     const errors: string[] = [];
     const pieceIds = new Set(ledger.pieces.map((piece) => piece.id));
     let nextPly = 1;
-    breakdown.scenes.forEach((scene, index) => {
+    let currentAct = 0;
+    let expectedSceneNumber = 0;
+    breakdown.scenes.forEach((scene) => {
       const events = ledger.events.slice(scene.startPly - 1, scene.endPly);
-      if (
-        scene.sceneNumber !== index + 1 ||
-        scene.startPly !== nextPly ||
-        scene.endPly < scene.startPly
-      )
-        errors.push('Scenes must be numbered, chronological, and contiguous');
+      if (scene.actNumber !== currentAct) {
+        if (scene.actNumber !== currentAct + 1) {
+          errors.push('Acts must be numbered chronologically');
+        }
+        currentAct = scene.actNumber;
+        expectedSceneNumber = 1;
+      } else {
+        expectedSceneNumber += 1;
+      }
+      if (scene.sceneNumber !== expectedSceneNumber) {
+        errors.push(
+          'Scene numbering must restart and increase within each act',
+        );
+      }
+      if (scene.startPly !== nextPly || scene.endPly < scene.startPly) {
+        errors.push('Scene ply ranges must be chronological and contiguous');
+      }
       nextPly = scene.endPly + 1;
       if (
         JSON.stringify(scene.involvedMoves) !==

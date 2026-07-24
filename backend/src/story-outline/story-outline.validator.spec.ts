@@ -3,6 +3,7 @@ import type { GameLedger } from '../chess/models/game-ledger';
 import type { NarrativeAnalysis } from '../narrative-analysis/models/narrative-analysis';
 import type { StoryOutline } from './models/story-outline';
 import { StoryOutlineValidator } from './story-outline.validator';
+import { normalizeStoryOutlineNumbering } from './story-outline.service';
 
 describe('StoryOutlineValidator', () => {
   const ledger = {
@@ -123,5 +124,16 @@ describe('StoryOutlineValidator', () => {
         twoActAnalysis,
       ),
     ).not.toThrow();
+  });
+
+  it('normalizes model-provided act and scene numbers', () => {
+    const unnormalized = structuredClone(outline);
+    unnormalized.acts[0].actNumber = 8;
+    unnormalized.acts[0].scenes[0].sceneNumber = 12;
+
+    const normalized = normalizeStoryOutlineNumbering(unnormalized);
+
+    expect(normalized.acts[0].actNumber).toBe(1);
+    expect(normalized.acts[0].scenes[0].sceneNumber).toBe(1);
   });
 });

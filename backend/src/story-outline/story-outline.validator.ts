@@ -25,19 +25,17 @@ export class StoryOutlineValidator {
       if (
         !plannedAct ||
         act.startPly !== plannedAct.startPly ||
-        act.endPly !== plannedAct.endPly ||
-        act.actNumber !== index + 1
+        act.endPly !== plannedAct.endPly
       ) {
-        errors.push('Outline act numbers and boundaries must match analysis');
+        errors.push('Outline act boundaries must match analysis');
       }
-      act.scenes.forEach((scene, sceneIndex) => {
+      act.scenes.forEach((scene) => {
         if (
-          scene.sceneNumber !== sceneIndex + 1 ||
           scene.startPly !== nextPly ||
           scene.endPly < scene.startPly ||
           scene.endPly > act.endPly
         ) {
-          errors.push('Scenes must be numbered, chronological, and contiguous');
+          errors.push('Scene ply ranges must be chronological and contiguous');
         }
         nextPly = scene.endPly + 1;
         scene.requiredEventPlies.forEach((ply) => {

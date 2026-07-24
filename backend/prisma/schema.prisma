@@ -25,6 +25,7 @@ enum GenerationStage {
   STORY
   VALIDATION
   REPAIR
+  SCENE_BREAKDOWN
 }
 
 model Game {
@@ -72,9 +73,19 @@ model GenerationRun {
   storyOutline      StoryOutline?
   generatedStory    GeneratedStory?
   storyValidation   StoryValidation?
+  sceneBreakdown    SceneBreakdown?
 
   @@index([gameId, createdAt])
   @@index([status, createdAt])
+}
+
+model SceneBreakdown {
+  id              String        @id @default(cuid())
+  generationRunId String        @unique
+  schemaVersion   Int           @default(1)
+  data            Json
+  createdAt       DateTime      @default(now())
+  generationRun   GenerationRun @relation(fields: [generationRunId], references: [id], onDelete: Cascade)
 }
 
 model StoryValidation {

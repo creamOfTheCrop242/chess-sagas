@@ -102,6 +102,7 @@ describe('GamesService', () => {
             storyOutline: true,
             generatedStory: true,
             storyValidation: true,
+            sceneBreakdown: true,
           },
           orderBy: { createdAt: 'desc' },
         },

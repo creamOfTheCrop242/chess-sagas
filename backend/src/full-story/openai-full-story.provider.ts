@@ -37,7 +37,7 @@ export class OpenAiFullStoryProvider implements FullStoryProvider {
         reasoning: { effort: 'medium' },
         instructions: FULL_STORY_INSTRUCTIONS,
         input: JSON.stringify(request),
-        max_output_tokens: 16_000,
+        max_output_tokens: 64_000,
         text: {
           verbosity: 'high',
           format: zodTextFormat(
@@ -47,6 +47,16 @@ export class OpenAiFullStoryProvider implements FullStoryProvider {
         },
       });
       if (!response.output_parsed) {
+        if (response.incomplete_details?.reason) {
+          throw new BadGatewayException(
+            `OpenAI story generation was incomplete: ${response.incomplete_details.reason}`,
+          );
+        }
+        if (response.error) {
+          throw new BadGatewayException(
+            `OpenAI story generation failed: ${response.error.message}`,
+          );
+        }
         throw new BadGatewayException('OpenAI returned no full story');
       }
       return generatedStoryPackageSchema.parse(response.output_parsed);

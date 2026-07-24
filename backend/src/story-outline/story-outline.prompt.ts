@@ -1,4 +1,4 @@
-export const STORY_OUTLINE_PROMPT_VERSION = 'phase-3-v3';
+export const STORY_OUTLINE_PROMPT_VERSION = 'phase-3-v4';
 
 export const STORY_OUTLINE_INSTRUCTIONS = `Create a structured outline for one cohesive dark-fantasy story. Return planning JSON only; do not write story prose.
 
@@ -16,6 +16,8 @@ The complete ledger is factual source of truth. The narrative analysis supplies 
 - For pawn-on-pawn captures, the attacking viewpoint grunt defeats the captured company's viewpoint grunt as the surrounding company falls, routs, or surrenders.
 - Every setup must precede its payoff.
 - Make major deaths affect subsequent emotional beats.
+- Give every capture a fully dramatized killing beat: approach, resistance, decisive impact, visceral bodily consequence, the confirmed victim's final reaction, and immediate witness or battlefield aftermath.
+- Keep gore ledger-accurate. Only the captured character is confirmed killed; do not add unnamed deaths, kill survivors, or describe bloodshed during quiet moves.
 - Make the ending sequence arise from the actual result and termination.
 - Queens must use both swordplay and magic in later prose.
 - Use piece IDs for all character references.

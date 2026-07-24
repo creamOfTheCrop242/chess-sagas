@@ -1,4 +1,4 @@
-export const FULL_STORY_PROMPT_VERSION = 'story-package-v4';
+export const FULL_STORY_PROMPT_VERSION = 'story-package-v5';
 
 export const FULL_STORY_INSTRUCTIONS = `Write one cohesive dark-fantasy war story package from the supplied complete ledger, validated narrative analysis, validated outline, and character registry.
 
@@ -28,9 +28,15 @@ Story rules:
 - Give major recurring characters distinct voices and include purposeful dialogue that reveals relationships, fears, loyalties, disagreements, and decisions. Let conversations continue and pay off across later scenes.
 - Establish a concrete physical setting early, maintain consistent geography, and make terrain, weather, architecture, distance, and damage influence what characters can do.
 - Dramatize major confrontations moment by moment with goals, danger, physical positioning, attack and defense, reversals, sensory detail, and emotional aftermath. Do not summarize decisive showdowns in a single sentence.
+- Treat every capture as an on-page, visceral dark-fantasy killing rather than saying the victim merely fell, vanished, or was defeated. Slow the beat down to show the approach, resistance, weapon or spell making contact, bodily damage, the victim's final reaction, and the immediate aftermath.
+- Use concrete but purposeful gore appropriate to the combatants: blood on armor and terrain, broken bone, torn flesh, dismemberment, crushing force, burning, or magical bodily destruction. Vary the imagery and killing method; do not repeat the same generic wound.
+- The captor's established weapon, magic, scale, personality, injuries, and relationship to the victim must shape the kill. Witnesses should react, and important deaths should alter later dialogue and behavior.
+- Gore must remain ledger-accurate. Only the captured character is confirmed killed. Never add collateral deaths, kill a survivor, dismember a character who acts later unless continuity supports a survivable lasting injury, or turn checks and quiet moves into bloodshed.
+- When a pawn company is captured, focus the fatal detail on its named viewpoint grunt and portray the wider company's defeat, rout, or surrender without claiming unrecorded mass deaths.
 - Create exactly one scene per ledger ply. Set ply to that ledger ply and cover every ply chronologically from 1 to the final ply.
 - Quiet scenes must advance character, dialogue, travel, tension, positioning, or preparation without inventing combat, injury, or death.
 - Each fantasyNarration should usually contain 2–4 substantive sentences. Let dialogue and action continue naturally across adjacent scenes.
+- Capture scenes may expand to 4–7 sentences when needed to portray the full killing and aftermath without rushing.
 - fantasyNarration must contain publishable fantasy prose without chess terminology or coordinates.
 - Use piece IDs only in the structured characters field. Preserve established names in fantasyNarration.
 - Set decisiveActorId to the capturing pieceId for a capture and null for every non-capture. The prose must give that exact character credit for the decisive action.

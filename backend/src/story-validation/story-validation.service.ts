@@ -109,9 +109,14 @@ export class StoryValidationService {
           'Validation found errors but OpenAI returned no repaired story',
         );
       }
-      if (result.repairedStoryMarkdown) {
+      const repairedStoryMarkdown = result.repairedStoryMarkdown
+        ? this.deterministic.repairProhibitedTerminology(
+            result.repairedStoryMarkdown,
+          )
+        : null;
+      if (repairedStoryMarkdown) {
         const remainingFindings = this.deterministic.validate(
-          result.repairedStoryMarkdown,
+          repairedStoryMarkdown,
           ledger,
         );
         if (remainingFindings.length > 0) {
@@ -139,7 +144,7 @@ export class StoryValidationService {
               schemaVersion: 1,
               valid,
               findings: findingsJson,
-              repairedStoryMarkdown: result.repairedStoryMarkdown,
+              repairedStoryMarkdown,
             },
           },
         },

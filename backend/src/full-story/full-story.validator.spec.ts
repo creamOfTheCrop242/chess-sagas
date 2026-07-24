@@ -38,13 +38,23 @@ The Southern King poured his strength into the Royal Seal, but every remaining r
     ).not.toThrow();
   });
 
-  it('rejects leaked coordinates and piece IDs', () => {
+  it('defers prose terminology repair to Phase 5', () => {
     expect(() =>
       new FullStoryValidator().validate(
         {
           ...story,
           storyMarkdown: `${story.storyMarkdown}\nThe w-q-d1 returned to f7.`,
         },
+        ledger,
+        outline,
+      ),
+    ).not.toThrow();
+  });
+
+  it('rejects a title that contradicts the validated outline', () => {
+    expect(() =>
+      new FullStoryValidator().validate(
+        { ...story, title: 'A Different Story' },
         ledger,
         outline,
       ),

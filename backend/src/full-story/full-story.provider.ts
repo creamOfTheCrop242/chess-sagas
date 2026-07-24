@@ -1,7 +1,7 @@
 import type { GameLedger, PieceIdentity } from '../chess/models/game-ledger';
 import type { NarrativeAnalysis } from '../narrative-analysis/models/narrative-analysis';
 import type { StoryOutline } from '../story-outline/models/story-outline';
-import type { GeneratedStoryDraft } from './models/generated-story';
+import type { GeneratedStoryPackage } from './models/generated-story';
 
 export const FULL_STORY_PROVIDER = Symbol('FULL_STORY_PROVIDER');
 
@@ -14,5 +14,5 @@ export interface FullStoryRequest {
 
 export interface FullStoryProvider {
   readonly model: string;
-  generate(request: FullStoryRequest): Promise<GeneratedStoryDraft>;
+  generate(request: FullStoryRequest): Promise<GeneratedStoryPackage>;
 }

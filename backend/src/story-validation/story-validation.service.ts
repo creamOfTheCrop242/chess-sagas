@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import type { GameLedger } from '../chess/models/game-ledger';
+import { normalizePawnViewpoints } from '../chess/piece-identity.service';
 import { PrismaService } from '../database/prisma.service';
 import { narrativeAnalysisSchema } from '../narrative-analysis/models/narrative-analysis';
 import { storyOutlineSchema } from '../story-outline/models/story-outline';
@@ -72,7 +73,9 @@ export class StoryValidationService {
       },
     });
     try {
-      const ledger = game.ledger.data as unknown as GameLedger;
+      const ledger = normalizePawnViewpoints(
+        game.ledger.data as unknown as GameLedger,
+      );
       const deterministicFindings = this.deterministic.validate(
         storyRun.generatedStory.storyMarkdown,
         ledger,
@@ -109,9 +112,14 @@ export class StoryValidationService {
           'Validation found errors but OpenAI returned no repaired story',
         );
       }
-      if (result.repairedStoryMarkdown) {
+      const repairedStoryMarkdown = result.repairedStoryMarkdown
+        ? this.deterministic.repairProhibitedTerminology(
+            result.repairedStoryMarkdown,
+          )
+        : null;
+      if (repairedStoryMarkdown) {
         const remainingFindings = this.deterministic.validate(
-          result.repairedStoryMarkdown,
+          repairedStoryMarkdown,
           ledger,
         );
         if (remainingFindings.length > 0) {
@@ -139,7 +147,7 @@ export class StoryValidationService {
               schemaVersion: 1,
               valid,
               findings: findingsJson,
-              repairedStoryMarkdown: result.repairedStoryMarkdown,
+              repairedStoryMarkdown,
             },
           },
         },

@@ -18,6 +18,8 @@ export interface PieceIdentity {
   currentChessType: ChessPieceType;
   fantasyType: FantasyPieceType;
   permanentName: string;
+  companyName?: string;
+  viewpointName?: string;
   alive: boolean;
   capturedAtPly?: number;
   promotedFromPawnId?: string;

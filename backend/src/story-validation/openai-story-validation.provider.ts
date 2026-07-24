@@ -10,7 +10,10 @@ import {
   storyValidationResultSchema,
   type StoryValidationResult,
 } from './models/story-validation';
-import { STORY_VALIDATION_INSTRUCTIONS } from './story-validation.prompt';
+import {
+  PROHIBITED_PROSE_TERMS,
+  STORY_VALIDATION_INSTRUCTIONS,
+} from './story-validation.prompt';
 import type {
   StoryValidationProvider,
   StoryValidationRequest,
@@ -36,7 +39,9 @@ export class OpenAiStoryValidationProvider implements StoryValidationProvider {
       const response = await this.client.responses.parse({
         model: this.model,
         reasoning: { effort: 'medium' },
-        instructions: STORY_VALIDATION_INSTRUCTIONS,
+        instructions: `${STORY_VALIDATION_INSTRUCTIONS}
+
+${PROHIBITED_PROSE_TERMS}`,
         input: JSON.stringify(request),
         max_output_tokens: 18_000,
         text: {

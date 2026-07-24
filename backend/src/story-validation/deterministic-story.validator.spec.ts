@@ -30,4 +30,15 @@ describe('DeterministicStoryValidator', () => {
       ),
     ).toEqual([]);
   });
+
+  it('repairs prohibited chess terminology deterministically', () => {
+    const repaired = validator.repairProhibitedTerminology(
+      'The E-file Company recorded checkmate after three plies of chess.',
+    );
+
+    expect(repaired).toBe(
+      'The battlefront Company recorded final defeat after three turns of war.',
+    );
+    expect(validator.validate(repaired, ledger)).toEqual([]);
+  });
 });

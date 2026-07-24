@@ -4,6 +4,18 @@ import type { ValidationFinding } from './models/story-validation';
 
 @Injectable()
 export class DeterministicStoryValidator {
+  repairProhibitedTerminology(storyMarkdown: string): string {
+    return storyMarkdown
+      .replace(/\bcheckmate\b/gi, 'final defeat')
+      .replace(/\bchess\b/gi, 'war')
+      .replace(/\bSAN\b/g, 'battle record')
+      .replace(/\bFEN\b/g, 'battle formation')
+      .replace(/\bplies\b/gi, 'turns')
+      .replace(/\bply\b/gi, 'turn')
+      .replace(/\b[A-H]-file\b/gi, 'battlefront')
+      .replace(/\bfile company\b/gi, 'soldier company');
+  }
+
   validate(storyMarkdown: string, ledger: GameLedger): ValidationFinding[] {
     const findings: ValidationFinding[] = [];
     const add = (

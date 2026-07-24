@@ -12,6 +12,10 @@ jest.mock('../database/prisma.service', () => ({
 describe('GamesService', () => {
   const gameCreate = jest.fn<(args: unknown) => Promise<{ id: string }>>();
   const gameFindMany = jest.fn<(args: unknown) => Promise<unknown[]>>();
+  const gameFindFirst =
+    jest.fn<
+      (args: unknown) => Promise<{ id: string; ledger: object } | null>
+    >();
   const gameFindUnique =
     jest.fn<
       (args: unknown) => Promise<{ id: string; ledger: object } | null>
@@ -19,6 +23,7 @@ describe('GamesService', () => {
   const prisma = {
     game: {
       create: gameCreate,
+      findFirst: gameFindFirst,
       findMany: gameFindMany,
       findUnique: gameFindUnique,
     },
@@ -28,9 +33,28 @@ describe('GamesService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    gameFindFirst.mockResolvedValue(null);
     const identities = new PieceIdentityService();
     const pgn = new PgnService(new GameLedgerService(identities));
     service = new GamesService(prisma, pgn);
+  });
+
+  it('reuses the latest saved game with the same PGN hash', async () => {
+    let capturedArgs: unknown;
+    gameFindFirst.mockImplementation((args) => {
+      capturedArgs = args;
+      return Promise.resolve({ id: 'existing-game', ledger: {} });
+    });
+
+    await expect(
+      service.create(
+        '[White "Ada"]\n[Black "Turing"]\n[Result "1-0"]\n\n1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6 4. Qxf7# 1-0',
+      ),
+    ).resolves.toMatchObject({ id: 'existing-game' });
+
+    expect(gameCreate).not.toHaveBeenCalled();
+    const findArgs = capturedArgs as { where: { pgnHash: string } };
+    expect(findArgs.where.pgnHash).toMatch(/^[a-f0-9]{64}$/);
   });
 
   it('persists a parsed game and immutable ledger in one nested create', async () => {

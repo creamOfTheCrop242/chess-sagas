@@ -1,6 +1,7 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import type { GameLedger } from '../chess/models/game-ledger';
+import { normalizePawnViewpoints } from '../chess/piece-identity.service';
 import { PrismaService } from '../database/prisma.service';
 import { storyOutlineSchema } from '../story-outline/models/story-outline';
 import { sceneBreakdownSchema } from './models/scene-breakdown';
@@ -10,6 +11,7 @@ import {
 } from './scene-breakdown.provider';
 import { SCENE_BREAKDOWN_PROMPT_VERSION } from './scene-breakdown.prompt';
 import { SceneBreakdownValidator } from './scene-breakdown.validator';
+import { FULL_STORY_PROMPT_VERSION } from '../full-story/full-story.prompt';
 
 @Injectable()
 export class SceneBreakdownService {
@@ -59,7 +61,9 @@ export class SceneBreakdownService {
       },
     });
     try {
-      const ledger = game.ledger.data as unknown as GameLedger;
+      const ledger = normalizePawnViewpoints(
+        game.ledger.data as unknown as GameLedger,
+      );
       const breakdown = sceneBreakdownSchema.parse(
         await this.provider.generate({
           ledger,
@@ -102,7 +106,20 @@ export class SceneBreakdownService {
 
   async findLatest(gameId: string) {
     const run = await this.prisma.generationRun.findFirst({
-      where: { gameId, currentStage: 'SCENE_BREAKDOWN', status: 'COMPLETED' },
+      where: {
+        gameId,
+        status: 'COMPLETED',
+        OR: [
+          {
+            currentStage: 'STORY',
+            promptVersion: FULL_STORY_PROMPT_VERSION,
+          },
+          {
+            currentStage: 'SCENE_BREAKDOWN',
+            promptVersion: SCENE_BREAKDOWN_PROMPT_VERSION,
+          },
+        ],
+      },
       orderBy: { createdAt: 'desc' },
       include: { sceneBreakdown: true },
     });

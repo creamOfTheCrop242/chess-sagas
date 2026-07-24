@@ -18,6 +18,12 @@ export class GamesService {
     const ledgerData = JSON.parse(
       JSON.stringify(parsed.ledger),
     ) as Prisma.InputJsonValue;
+    const existing = await this.prisma.game.findFirst({
+      where: { pgnHash },
+      orderBy: { createdAt: 'desc' },
+      include: { ledger: true },
+    });
+    if (existing) return existing;
 
     return this.prisma.game.create({
       data: {

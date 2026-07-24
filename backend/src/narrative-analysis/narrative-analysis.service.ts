@@ -1,6 +1,7 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import type { GameLedger } from '../chess/models/game-ledger';
+import { normalizePawnViewpoints } from '../chess/piece-identity.service';
 import { PrismaService } from '../database/prisma.service';
 import {
   NARRATIVE_ANALYSIS_PROVIDER,
@@ -39,7 +40,9 @@ export class NarrativeAnalysisService {
     });
 
     try {
-      const ledger = game.ledger.data as unknown as GameLedger;
+      const ledger = normalizePawnViewpoints(
+        game.ledger.data as unknown as GameLedger,
+      );
       const analysis = narrativeAnalysisSchema.parse(
         await this.provider.analyze({ ledger }),
       );

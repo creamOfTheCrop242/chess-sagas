@@ -13,6 +13,6 @@ Report:
 - important Queen combat lacking either swordplay or magic
 - outline setup/payoff or continuity violations
 
-Do not duplicate supplied deterministic findings. Use exact piece IDs and plies in findings, but never add them to prose.
+Treat supplied deterministicFindings as authoritative errors that must be repaired. Do not duplicate them in the returned findings array. Use exact piece IDs and plies in new findings, but never add them to prose.
 
-If there are error-severity findings, return the complete repaired story Markdown. Preserve unaffected passages and patch only affected sections. The repair must resolve every error without inventing events. If there are no errors, repairedStoryMarkdown must be null.`;
+If either deterministicFindings or your new findings contain an error, repairedStoryMarkdown MUST contain the complete repaired story. This requirement applies even when your returned findings array is empty because the only errors were supplied deterministic findings. Preserve unaffected passages and patch only affected sections. The repair must resolve every deterministic and semantic error without inventing events. Only return null when both supplied deterministicFindings and your new findings contain no errors.`;

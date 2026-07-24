@@ -1,7 +1,13 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
-import { NarrateRequest, NarrateResponse, ParsedPgn } from './pgn.models';
+import { concatMap, Observable } from 'rxjs';
+import {
+  NarrateRequest,
+  NarrateResponse,
+  ParsedPgn,
+  SavedGame,
+  SceneBreakdownResponse,
+} from './pgn.models';
 
 @Injectable({ providedIn: 'root' })
 export class PgnApiService {
@@ -16,5 +22,27 @@ export class PgnApiService {
 
   narrate(payload: NarrateRequest): Observable<NarrateResponse> {
     return this.http.post<NarrateResponse>(this.narrateUrl, payload);
+  }
+
+  createGame(pgn: string): Observable<SavedGame> {
+    return this.http.post<SavedGame>('http://localhost:3000/games', { pgn });
+  }
+
+  generateSaga(gameId: string): Observable<SceneBreakdownResponse> {
+    const base = `http://localhost:3000/games/${gameId}`;
+    return this.http.post(`${base}/analysis`, {}).pipe(
+      concatMap(() => this.http.post(`${base}/outline`, {})),
+      concatMap(() => this.http.post(`${base}/story`, {})),
+      concatMap(() => this.http.post(`${base}/validation`, {})),
+      concatMap(() =>
+        this.http.post<SceneBreakdownResponse>(`${base}/scenes`, {}),
+      ),
+    );
+  }
+
+  getScenes(gameId: string): Observable<SceneBreakdownResponse> {
+    return this.http.get<SceneBreakdownResponse>(
+      `http://localhost:3000/games/${gameId}/scenes`,
+    );
   }
 }

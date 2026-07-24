@@ -4,7 +4,13 @@ import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { ChessboardComponent } from './chessboard.component';
 import { PgnApiService } from './pgn-api.service';
-import { ParsedPgn, ParsedPosition, PlaybackScene } from './pgn.models';
+import {
+  ParsedPgn,
+  ParsedPosition,
+  PlaybackScene,
+  SagaStage,
+  SagaStageState,
+} from './pgn.models';
 
 @Component({
   selector: 'app-pgn-viewer',
@@ -23,6 +29,15 @@ export class PgnViewerComponent {
   scenes: PlaybackScene[] = [];
   sagaGenerating = false;
   storyError: string | null = null;
+  readonly pipelineSteps: Array<{ id: SagaStage; label: string }> = [
+    { id: 'analysis', label: 'Narrative analysis' },
+    { id: 'outline', label: 'Story outline' },
+    { id: 'story', label: 'Full story' },
+    { id: 'validation', label: 'Validation and repair' },
+    { id: 'scenes', label: 'Scene alignment' },
+  ];
+  pipelineState: Record<SagaStage, SagaStageState> =
+    this.initialPipelineState();
 
   constructor(private readonly pgnApi: PgnApiService) {}
 
@@ -70,6 +85,26 @@ export class PgnViewerComponent {
     if (this.currentPly === 0) return this.introStory();
     return this.currentScene?.fantasyNarration ?? '';
   }
+  get pipelineVisible(): boolean {
+    return this.pipelineSteps.some(
+      (step) => this.pipelineState[step.id] !== 'pending',
+    );
+  }
+  get completedPipelineSteps(): number {
+    return this.pipelineSteps.filter((step) =>
+      ['completed', 'reused'].includes(this.pipelineState[step.id]),
+    ).length;
+  }
+  pipelineIcon(state: SagaStageState): string {
+    if (state === 'completed') return '✓';
+    if (state === 'reused') return '↻';
+    if (state === 'failed') return '!';
+    if (state === 'checking' || state === 'generating') return '●';
+    return '○';
+  }
+  pipelineStatus(state: SagaStageState): string {
+    return state === 'reused' ? 'reused' : state;
+  }
 
   submit(): void {
     this.loading = true;
@@ -84,6 +119,7 @@ export class PgnViewerComponent {
         this.gameId = saved.id;
         this.currentPly = 0;
         this.scenes = [];
+        this.pipelineState = this.initialPipelineState();
         this.loading = false;
       },
       error: (error: unknown) => {
@@ -97,16 +133,21 @@ export class PgnViewerComponent {
     if (!this.gameId) return;
     this.sagaGenerating = true;
     this.storyError = null;
-    this.pgnApi.generateSaga(this.gameId).subscribe({
-      next: (response) => {
-        this.scenes = response.sceneBreakdown.data.scenes;
-        this.sagaGenerating = false;
-      },
-      error: (error: unknown) => {
-        this.sagaGenerating = false;
-        this.storyError = this.extractError(error, 'Failed to generate saga');
-      },
-    });
+    this.pipelineState = this.initialPipelineState();
+    this.pgnApi
+      .generateSaga(this.gameId, (stage, state) => {
+        this.pipelineState = { ...this.pipelineState, [stage]: state };
+      })
+      .subscribe({
+        next: (response) => {
+          this.scenes = response.sceneBreakdown.data.scenes;
+          this.sagaGenerating = false;
+        },
+        error: (error: unknown) => {
+          this.sagaGenerating = false;
+          this.storyError = this.extractError(error, 'Failed to generate saga');
+        },
+      });
   }
 
   back(): void {
@@ -142,5 +183,15 @@ export class PgnViewerComponent {
       return error.message || fallback;
     }
     return fallback;
+  }
+
+  private initialPipelineState(): Record<SagaStage, SagaStageState> {
+    return {
+      analysis: 'pending',
+      outline: 'pending',
+      story: 'pending',
+      validation: 'pending',
+      scenes: 'pending',
+    };
   }
 }

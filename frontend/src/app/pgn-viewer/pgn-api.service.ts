@@ -7,6 +7,7 @@ import {
   Observable,
   of,
   switchMap,
+  tap,
   throwError,
 } from 'rxjs';
 import {
@@ -14,6 +15,8 @@ import {
   NarrateResponse,
   ParsedPgn,
   SavedGame,
+  SagaStage,
+  SagaStageState,
   SceneBreakdownResponse,
 } from './pgn.models';
 
@@ -36,14 +39,23 @@ export class PgnApiService {
     return this.http.post<SavedGame>('http://localhost:3000/games', { pgn });
   }
 
-  generateSaga(gameId: string): Observable<SceneBreakdownResponse> {
+  generateSaga(
+    gameId: string,
+    onProgress: (stage: SagaStage, state: SagaStageState) => void,
+  ): Observable<SceneBreakdownResponse> {
     const base = `http://localhost:3000/games/${gameId}`;
-    return this.ensureStage(`${base}/analysis`).pipe(
-      concatMap(() => this.ensureStage(`${base}/outline`)),
-      concatMap(() => this.ensureStage(`${base}/story`)),
-      concatMap(() => this.ensureValidStory(base)),
+    return this.ensureStage(`${base}/analysis`, 'analysis', onProgress).pipe(
       concatMap(() =>
-        this.ensureStage<SceneBreakdownResponse>(`${base}/scenes`),
+        this.ensureStage(`${base}/outline`, 'outline', onProgress),
+      ),
+      concatMap(() => this.ensureStage(`${base}/story`, 'story', onProgress)),
+      concatMap(() => this.ensureValidStory(base, onProgress)),
+      concatMap(() =>
+        this.ensureStage<SceneBreakdownResponse>(
+          `${base}/scenes`,
+          'scenes',
+          onProgress,
+        ),
       ),
     );
   }
@@ -54,27 +66,57 @@ export class PgnApiService {
     );
   }
 
-  private ensureStage<T = unknown>(url: string): Observable<T> {
+  private ensureStage<T = unknown>(
+    url: string,
+    stage: SagaStage,
+    onProgress: (stage: SagaStage, state: SagaStageState) => void,
+  ): Observable<T> {
+    onProgress(stage, 'checking');
     return this.http.get<T>(url).pipe(
+      tap(() => onProgress(stage, 'reused')),
       catchError((error: unknown) => {
         if (error instanceof HttpErrorResponse && error.status === 404) {
-          return this.http.post<T>(url, {});
+          onProgress(stage, 'generating');
+          return this.http
+            .post<T>(url, {})
+            .pipe(tap(() => onProgress(stage, 'completed')));
         }
+        return throwError(() => error);
+      }),
+      catchError((error: unknown) => {
+        onProgress(stage, 'failed');
         return throwError(() => error);
       }),
     );
   }
 
-  private ensureValidStory(base: string): Observable<unknown> {
+  private ensureValidStory(
+    base: string,
+    onProgress: (stage: SagaStage, state: SagaStageState) => void,
+  ): Observable<unknown> {
     const url = `${base}/validation`;
     return this.ensureStage<{
       storyValidation?: { valid: boolean };
-    }>(url).pipe(
+    }>(url, 'validation', onProgress).pipe(
       switchMap((response) =>
         response.storyValidation?.valid
           ? of(response)
-          : this.http.post(url, {}),
+          : this.regenerateValidation(url, onProgress),
       ),
+    );
+  }
+
+  private regenerateValidation(
+    url: string,
+    onProgress: (stage: SagaStage, state: SagaStageState) => void,
+  ): Observable<unknown> {
+    onProgress('validation', 'generating');
+    return this.http.post(url, {}).pipe(
+      tap(() => onProgress('validation', 'completed')),
+      catchError((error: unknown) => {
+        onProgress('validation', 'failed');
+        return throwError(() => error);
+      }),
     );
   }
 }

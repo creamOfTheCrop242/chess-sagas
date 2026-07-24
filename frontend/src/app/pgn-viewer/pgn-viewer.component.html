@@ -96,6 +96,30 @@
         }
       }
 
+      @if (pipelineVisible) {
+        <section class="pipeline-progress" aria-live="polite">
+          <div class="pipeline-heading">
+            <h3>Saga pipeline</h3>
+            <span
+              >{{ completedPipelineSteps }} of {{ pipelineSteps.length }}</span
+            >
+          </div>
+          <ol>
+            @for (step of pipelineSteps; track step.id) {
+              <li [class]="'pipeline-' + pipelineState[step.id]">
+                <span class="pipeline-icon" aria-hidden="true">
+                  {{ pipelineIcon(pipelineState[step.id]) }}
+                </span>
+                <span class="pipeline-label">{{ step.label }}</span>
+                <span class="pipeline-state">
+                  {{ pipelineStatus(pipelineState[step.id]) }}
+                </span>
+              </li>
+            }
+          </ol>
+        </section>
+      }
+
       <aside class="story-panel" aria-live="polite">
         <h3>The chronicler’s ink</h3>
         @if (storyError) {

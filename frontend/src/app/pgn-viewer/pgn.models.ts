@@ -145,3 +145,9 @@ export type SceneBreakdownResponse = {
   status: 'COMPLETED';
   sceneBreakdown: { data: { scenes: PlaybackScene[] } };
 };
+
+export type SagaStage =
+  'analysis' | 'outline' | 'story' | 'validation' | 'scenes';
+
+export type SagaStageState =
+  'pending' | 'checking' | 'reused' | 'generating' | 'completed' | 'failed';

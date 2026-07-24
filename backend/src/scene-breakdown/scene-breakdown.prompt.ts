@@ -1,4 +1,4 @@
-export const SCENE_BREAKDOWN_PROMPT_VERSION = 'phase-6-v7';
+export const SCENE_BREAKDOWN_PROMPT_VERSION = 'phase-6-v8';
 export const SCENE_BREAKDOWN_INSTRUCTIONS = `Split the validated cohesive story into move-aligned playback scenes. Return structured JSON only.
 
 - Create exactly one playback scene for every ledger ply. Never group multiple plies into one scene.
@@ -18,6 +18,8 @@ export const SCENE_BREAKDOWN_INSTRUCTIONS = `Split the validated cohesive story 
 - Render important confrontations as specific, readable showdowns rather than summaries. Establish who wants what, the immediate danger, the surrounding terrain, physical positioning, attacks and defenses, reversals, emotional reactions, and the lasting consequence.
 - At captures, checks, sacrifices, promotions, and the final sequence, slow the pacing enough for sensory detail and character reaction. Describe concrete sights, sounds, weather, light, architecture, clothing, weapons, magic, bodily effort, and damage that fit the established setting.
 - Every capture must portray the confirmed victim's killing on the page with specific contact, visceral bodily damage, a final reaction, and immediate aftermath. Use varied blood, bone, armor, flesh, crushing, burning, dismemberment, or magical destruction appropriate to the captor.
+- Keep the victim emotionally present: show what they notice, realize, feel, attempt, and express as they are killed. Use a character-specific final word, thought, memory, gesture, or look when plausible, and a brief final recognition or reflex for instantaneous deaths.
+- Never describe only the killer's experience or give the victim awareness after death.
 - Never invent collateral deaths or gore on quiet moves. For a captured pawn company, center the fatal detail on its named viewpoint grunt and describe the remaining company as defeated, routed, or surrendered unless the ledger supports more deaths.
 - Make scenery active in the story. Terrain, fortifications, roads, ruins, forests, rivers, smoke, weather, and distance should constrain choices and change as the conflict progresses; avoid decorative lists of adjectives.
 - Use quiet moves for character work, dialogue, observation, travel, tactical preparation, dread, or relationship development. They must advance the dramatic thread without inventing combat, injury, or death.

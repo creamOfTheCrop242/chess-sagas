@@ -1,4 +1,4 @@
-export const FULL_STORY_PROMPT_VERSION = 'story-package-v5';
+export const FULL_STORY_PROMPT_VERSION = 'story-package-v6';
 
 export const FULL_STORY_INSTRUCTIONS = `Write one cohesive dark-fantasy war story package from the supplied complete ledger, validated narrative analysis, validated outline, and character registry.
 
@@ -29,6 +29,9 @@ Story rules:
 - Establish a concrete physical setting early, maintain consistent geography, and make terrain, weather, architecture, distance, and damage influence what characters can do.
 - Dramatize major confrontations moment by moment with goals, danger, physical positioning, attack and defense, reversals, sensory detail, and emotional aftermath. Do not summarize decisive showdowns in a single sentence.
 - Treat every capture as an on-page, visceral dark-fantasy killing rather than saying the victim merely fell, vanished, or was defeated. Slow the beat down to show the approach, resistance, weapon or spell making contact, bodily damage, the victim's final reaction, and the immediate aftermath.
+- Show the victim experiencing the fatal moment from inside their own awareness as well as through the killer's perspective. Include what the victim notices, realizes, physically feels, tries to do, and emotionally expresses as death becomes unavoidable.
+- Give named victims a character-specific final word, broken sentence, thought, memory, gesture, expression, or look whenever the timing of the wound allows it. Their response must reflect established personality, loyalties, fears, wounds, and relationship with the killer.
+- Never treat a named victim as a passive prop for the captor. For an instantaneous death, use a brief final recognition, reflex, or interrupted intention; do not grant speech, thought, or action after consciousness and life have ended.
 - Use concrete but purposeful gore appropriate to the combatants: blood on armor and terrain, broken bone, torn flesh, dismemberment, crushing force, burning, or magical bodily destruction. Vary the imagery and killing method; do not repeat the same generic wound.
 - The captor's established weapon, magic, scale, personality, injuries, and relationship to the victim must shape the kill. Witnesses should react, and important deaths should alter later dialogue and behavior.
 - Gore must remain ledger-accurate. Only the captured character is confirmed killed. Never add collateral deaths, kill a survivor, dismember a character who acts later unless continuity supports a survivable lasting injury, or turn checks and quiet moves into bloodshed.

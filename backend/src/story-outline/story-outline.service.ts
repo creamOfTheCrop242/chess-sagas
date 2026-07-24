@@ -6,7 +6,7 @@ import {
   narrativeAnalysisSchema,
   type NarrativeAnalysis,
 } from '../narrative-analysis/models/narrative-analysis';
-import { storyOutlineSchema } from './models/story-outline';
+import { storyOutlineSchema, type StoryOutline } from './models/story-outline';
 import { STORY_OUTLINE_PROMPT_VERSION } from './story-outline.prompt';
 import {
   STORY_OUTLINE_PROVIDER,
@@ -60,12 +60,14 @@ export class StoryOutlineService {
       const ledger = game.ledger.data as unknown as GameLedger;
       const narrativeAnalysis: NarrativeAnalysis =
         narrativeAnalysisSchema.parse(analysisRun.narrativeAnalysis.data);
-      const outline = storyOutlineSchema.parse(
-        await this.provider.generate({
-          ledger,
-          narrativeAnalysis,
-          characterRegistry: ledger.pieces,
-        }),
+      const outline = normalizeStoryOutlineNumbering(
+        storyOutlineSchema.parse(
+          await this.provider.generate({
+            ledger,
+            narrativeAnalysis,
+            characterRegistry: ledger.pieces,
+          }),
+        ),
       );
       this.validator.validate(outline, ledger, narrativeAnalysis);
       const data = JSON.parse(JSON.stringify(outline)) as Prisma.InputJsonValue;
@@ -119,4 +121,20 @@ export class StoryOutlineService {
     }
     return run;
   }
+}
+
+export function normalizeStoryOutlineNumbering(
+  outline: StoryOutline,
+): StoryOutline {
+  return {
+    ...outline,
+    acts: outline.acts.map((act, actIndex) => ({
+      ...act,
+      actNumber: actIndex + 1,
+      scenes: act.scenes.map((scene, sceneIndex) => ({
+        ...scene,
+        sceneNumber: sceneIndex + 1,
+      })),
+    })),
+  };
 }

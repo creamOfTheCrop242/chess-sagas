@@ -12,8 +12,8 @@ import type {
 } from './full-story.provider';
 import { FULL_STORY_INSTRUCTIONS } from './full-story.prompt';
 import {
-  generatedStorySchema,
-  type GeneratedStoryDraft,
+  generatedStoryPackageSchema,
+  type GeneratedStoryPackage,
 } from './models/generated-story';
 
 @Injectable()
@@ -27,7 +27,7 @@ export class OpenAiFullStoryProvider implements FullStoryProvider {
     this.client = apiKey ? new OpenAI({ apiKey }) : null;
   }
 
-  async generate(request: FullStoryRequest): Promise<GeneratedStoryDraft> {
+  async generate(request: FullStoryRequest): Promise<GeneratedStoryPackage> {
     if (!this.client) {
       throw new ServiceUnavailableException('OPENAI_API_KEY is not configured');
     }
@@ -40,13 +40,16 @@ export class OpenAiFullStoryProvider implements FullStoryProvider {
         max_output_tokens: 16_000,
         text: {
           verbosity: 'high',
-          format: zodTextFormat(generatedStorySchema, 'generated_story'),
+          format: zodTextFormat(
+            generatedStoryPackageSchema,
+            'generated_story_package',
+          ),
         },
       });
       if (!response.output_parsed) {
         throw new BadGatewayException('OpenAI returned no full story');
       }
-      return generatedStorySchema.parse(response.output_parsed);
+      return generatedStoryPackageSchema.parse(response.output_parsed);
     } catch (error) {
       if (
         error instanceof ServiceUnavailableException ||

@@ -1,7 +1,9 @@
 import { BadGatewayException } from '@nestjs/common';
 import type { GameLedger } from '../chess/models/game-ledger';
 import type { StoryOutline } from '../story-outline/models/story-outline';
+import type { SceneBreakdown } from '../scene-breakdown/models/scene-breakdown';
 import type { GeneratedStoryDraft } from './models/generated-story';
+import { assembleStoryMarkdown } from './full-story.service';
 import { FullStoryValidator } from './full-story.validator';
 
 describe('FullStoryValidator', () => {
@@ -59,5 +61,32 @@ The Southern King poured his strength into the Royal Seal, but every remaining r
         outline,
       ),
     ).toThrow(BadGatewayException);
+  });
+
+  it('assembles one continuous story from ordered playback scenes', () => {
+    const scenes = [
+      {
+        actNumber: 1,
+        fantasyNarration: 'The armies entered the rain-dark valley.',
+      },
+      {
+        actNumber: 1,
+        fantasyNarration: 'Mara answered the distant horn with a warning.',
+      },
+      {
+        actNumber: 2,
+        fantasyNarration: 'At dawn, the ruined gate finally gave way.',
+      },
+    ] as SceneBreakdown['scenes'];
+
+    expect(assembleStoryMarkdown(scenes, ['Gathering Storm', 'The Gate'])).toBe(
+      [
+        '## Act 1: Gathering Storm',
+        'The armies entered the rain-dark valley.',
+        'Mara answered the distant horn with a warning.',
+        '## Act 2: The Gate',
+        'At dawn, the ruined gate finally gave way.',
+      ].join('\n\n'),
+    );
   });
 });

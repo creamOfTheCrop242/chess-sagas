@@ -10,6 +10,7 @@ import {
 } from './scene-breakdown.provider';
 import { SCENE_BREAKDOWN_PROMPT_VERSION } from './scene-breakdown.prompt';
 import { SceneBreakdownValidator } from './scene-breakdown.validator';
+import { FULL_STORY_PROMPT_VERSION } from '../full-story/full-story.prompt';
 
 @Injectable()
 export class SceneBreakdownService {
@@ -104,9 +105,17 @@ export class SceneBreakdownService {
     const run = await this.prisma.generationRun.findFirst({
       where: {
         gameId,
-        currentStage: 'SCENE_BREAKDOWN',
         status: 'COMPLETED',
-        promptVersion: SCENE_BREAKDOWN_PROMPT_VERSION,
+        OR: [
+          {
+            currentStage: 'STORY',
+            promptVersion: FULL_STORY_PROMPT_VERSION,
+          },
+          {
+            currentStage: 'SCENE_BREAKDOWN',
+            promptVersion: SCENE_BREAKDOWN_PROMPT_VERSION,
+          },
+        ],
       },
       orderBy: { createdAt: 'desc' },
       include: { sceneBreakdown: true },

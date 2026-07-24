@@ -1,4 +1,4 @@
-export const SCENE_BREAKDOWN_PROMPT_VERSION = 'phase-6-v3';
+export const SCENE_BREAKDOWN_PROMPT_VERSION = 'phase-6-v4';
 export const SCENE_BREAKDOWN_INSTRUCTIONS = `Split the validated cohesive story into move-aligned playback scenes. Return structured JSON only.
 
 - Create exactly one playback scene for every ledger ply. Never group multiple plies into one scene.
@@ -10,6 +10,11 @@ export const SCENE_BREAKDOWN_INSTRUCTIONS = `Split the validated cohesive story 
 - Preserve the validated story's central setting, atmosphere, named characters, relationships, motives, wounds, fears, rivalries, recurring imagery, and emotional arcs. Do not replace named characters with generic labels when the story established a name.
 - Anchor the opening in a concrete physical setting. Thereafter, maintain geography and only restate setting details when characters enter a new place or a changed detail matters.
 - Connect adjacent beats through cause and effect. A character should remember, react to, or build upon prior events; important choices and deaths must affect later behavior.
+- Include meaningful dialogue throughout the saga. Give recurring characters distinct voices shaped by their rank, history, fears, loyalties, and relationships. Dialogue must reveal character, create conflict, make a decision, or pay off an earlier exchange—not merely announce the action.
+- Do not force dialogue into every ply. Carry conversations naturally across adjacent beats, let other characters answer later, and use silence or interrupted speech when dramatically stronger.
+- Render important confrontations as specific, readable showdowns rather than summaries. Establish who wants what, the immediate danger, the surrounding terrain, physical positioning, attacks and defenses, reversals, emotional reactions, and the lasting consequence.
+- At captures, checks, sacrifices, promotions, and the final sequence, slow the pacing enough for sensory detail and character reaction. Describe concrete sights, sounds, weather, light, architecture, clothing, weapons, magic, bodily effort, and damage that fit the established setting.
+- Make scenery active in the story. Terrain, fortifications, roads, ruins, forests, rivers, smoke, weather, and distance should constrain choices and change as the conflict progresses; avoid decorative lists of adjectives.
 - Use quiet moves for character work, dialogue, observation, travel, tactical preparation, dread, or relationship development. They must advance the dramatic thread without inventing combat, injury, or death.
 - Major events may receive a stronger payoff, but do not make every beat sound climactic. Build tension across several plies and allow aftermath after turning points.
 - fantasyNarration may faithfully expand and localize the validated story for its exact ply. It must add connective dramatic detail without contradicting the source or ledger.

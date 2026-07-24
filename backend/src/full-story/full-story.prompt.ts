@@ -1,4 +1,4 @@
-export const FULL_STORY_PROMPT_VERSION = 'phase-4-v1';
+export const FULL_STORY_PROMPT_VERSION = 'phase-4-v2';
 
 export const FULL_STORY_INSTRUCTIONS = `Write one cohesive dark-fantasy war story from the supplied complete ledger, validated narrative analysis, validated outline, and character registry.
 
@@ -20,6 +20,9 @@ Factual rules:
 Story rules:
 - Follow the supplied title, theme, acts, scene ranges, setups, payoffs, ending sequence, and prose constraints.
 - Write continuous scenes with transitions, callbacks, recurring motifs, cause and effect, and emotional consequences.
+- Give major recurring characters distinct voices and include purposeful dialogue that reveals relationships, fears, loyalties, disagreements, and decisions. Let conversations continue and pay off across later scenes.
+- Establish a concrete physical setting early, maintain consistent geography, and make terrain, weather, architecture, distance, and damage influence what characters can do.
+- Dramatize major confrontations moment by moment with goals, danger, physical positioning, attack and defense, reversals, sensory detail, and emotional aftermath. Do not summarize decisive showdowns in a single sentence.
 - Group quiet events naturally rather than narrating each separately.
 - Include Markdown act and scene headings, but do not include move ranges.
 - Make story length proportional to the game: roughly 900–1600 words for games under 20 plies, 1600–3000 for games under 60 plies, and 2500–4500 for longer games.

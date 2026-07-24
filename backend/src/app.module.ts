@@ -9,6 +9,7 @@ import { GamesModule } from './games/games.module';
 import { NarrativeAnalysisModule } from './narrative-analysis/narrative-analysis.module';
 import { StoryOutlineModule } from './story-outline/story-outline.module';
 import { FullStoryModule } from './full-story/full-story.module';
+import { StoryValidationModule } from './story-validation/story-validation.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { FullStoryModule } from './full-story/full-story.module';
     NarrativeAnalysisModule,
     StoryOutlineModule,
     FullStoryModule,
+    StoryValidationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -29,6 +29,7 @@ describe('PgnService deterministic ledger', () => {
     ).toMatchObject({
       permanentName: 'Jake',
       viewpointName: 'Jake',
+      viewpointRole: 'spearman',
       companyName: 'Northern Ember Company',
     });
     expect(game.ledger.finalFen).toBe(capture.boardFenAfterMove);
@@ -81,6 +82,7 @@ describe('PgnService deterministic ledger', () => {
       currentChessType: 'q',
       permanentName: 'Rowan',
       viewpointName: 'Rowan',
+      viewpointRole: 'scout',
       companyName: 'Northern Dawn Company',
       promotedFromPawnId: 'w-p-a7',
       alive: true,

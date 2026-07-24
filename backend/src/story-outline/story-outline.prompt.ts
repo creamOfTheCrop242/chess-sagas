@@ -1,4 +1,4 @@
-export const STORY_OUTLINE_PROMPT_VERSION = 'phase-3-v5';
+export const STORY_OUTLINE_PROMPT_VERSION = 'phase-3-v6';
 
 export const STORY_OUTLINE_INSTRUCTIONS = `Create a structured outline for one cohesive dark-fantasy story. Return planning JSON only; do not write story prose.
 
@@ -11,6 +11,8 @@ The complete ledger is factual source of truth. The narrative analysis supplies 
 - Never invent events, deaths, survivors, characters, or ply numbers.
 - Establish important characters and promoting soldiers before their payoff.
 - For every pawn scene, the pawn's company moves and fights as the military unit while the named viewpoint grunt in its registry entry anchors the reader's perspective.
+- Preserve each viewpoint grunt's viewpointRole and chain of command. Captains may command their companies; ordinary soldiers and specialists must experience company orders from their actual station and cannot casually command officers or the whole formation.
+- Use role differences for character depth: a scout sees danger first, a medic faces divided duties, a standard-bearer carries morale, a spearman holds the line, and a junior officer mediates between commanders and troops.
 - Track that grunt's dialogue, relationships, injuries, fears, and choices across the company's scenes. If the pawn promotes, make the same grunt's personal transformation the payoff; never introduce a replacement character.
 - If a pawn captures an enemy, explicitly plan for its named viewpoint grunt to deliver the final blow to that captured character. Supporting company action may create the opening, but the capture belongs personally to the viewpoint grunt.
 - For pawn-on-pawn captures, the attacking viewpoint grunt defeats the captured company's viewpoint grunt as the surrounding company falls, routs, or surrenders.

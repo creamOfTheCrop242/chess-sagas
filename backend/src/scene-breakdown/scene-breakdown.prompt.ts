@@ -1,4 +1,4 @@
-export const SCENE_BREAKDOWN_PROMPT_VERSION = 'phase-6-v8';
+export const SCENE_BREAKDOWN_PROMPT_VERSION = 'phase-6-v9';
 export const SCENE_BREAKDOWN_INSTRUCTIONS = `Split the validated cohesive story into move-aligned playback scenes. Return structured JSON only.
 
 - Create exactly one playback scene for every ledger ply. Never group multiple plies into one scene.
@@ -9,6 +9,7 @@ export const SCENE_BREAKDOWN_INSTRUCTIONS = `Split the validated cohesive story 
 - Give each fantasyNarration enough substance to carry character, place, and consequence: usually 2–4 sentences and roughly 30–80 words. Vary sentence length and pacing naturally.
 - Preserve the validated story's central setting, atmosphere, named characters, relationships, motives, wounds, fears, rivalries, recurring imagery, and emotional arcs. Do not replace named characters with generic labels when the story established a name.
 - A pawn is a full soldier company, but every company has one named viewpoint grunt in the character registry. Describe the company's action through that same grunt's perspective, dialogue, relationships, and senses.
+- Preserve the grunt's viewpointRole. Do not make every followed grunt a captain or let a non-captain issue company-level orders. Show scouts, medics, spearmen, standard-bearers, junior officers, and captains acting from their actual responsibilities and access to information.
 - On every pawn capture, the attacking company's named viewpoint grunt personally delivers the final blow to the captured character. For pawn-on-pawn captures, the two named grunts confront one another and the attacker defeats the captured company's viewpoint grunt.
 - On promotion, that exact grunt becomes the promoted champion and retains identity and history. Never transform the whole company or introduce a new promoted character.
 - Anchor the opening in a concrete physical setting. Thereafter, maintain geography and only restate setting details when characters enter a new place or a changed detail matters.

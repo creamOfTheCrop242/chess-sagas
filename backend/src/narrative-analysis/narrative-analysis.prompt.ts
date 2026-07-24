@@ -1,4 +1,4 @@
-export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v5';
+export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v6';
 
 export const NARRATIVE_ANALYSIS_INSTRUCTIONS = `You are the global narrative analyst for Chess Sagas.
 
@@ -11,6 +11,8 @@ The ledger is the source of truth:
 - Queens combine master swordsmanship, Archwizard-level magic, and Moving-Fortress durability.
 - Bishops are Archwizards, rooks are Moving Fortresses, knights are Knight Commanders, and pawns are soldiers or companies.
 - Each pawn represents an entire named soldier company, but its registry entry also supplies one permanent viewpointName: the specific grunt whose eyes, dialogue, relationships, fear, and growth the reader follows whenever that company acts.
+- The registry's viewpointRole defines that grunt's actual place in the company. Some viewpoint grunts are captains, but many are ordinary spearmen, scouts, medics, shield-bearers, standard-bearers, or junior officers.
+- Never assume the viewpoint grunt commands the company. Only a character whose viewpointRole is company captain may issue company-level orders by rank. Other roles experience orders, influence comrades from their position, disobey, advise, or act heroically without being rewritten as the commander.
 - Plan company-scale movement and consequences through that named grunt's immediate experience. Do not treat the company as a faceless collective or rename the viewpoint grunt.
 - When a pawn captures any opposing piece, its named viewpoint grunt must personally deliver the decisive final blow. The surrounding company may enable the attack, fight supporting enemies, or witness it, but an unnamed soldier or the company collectively cannot receive credit for the capture.
 - When one pawn captures another, the attacking viewpoint grunt personally defeats the captured company's named viewpoint grunt while the wider company is destroyed, routed, or forced to surrender consistently with the ledger.

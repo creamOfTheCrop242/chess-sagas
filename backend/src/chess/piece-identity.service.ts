@@ -25,6 +25,29 @@ const PAWN_VIEWPOINT_NAMES = {
   south: ['Dain', 'Veyra', 'Cassian', 'Nessa', 'Rei', 'Maela', 'Orin', 'Zara'],
 } as const;
 
+const PAWN_VIEWPOINT_ROLES = {
+  north: [
+    'scout',
+    'shield-bearer',
+    'sergeant',
+    'company captain',
+    'spearman',
+    'field medic',
+    'standard-bearer',
+    'company captain',
+  ],
+  south: [
+    'spearman',
+    'company captain',
+    'scout',
+    'sergeant',
+    'shield-bearer',
+    'company captain',
+    'field medic',
+    'standard-bearer',
+  ],
+} as const;
+
 @Injectable()
 export class PieceIdentityService {
   create(chess: Chess): {
@@ -80,6 +103,7 @@ export class PieceIdentityService {
         pawnProfile?.viewpointName ?? this.name(side, type, square),
       companyName: pawnProfile?.companyName,
       viewpointName: pawnProfile?.viewpointName,
+      viewpointRole: pawnProfile?.viewpointRole,
       alive: true,
     };
   }
@@ -102,7 +126,7 @@ export class PieceIdentityService {
 function pawnNarrativeProfile(
   side: Side,
   square: string,
-): { companyName: string; viewpointName: string } {
+): { companyName: string; viewpointName: string; viewpointRole: string } {
   const fileIndex = Math.max(
     0,
     Math.min(7, square.charCodeAt(0) - 'a'.charCodeAt(0)),
@@ -111,6 +135,7 @@ function pawnNarrativeProfile(
   return {
     companyName: `${kingdom} ${PAWN_COMPANIES[fileIndex]}`,
     viewpointName: PAWN_VIEWPOINT_NAMES[side][fileIndex],
+    viewpointRole: PAWN_VIEWPOINT_ROLES[side][fileIndex],
   };
 }
 
@@ -125,6 +150,7 @@ export function normalizePawnViewpoints(ledger: GameLedger): GameLedger {
         permanentName: profile.viewpointName,
         companyName: profile.companyName,
         viewpointName: profile.viewpointName,
+        viewpointRole: profile.viewpointRole,
       };
     }),
   };

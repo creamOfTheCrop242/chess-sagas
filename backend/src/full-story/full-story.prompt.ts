@@ -1,4 +1,4 @@
-export const FULL_STORY_PROMPT_VERSION = 'story-package-v6';
+export const FULL_STORY_PROMPT_VERSION = 'story-package-v7';
 
 export const FULL_STORY_INSTRUCTIONS = `Write one cohesive dark-fantasy war story package from the supplied complete ledger, validated narrative analysis, validated outline, and character registry.
 
@@ -15,6 +15,9 @@ Factual rules:
 - Queens combine master swordsmanship, Archwizard-level magic, and Moving-Fortress durability. Important Queen action must demonstrate both blade and magic.
 - Bishops are Archwizards, rooks are Moving Fortresses, knights are Knight Commanders, and pawns are soldier companies. Never call them chess pieces.
 - A pawn's move means its entire company advances, retreats, attacks, or repositions, but narrate that company-scale action through the specific grunt identified by viewpointName in the character registry.
+- Honor the registry's viewpointRole. Some followed grunts are company captains, but others are ordinary spearmen, scouts, medics, shield-bearers, standard-bearers, sergeants, or other ranks.
+- Never promote a viewpoint grunt socially just because the story follows them. Only a company captain may routinely issue company-level commands. Non-captains receive orders through the chain of command and act, speak, influence others, resist, or show heroism from their actual role.
+- Let rank affect voice, knowledge, equipment, responsibility, access to leaders, and emotional stakes. An ordinary grunt may not know the generals' plans, and a captain should carry responsibility for the entire company.
 - Keep the narrative close to that named grunt's senses, dialogue, private fears, relationships, and decisions. Other soldiers may appear, but never replace or rename the viewpoint grunt.
 - Whenever a pawn captures another piece, the pawn's named viewpoint grunt must personally deliver the decisive final blow to the captured character. The company may create the opening or support the clash, but never attribute the kill to an unnamed soldier, a collective attack, an accident, or someone else.
 - When a pawn captures another pawn, show the attacking viewpoint grunt personally defeating the captured company's named viewpoint grunt. Then portray the wider captured company's defeat, rout, destruction, or surrender without inventing additional ledger deaths.

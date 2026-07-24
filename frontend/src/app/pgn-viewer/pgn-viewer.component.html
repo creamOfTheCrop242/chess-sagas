@@ -73,27 +73,27 @@
         </button>
       </div>
 
-      @if (!scenes.length) {
-        <div class="actions">
-          <button
-            type="button"
-            class="primary"
-            (click)="generateSaga()"
-            [disabled]="sagaGenerating || !gameId"
-          >
-            {{
-              sagaGenerating
-                ? "Forging the complete saga…"
+      <div class="actions">
+        <button
+          type="button"
+          class="primary"
+          (click)="generateSaga()"
+          [disabled]="sagaGenerating || !gameId"
+        >
+          {{
+            sagaGenerating
+              ? "Forging the complete saga…"
+              : scenes.length
+                ? "Refresh story beats"
                 : "Forge cohesive saga"
-            }}
-          </button>
-        </div>
-        @if (sagaGenerating) {
-          <p class="story-status">
-            The chronicler is analyzing, outlining, writing, validating, and
-            aligning the saga…
-          </p>
-        }
+          }}
+        </button>
+      </div>
+      @if (sagaGenerating) {
+        <p class="story-status">
+          The chronicler is analyzing, outlining, writing, validating, and
+          aligning the saga…
+        </p>
       }
 
       @if (pipelineVisible) {

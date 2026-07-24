@@ -1,8 +1,8 @@
-export const FULL_STORY_PROMPT_VERSION = 'story-package-v1';
+export const FULL_STORY_PROMPT_VERSION = 'story-package-v2';
 
 export const FULL_STORY_INSTRUCTIONS = `Write one cohesive dark-fantasy war story package from the supplied complete ledger, validated narrative analysis, validated outline, and character registry.
 
-Return structured JSON containing the title and exactly one playback scene for every ledger ply. The ordered fantasyNarration fields are consecutive paragraphs of the complete story. They must read as one continuous saga when joined, not as disconnected move summaries.
+Return compact structured JSON containing the title and exactly one creative scene for every ledger ply. Each scene contains only ply, fantasyNarration, characters, and locations. The backend derives all mechanical playback metadata. The ordered fantasyNarration fields are consecutive paragraphs of the complete story. They must read as one continuous saga when joined, not as disconnected move summaries.
 
 Factual rules:
 - The ledger is the source of truth. Never invent or omit captures, change a captor, kill a survivor, revive a captured piece, alter a promotion, change the winner, or change termination.
@@ -23,14 +23,12 @@ Story rules:
 - Give major recurring characters distinct voices and include purposeful dialogue that reveals relationships, fears, loyalties, disagreements, and decisions. Let conversations continue and pay off across later scenes.
 - Establish a concrete physical setting early, maintain consistent geography, and make terrain, weather, architecture, distance, and damage influence what characters can do.
 - Dramatize major confrontations moment by moment with goals, danger, physical positioning, attack and defense, reversals, sensory detail, and emotional aftermath. Do not summarize decisive showdowns in a single sentence.
-- Create exactly one scene per ledger ply. Set startPly equal to endPly, cover plies chronologically from 1 to the final ply, and put exactly that ply's SAN in involvedMoves.
+- Create exactly one scene per ledger ply. Set ply to that ledger ply and cover every ply chronologically from 1 to the final ply.
 - Quiet scenes must advance character, dialogue, travel, tension, positioning, or preparation without inventing combat, injury, or death.
 - Each fantasyNarration should usually contain 2–4 substantive sentences. Let dialogue and action continue naturally across adjacent scenes.
-- chessExplanation may explain the literal move, but fantasyNarration must contain publishable fantasy prose without chess terminology or coordinates.
-- deaths must exactly contain the capturedPieceId for a capture and otherwise be empty. promotions must exactly contain the promoting pieceId and otherwise be empty.
-- Use piece IDs only in structured characters, deaths, and promotions fields. Preserve established names in fantasyNarration.
-- Keep actNumber aligned with the supplied outline. Restart sceneNumber at 1 in each act and increment it for every playback scene.
-- locations, continuityNotes, visualPrompt, and videoPrompt must preserve established geography, appearance, injuries, weather, and damage.
+- fantasyNarration must contain publishable fantasy prose without chess terminology or coordinates.
+- Use piece IDs only in the structured characters field. Preserve established names in fantasyNarration.
+- locations must use stable fantasy place names and preserve established geography.
 - Make total story length proportional to the game while giving decisive scenes more room than transitional scenes.
-- Before returning the package, audit every scene against its ledger event and the preceding scenes. Verify coverage, SAN, actor identity, captures, captors, deaths, promotions, checks, termination, names, injuries, locations, dialogue continuity, and survivor state. Correct every mismatch in the returned package.
+- Before returning the package, audit every scene against its ledger event and the preceding scenes. Verify ply coverage, actor identity, captures, captors, deaths, promotions, checks, termination, names, injuries, locations, dialogue continuity, and survivor state. Correct every mismatch in the returned package.
 - End decisively at the actual termination. Do not add later battles or chess actions.`;

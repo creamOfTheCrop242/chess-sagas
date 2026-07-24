@@ -87,13 +87,51 @@ export class FullStoryService {
           characterRegistry: ledger.pieces,
         }),
       );
-      const scenes = storyPackage.scenes.map((scene) => ({
-        ...scene,
-        fantasyNarration: this.cleanReaderFacingProse(
-          scene.fantasyNarration,
-          ledger.pieces.map((piece) => piece.id),
-        ),
-      }));
+      const pieceIds = new Set(ledger.pieces.map((piece) => piece.id));
+      const sceneNumbers = new Map<number, number>();
+      const scenes = storyPackage.scenes.map((creativeScene) => {
+        const event = ledger.events[creativeScene.ply - 1];
+        if (!event || event.ply !== creativeScene.ply) {
+          throw new Error(
+            `Story package has no ledger event for ply ${creativeScene.ply}`,
+          );
+        }
+        const act =
+          outline.acts.find(
+            (candidate) =>
+              event.ply >= candidate.startPly && event.ply <= candidate.endPly,
+          ) || outline.acts[outline.acts.length - 1];
+        const sceneNumber = (sceneNumbers.get(act.actNumber) || 0) + 1;
+        sceneNumbers.set(act.actNumber, sceneNumber);
+        const characters = [
+          event.pieceId,
+          ...(event.capturedPieceId ? [event.capturedPieceId] : []),
+          ...creativeScene.characters.filter((id) => pieceIds.has(id)),
+        ].filter((id, index, all) => all.indexOf(id) === index);
+        const fantasyNarration = this.cleanReaderFacingProse(
+          creativeScene.fantasyNarration,
+          [...pieceIds],
+        );
+        const wordCount = fantasyNarration.trim().split(/\s+/).length;
+        return {
+          id: `act-${act.actNumber}-scene-${sceneNumber}`,
+          actNumber: act.actNumber,
+          sceneNumber,
+          startPly: event.ply,
+          endPly: event.ply,
+          involvedMoves: [event.san],
+          chessExplanation: `${event.san}: ${event.pieceType} moves from ${event.from} to ${event.to}.`,
+          fantasyNarration,
+          characters,
+          locations: creativeScene.locations,
+          deaths: event.capturedPieceId ? [event.capturedPieceId] : [],
+          promotions: event.isPromotion ? [event.pieceId] : [],
+          visualPrompt: fantasyNarration,
+          videoPrompt: fantasyNarration,
+          estimatedDurationSeconds: Math.max(8, Math.ceil(wordCount / 2.5)),
+          continuityNotes: [],
+        };
+      });
       const breakdown: SceneBreakdown = { scenes };
       this.sceneValidator.validate(breakdown, ledger);
       const story: GeneratedStoryDraft = {

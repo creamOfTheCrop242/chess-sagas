@@ -10,6 +10,9 @@ export class SceneBreakdownValidator {
     let nextPly = 1;
     let currentAct = 0;
     let expectedSceneNumber = 0;
+    if (breakdown.scenes.length !== ledger.events.length) {
+      errors.push('Scene breakdown must contain exactly one scene per ply');
+    }
     breakdown.scenes.forEach((scene) => {
       const events = ledger.events.slice(scene.startPly - 1, scene.endPly);
       if (scene.actNumber !== currentAct) {
@@ -28,6 +31,9 @@ export class SceneBreakdownValidator {
       }
       if (scene.startPly !== nextPly || scene.endPly < scene.startPly) {
         errors.push('Scene ply ranges must be chronological and contiguous');
+      }
+      if (scene.startPly !== scene.endPly) {
+        errors.push('Each playback scene must cover exactly one ply');
       }
       nextPly = scene.endPly + 1;
       if (

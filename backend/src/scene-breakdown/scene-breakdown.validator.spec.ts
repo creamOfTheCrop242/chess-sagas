@@ -61,4 +61,40 @@ describe('SceneBreakdownValidator', () => {
       new SceneBreakdownValidator().validate(breakdown, ledger),
     ).not.toThrow();
   });
+
+  it('rejects a scene that groups multiple plies', () => {
+    const ledger = {
+      pieces: [{ id: 'w-p-e2' }, { id: 'b-p-e7' }],
+      events: [
+        { ply: 1, san: 'e4', isCapture: false, isPromotion: false },
+        { ply: 2, san: 'e5', isCapture: false, isPromotion: false },
+      ],
+    } as GameLedger;
+    const breakdown = {
+      scenes: [
+        {
+          id: 'grouped',
+          actNumber: 1,
+          sceneNumber: 1,
+          startPly: 1,
+          endPly: 2,
+          involvedMoves: ['e4', 'e5'],
+          chessExplanation: 'Two quiet moves.',
+          fantasyNarration: 'Two companies advance.',
+          characters: ['w-p-e2', 'b-p-e7'],
+          locations: ['central road'],
+          deaths: [],
+          promotions: [],
+          visualPrompt: 'Two armies.',
+          videoPrompt: 'Two advances.',
+          estimatedDurationSeconds: 10,
+          continuityNotes: ['No combat.'],
+        },
+      ],
+    } satisfies SceneBreakdown;
+
+    expect(() =>
+      new SceneBreakdownValidator().validate(breakdown, ledger),
+    ).toThrow('exactly one scene per ply');
+  });
 });

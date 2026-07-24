@@ -68,6 +68,13 @@ curl -X POST http://localhost:3000/games/GAME_ID/validation
 curl http://localhost:3000/games/GAME_ID/validation
 ```
 
+Phase 6 splits the latest valid story into move-aligned playback scenes:
+
+```bash
+curl -X POST http://localhost:3000/games/GAME_ID/scenes
+curl http://localhost:3000/games/GAME_ID/scenes
+```
+
 ## Project setup
 
 ```bash

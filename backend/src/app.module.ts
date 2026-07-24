@@ -10,6 +10,7 @@ import { NarrativeAnalysisModule } from './narrative-analysis/narrative-analysis
 import { StoryOutlineModule } from './story-outline/story-outline.module';
 import { FullStoryModule } from './full-story/full-story.module';
 import { StoryValidationModule } from './story-validation/story-validation.module';
+import { SceneBreakdownModule } from './scene-breakdown/scene-breakdown.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { StoryValidationModule } from './story-validation/story-validation.modul
     StoryOutlineModule,
     FullStoryModule,
     StoryValidationModule,
+    SceneBreakdownModule,
   ],
   controllers: [AppController],
   providers: [AppService],

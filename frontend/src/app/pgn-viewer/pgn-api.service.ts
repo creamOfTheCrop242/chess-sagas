@@ -1,6 +1,14 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { concatMap, Observable } from 'rxjs';
+import {
+  catchError,
+  concatMap,
+  Observable,
+  of,
+  switchMap,
+  throwError,
+} from 'rxjs';
 import {
   NarrateRequest,
   NarrateResponse,
@@ -30,12 +38,12 @@ export class PgnApiService {
 
   generateSaga(gameId: string): Observable<SceneBreakdownResponse> {
     const base = `http://localhost:3000/games/${gameId}`;
-    return this.http.post(`${base}/analysis`, {}).pipe(
-      concatMap(() => this.http.post(`${base}/outline`, {})),
-      concatMap(() => this.http.post(`${base}/story`, {})),
-      concatMap(() => this.http.post(`${base}/validation`, {})),
+    return this.ensureStage(`${base}/analysis`).pipe(
+      concatMap(() => this.ensureStage(`${base}/outline`)),
+      concatMap(() => this.ensureStage(`${base}/story`)),
+      concatMap(() => this.ensureValidStory(base)),
       concatMap(() =>
-        this.http.post<SceneBreakdownResponse>(`${base}/scenes`, {}),
+        this.ensureStage<SceneBreakdownResponse>(`${base}/scenes`),
       ),
     );
   }
@@ -43,6 +51,30 @@ export class PgnApiService {
   getScenes(gameId: string): Observable<SceneBreakdownResponse> {
     return this.http.get<SceneBreakdownResponse>(
       `http://localhost:3000/games/${gameId}/scenes`,
+    );
+  }
+
+  private ensureStage<T = unknown>(url: string): Observable<T> {
+    return this.http.get<T>(url).pipe(
+      catchError((error: unknown) => {
+        if (error instanceof HttpErrorResponse && error.status === 404) {
+          return this.http.post<T>(url, {});
+        }
+        return throwError(() => error);
+      }),
+    );
+  }
+
+  private ensureValidStory(base: string): Observable<unknown> {
+    const url = `${base}/validation`;
+    return this.ensureStage<{
+      storyValidation?: { valid: boolean };
+    }>(url).pipe(
+      switchMap((response) =>
+        response.storyValidation?.valid
+          ? of(response)
+          : this.http.post(url, {}),
+      ),
     );
   }
 }

@@ -24,6 +24,13 @@ describe('PgnService deterministic ledger', () => {
     });
     expect(game.ledger.capturedPieces).toEqual(['b-p-d7']);
     expect(game.ledger.survivors).toContain('w-p-e2');
+    expect(
+      game.ledger.pieces.find((piece) => piece.id === 'w-p-e2'),
+    ).toMatchObject({
+      permanentName: 'Jake',
+      viewpointName: 'Jake',
+      companyName: 'Northern Ember Company',
+    });
     expect(game.ledger.finalFen).toBe(capture.boardFenAfterMove);
     expect(game.ledger.metadata).toMatchObject({
       whitePlayer: 'Ada',
@@ -72,6 +79,9 @@ describe('PgnService deterministic ledger', () => {
     expect(pawn).toMatchObject({
       chessType: 'p',
       currentChessType: 'q',
+      permanentName: 'Rowan',
+      viewpointName: 'Rowan',
+      companyName: 'Northern Dawn Company',
       promotedFromPawnId: 'w-p-a7',
       alive: true,
     });

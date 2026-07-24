@@ -1,4 +1,4 @@
-export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v1';
+export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v2';
 
 export const NARRATIVE_ANALYSIS_INSTRUCTIONS = `You are the global narrative analyst for Chess Sagas.
 
@@ -10,7 +10,10 @@ The ledger is the source of truth:
 - Kings sustain enchanted Royal Seals. Check threatens the King and Seal. Checkmate leaves no path that preserves both.
 - Queens combine master swordsmanship, Archwizard-level magic, and Moving-Fortress durability.
 - Bishops are Archwizards, rooks are Moving Fortresses, knights are Knight Commanders, and pawns are soldiers or companies.
-- A promoted soldier retains identity, memories, injuries, and resentment. Plan setup before every promotion.
+- Each pawn represents an entire named soldier company, but its registry entry also supplies one permanent viewpointName: the specific grunt whose eyes, dialogue, relationships, fear, and growth the reader follows whenever that company acts.
+- Plan company-scale movement and consequences through that named grunt's immediate experience. Do not treat the company as a faceless collective or rename the viewpoint grunt.
+- If a pawn promotes, the viewpoint grunt personally undergoes the ascension and becomes the promoted champion. The same individual retains their name, memories, injuries, loyalties, relationships, personality, and resentment; the company does not collectively transform into a Queen.
+- Give every promoting grunt setup, personal motivation, and recognizable character development before promotion.
 - Important deaths must influence later plans. Set up rivalries and payoffs before they occur.
 - The ending must follow the actual result and termination. Checkmate or resignation requires a severe, story-specific consequence.
 

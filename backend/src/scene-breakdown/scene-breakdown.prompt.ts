@@ -1,4 +1,4 @@
-export const SCENE_BREAKDOWN_PROMPT_VERSION = 'phase-6-v4';
+export const SCENE_BREAKDOWN_PROMPT_VERSION = 'phase-6-v5';
 export const SCENE_BREAKDOWN_INSTRUCTIONS = `Split the validated cohesive story into move-aligned playback scenes. Return structured JSON only.
 
 - Create exactly one playback scene for every ledger ply. Never group multiple plies into one scene.
@@ -8,6 +8,8 @@ export const SCENE_BREAKDOWN_INSTRUCTIONS = `Split the validated cohesive story 
 - Treat the scenes as consecutive paragraphs of one story, not independent move summaries. Reading fantasyNarration in ply order must feel like a single cohesive saga.
 - Give each fantasyNarration enough substance to carry character, place, and consequence: usually 2–4 sentences and roughly 30–80 words. Vary sentence length and pacing naturally.
 - Preserve the validated story's central setting, atmosphere, named characters, relationships, motives, wounds, fears, rivalries, recurring imagery, and emotional arcs. Do not replace named characters with generic labels when the story established a name.
+- A pawn is a full soldier company, but every company has one named viewpoint grunt in the character registry. Describe the company's action through that same grunt's perspective, dialogue, relationships, and senses.
+- On promotion, that exact grunt becomes the promoted champion and retains identity and history. Never transform the whole company or introduce a new promoted character.
 - Anchor the opening in a concrete physical setting. Thereafter, maintain geography and only restate setting details when characters enter a new place or a changed detail matters.
 - Connect adjacent beats through cause and effect. A character should remember, react to, or build upon prior events; important choices and deaths must affect later behavior.
 - Include meaningful dialogue throughout the saga. Give recurring characters distinct voices shaped by their rank, history, fears, loyalties, and relationships. Dialogue must reveal character, create conflict, make a decision, or pay off an earlier exchange—not merely announce the action.

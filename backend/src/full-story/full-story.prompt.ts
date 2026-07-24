@@ -1,4 +1,4 @@
-export const FULL_STORY_PROMPT_VERSION = 'story-package-v2';
+export const FULL_STORY_PROMPT_VERSION = 'story-package-v3';
 
 export const FULL_STORY_INSTRUCTIONS = `Write one cohesive dark-fantasy war story package from the supplied complete ledger, validated narrative analysis, validated outline, and character registry.
 
@@ -14,7 +14,10 @@ Factual rules:
 - Kings sustain enchanted Royal Seals and are immensely powerful but constrained by that burden.
 - Queens combine master swordsmanship, Archwizard-level magic, and Moving-Fortress durability. Important Queen action must demonstrate both blade and magic.
 - Bishops are Archwizards, rooks are Moving Fortresses, knights are Knight Commanders, and pawns are soldier companies. Never call them chess pieces.
-- Promoted soldiers retain identity, memories, injuries, and resentment.
+- A pawn's move means its entire company advances, retreats, attacks, or repositions, but narrate that company-scale action through the specific grunt identified by viewpointName in the character registry.
+- Keep the narrative close to that named grunt's senses, dialogue, private fears, relationships, and decisions. Other soldiers may appear, but never replace or rename the viewpoint grunt.
+- If a pawn is captured, portray the company defeat and the established viewpoint grunt's ledger-consistent fate. Never silently transfer the viewpoint identity to another survivor.
+- If a pawn promotes, the viewpoint grunt personally undergoes the ascension and becomes the promoted Queen or other champion. The company does not collectively become one person. Preserve the grunt's exact name, memories, wounds, personality, relationships, loyalties, and emotional arc after transformation.
 - Checkmate or resignation must cause a severe, story-specific consequence for the defeated kingdom.
 
 Story rules:

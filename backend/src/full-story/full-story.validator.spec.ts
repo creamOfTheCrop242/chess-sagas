@@ -6,6 +6,7 @@ import type { GeneratedStoryDraft } from './models/generated-story';
 import {
   assembleStoryMarkdown,
   expectedDefeatedKingFate,
+  expectedDefeatedSealFate,
 } from './full-story.service';
 import { FullStoryValidator } from './full-story.validator';
 
@@ -134,5 +135,13 @@ The Southern King poured his strength into the Royal Seal, but every remaining r
     expect(expectedDefeatedKingFate('draw')).toBe('survives');
     expect(expectedDefeatedKingFate('timeout')).toBe('survives');
     expect(expectedDefeatedKingFate('unknown')).toBe('survives');
+  });
+
+  it('destroys the defeated Seal only for checkmate or resignation', () => {
+    expect(expectedDefeatedSealFate('checkmate')).toBe('destroyed');
+    expect(expectedDefeatedSealFate('resignation')).toBe('destroyed');
+    expect(expectedDefeatedSealFate('draw')).toBe('intact');
+    expect(expectedDefeatedSealFate('timeout')).toBe('intact');
+    expect(expectedDefeatedSealFate('unknown')).toBe('intact');
   });
 });

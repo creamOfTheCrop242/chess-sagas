@@ -99,6 +99,14 @@ export class FullStoryService {
           `Story package has incorrect defeated King fate for ${ledger.metadata.termination}`,
         );
       }
+      const expectedSealFate = expectedDefeatedSealFate(
+        ledger.metadata.termination,
+      );
+      if (storyPackage.defeatedSealFate !== expectedSealFate) {
+        throw new Error(
+          `Story package has incorrect defeated Royal Seal fate for ${ledger.metadata.termination}`,
+        );
+      }
       const pieceIds = new Set(ledger.pieces.map((piece) => piece.id));
       const sceneNumbers = new Map<number, number>();
       const scenes = storyPackage.scenes.map((creativeScene) => {
@@ -308,4 +316,12 @@ export function expectedDefeatedKingFate(
   if (termination === 'checkmate') return 'killed-after-checkmate';
   if (termination === 'resignation') return 'suicide-after-surrender';
   return 'survives';
+}
+
+export function expectedDefeatedSealFate(
+  termination: GameLedger['metadata']['termination'],
+): GeneratedStoryPackage['defeatedSealFate'] {
+  return termination === 'checkmate' || termination === 'resignation'
+    ? 'destroyed'
+    : 'intact';
 }

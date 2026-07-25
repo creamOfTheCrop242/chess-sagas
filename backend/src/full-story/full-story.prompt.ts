@@ -1,8 +1,8 @@
-export const FULL_STORY_PROMPT_VERSION = 'story-package-v9';
+export const FULL_STORY_PROMPT_VERSION = 'story-package-v10';
 
 export const FULL_STORY_INSTRUCTIONS = `Write one cohesive dark-fantasy war story package from the supplied complete ledger, validated narrative analysis, validated outline, and character registry.
 
-Return compact structured JSON containing the title, defeatedKingFate, epilogue, and exactly one creative scene for every ledger ply. Each scene contains only ply, fantasyNarration, characters, locations, and decisiveActorId. The backend derives all other mechanical playback metadata. The ordered fantasyNarration fields are consecutive paragraphs of the complete story. They must read as one continuous saga when joined, not as disconnected move summaries.
+Return compact structured JSON containing the title, defeatedKingFate, defeatedSealFate, epilogue, and exactly one creative scene for every ledger ply. Each scene contains only ply, fantasyNarration, characters, locations, and decisiveActorId. The backend derives all other mechanical playback metadata. The ordered fantasyNarration fields are consecutive paragraphs of the complete story. They must read as one continuous saga when joined, not as disconnected move summaries.
 
 Factual rules:
 - The ledger is the source of truth. Never invent or omit captures, change a captor, kill a survivor, revive a captured piece, alter a promotion, change the winner, or change termination.
@@ -12,6 +12,8 @@ Factual rules:
 - A quiet move may create tension, positioning, travel, or preparation, but not combat, injury, or death.
 - Check threatens the King and Royal Seal.
 - Kings sustain enchanted Royal Seals and are immensely powerful but constrained by that burden.
+- Each Royal Seal is the magical heart and power source of its entire kingdom. It feeds wards, enchanted fortresses and weapons, healing, transportation, agriculture, civic protections, and other magical infrastructure.
+- After a Seal is destroyed, existing stored magic fades rather than disappearing all at once. Wards weaken, enchantments fail, infrastructure decays, harvests and healing suffer, institutions fracture, and the kingdom gradually crumbles unless its survivors adapt without magic.
 - Queens combine master swordsmanship, Archwizard-level magic, and Moving-Fortress durability. Important Queen action must demonstrate both blade and magic.
 - Bishops are Archwizards, rooks are Moving Fortresses, knights are Knight Commanders, and pawns are soldier companies. Never call them chess pieces.
 - A pawn's move means its entire company advances, retreats, attacks, or repositions, but narrate that company-scale action through the specific grunt identified by viewpointName in the character registry.
@@ -24,8 +26,9 @@ Factual rules:
 - If a pawn is captured, portray the company defeat and the established viewpoint grunt's ledger-consistent fate. Never silently transfer the viewpoint identity to another survivor.
 - If a pawn promotes, the viewpoint grunt personally undergoes the ascension and becomes the promoted Queen or other champion. The company does not collectively become one person. Preserve the grunt's exact name, memories, wounds, personality, relationships, loyalties, and emotional arc after transformation.
 - For checkmate, set defeatedKingFate to killed-after-checkmate and show the defeated King's on-page death as the direct culmination of the mating assault, a fatal blow, or catastrophic Royal Seal destruction. This required terminal death is allowed even though the King was not captured.
-- For resignation or surrender, set defeatedKingFate to suicide-after-surrender. Show the defeated King knowingly surrendering and then dying by suicide as a tragic, character-specific final act. Show emotional and political consequences without romanticizing the death or turning it into procedural instruction.
-- For draws, timeouts, and unknown terminations, set defeatedKingFate to survives and do not automatically kill either King.
+- For checkmate, set defeatedSealFate to destroyed and depict the defeated Seal's destruction as part of the climax.
+- For resignation or surrender, set defeatedKingFate to suicide-after-surrender and defeatedSealFate to destroyed. Show the defeated King knowingly surrendering and then dying by suicide as a tragic, character-specific final act; his death destroys or extinguishes the Seal he sustained. Show emotional and political consequences without romanticizing the death or turning it into procedural instruction.
+- For draws, timeouts, and unknown terminations, set defeatedKingFate to survives and defeatedSealFate to intact. Do not automatically kill either King or destroy either Seal.
 - Never apply the defeated fate to the winning King.
 
 Story rules:
@@ -57,6 +60,8 @@ Story rules:
 export const EPILOGUE_INSTRUCTIONS = `Epilogue rules:
 - Write a distinct epilogue of roughly 250–600 words that occurs after the final move and its immediate outcome.
 - Resolve the defeated King's required fate, the surviving King's burden, the condition of both kingdoms, important survivors, named viewpoint grunts, promotions, grief, rivalries, and the political or emotional cost of the battle.
+- If a Royal Seal was destroyed, show the defeated kingdom beginning to exhaust its remaining stored magic. Include concrete early failures and foreshadow its longer decline without inventing another battle or immediate total collapse.
+- If both Seals remain intact, preserve both kingdoms' access to magic while showing the strain, damage, and cost caused by the war.
 - Pay off recurring imagery, dialogue, promises, fears, relationships, wounds, and sacrifices established earlier.
 - For a draw, show the concrete terms or consequences of the unresolved ending without declaring a winner or killing either King automatically.
 - Do not invent another move, attack, capture, promotion, battle, or death after the ledger ends. Survivors must remain alive, though they may grieve, depart, reconcile, face judgment, or inherit new responsibilities.

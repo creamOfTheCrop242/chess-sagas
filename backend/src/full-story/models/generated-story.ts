@@ -15,6 +15,7 @@ export const generatedStoryPackageSchema = z.object({
     'suicide-after-surrender',
     'survives',
   ]),
+  defeatedSealFate: z.enum(['destroyed', 'intact']),
   scenes: z
     .array(
       z.object({

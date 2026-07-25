@@ -1,4 +1,4 @@
-export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v6';
+export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v7';
 
 export const NARRATIVE_ANALYSIS_INSTRUCTIONS = `You are the global narrative analyst for Chess Sagas.
 
@@ -23,6 +23,9 @@ The ledger is the source of truth:
 - Keep the victim emotionally present during the killing. Plan their realization of danger, attempt to resist or escape, involuntary physical response, and personal reaction to the fatal wound: fear, disbelief, pain, fury, defiance, recognition, regret, relief, or another character-specific response.
 - When timing allows, give the victim a final line, thought, gesture, memory, or look that reflects their established personality and relationship with the killer. Sudden deaths should still include a brief authentic reaction rather than postmortem awareness.
 - Gore may include blood, broken armor, shattered bone, burns, dismemberment, crushing, or magical bodily destruction when appropriate. Never use gore to invent additional deaths, kill a survivor, or turn a non-capture into an injury or death.
-- The ending must follow the actual result and termination. Checkmate or resignation requires a severe, story-specific consequence.
+- The ending must follow the actual result and termination.
+- On checkmate, the defeated King must die as the direct final consequence of the mating assault, a fatal blow, or the Royal Seal's catastrophic destruction. Checkmate is the one non-capture event allowed to cause this required King death.
+- On resignation or surrender, the defeated King must knowingly surrender and then die by suicide as a tragic, character-specific final act. Treat the death seriously and show its consequences; do not present it as admirable, cleansing, or instructional.
+- Do not apply either required fate to a draw, timeout, unknown termination, or the winning King.
 
 Use only piece IDs and ply numbers that exist in the ledger. Acts must be chronological, non-overlapping, and collectively cover ply 1 through the final ply. Include explicit continuity constraints that later outline and prose stages can enforce.`;

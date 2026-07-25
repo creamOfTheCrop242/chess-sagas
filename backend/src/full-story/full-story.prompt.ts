@@ -1,8 +1,8 @@
-export const FULL_STORY_PROMPT_VERSION = 'story-package-v7';
+export const FULL_STORY_PROMPT_VERSION = 'story-package-v8';
 
 export const FULL_STORY_INSTRUCTIONS = `Write one cohesive dark-fantasy war story package from the supplied complete ledger, validated narrative analysis, validated outline, and character registry.
 
-Return compact structured JSON containing the title and exactly one creative scene for every ledger ply. Each scene contains only ply, fantasyNarration, characters, locations, and decisiveActorId. The backend derives all other mechanical playback metadata. The ordered fantasyNarration fields are consecutive paragraphs of the complete story. They must read as one continuous saga when joined, not as disconnected move summaries.
+Return compact structured JSON containing the title, defeatedKingFate, and exactly one creative scene for every ledger ply. Each scene contains only ply, fantasyNarration, characters, locations, and decisiveActorId. The backend derives all other mechanical playback metadata. The ordered fantasyNarration fields are consecutive paragraphs of the complete story. They must read as one continuous saga when joined, not as disconnected move summaries.
 
 Factual rules:
 - The ledger is the source of truth. Never invent or omit captures, change a captor, kill a survivor, revive a captured piece, alter a promotion, change the winner, or change termination.
@@ -10,7 +10,7 @@ Factual rules:
 - Use permanent character names from the registry, never piece IDs in reader-facing prose.
 - Do not mention chess, moves, plies, SAN, FEN, ranks, files, board coordinates, or algebraic notation in prose.
 - A quiet move may create tension, positioning, travel, or preparation, but not combat, injury, or death.
-- Check threatens the King and Royal Seal. Checkmate means no path preserves both; it does not itself prove the King was physically captured.
+- Check threatens the King and Royal Seal.
 - Kings sustain enchanted Royal Seals and are immensely powerful but constrained by that burden.
 - Queens combine master swordsmanship, Archwizard-level magic, and Moving-Fortress durability. Important Queen action must demonstrate both blade and magic.
 - Bishops are Archwizards, rooks are Moving Fortresses, knights are Knight Commanders, and pawns are soldier companies. Never call them chess pieces.
@@ -23,7 +23,10 @@ Factual rules:
 - When a pawn captures another pawn, show the attacking viewpoint grunt personally defeating the captured company's named viewpoint grunt. Then portray the wider captured company's defeat, rout, destruction, or surrender without inventing additional ledger deaths.
 - If a pawn is captured, portray the company defeat and the established viewpoint grunt's ledger-consistent fate. Never silently transfer the viewpoint identity to another survivor.
 - If a pawn promotes, the viewpoint grunt personally undergoes the ascension and becomes the promoted Queen or other champion. The company does not collectively become one person. Preserve the grunt's exact name, memories, wounds, personality, relationships, loyalties, and emotional arc after transformation.
-- Checkmate or resignation must cause a severe, story-specific consequence for the defeated kingdom.
+- For checkmate, set defeatedKingFate to killed-after-checkmate and show the defeated King's on-page death as the direct culmination of the mating assault, a fatal blow, or catastrophic Royal Seal destruction. This required terminal death is allowed even though the King was not captured.
+- For resignation or surrender, set defeatedKingFate to suicide-after-surrender. Show the defeated King knowingly surrendering and then dying by suicide as a tragic, character-specific final act. Show emotional and political consequences without romanticizing the death or turning it into procedural instruction.
+- For draws, timeouts, and unknown terminations, set defeatedKingFate to survives and do not automatically kill either King.
+- Never apply the defeated fate to the winning King.
 
 Story rules:
 - Follow the supplied title, theme, acts, scene ranges, setups, payoffs, ending sequence, and prose constraints.

@@ -17,6 +17,7 @@ import { FullStoryValidator } from './full-story.validator';
 import {
   generatedStoryPackageSchema,
   type GeneratedStoryDraft,
+  type GeneratedStoryPackage,
 } from './models/generated-story';
 
 @Injectable()
@@ -90,6 +91,14 @@ export class FullStoryService {
           characterRegistry: ledger.pieces,
         }),
       );
+      const expectedKingFate = expectedDefeatedKingFate(
+        ledger.metadata.termination,
+      );
+      if (storyPackage.defeatedKingFate !== expectedKingFate) {
+        throw new Error(
+          `Story package has incorrect defeated King fate for ${ledger.metadata.termination}`,
+        );
+      }
       const pieceIds = new Set(ledger.pieces.map((piece) => piece.id));
       const sceneNumbers = new Map<number, number>();
       const scenes = storyPackage.scenes.map((creativeScene) => {
@@ -283,4 +292,12 @@ export function assembleStoryMarkdown(
     sections.push(scene.fantasyNarration);
   });
   return sections.join('\n\n');
+}
+
+export function expectedDefeatedKingFate(
+  termination: GameLedger['metadata']['termination'],
+): GeneratedStoryPackage['defeatedKingFate'] {
+  if (termination === 'checkmate') return 'killed-after-checkmate';
+  if (termination === 'resignation') return 'suicide-after-surrender';
+  return 'survives';
 }

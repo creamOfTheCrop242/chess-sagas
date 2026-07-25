@@ -10,7 +10,10 @@ import type {
   FullStoryProvider,
   FullStoryRequest,
 } from './full-story.provider';
-import { FULL_STORY_INSTRUCTIONS } from './full-story.prompt';
+import {
+  EPILOGUE_INSTRUCTIONS,
+  FULL_STORY_INSTRUCTIONS,
+} from './full-story.prompt';
 import {
   generatedStoryPackageSchema,
   type GeneratedStoryPackage,
@@ -35,7 +38,9 @@ export class OpenAiFullStoryProvider implements FullStoryProvider {
       const response = await this.client.responses.parse({
         model: this.model,
         reasoning: { effort: 'medium' },
-        instructions: FULL_STORY_INSTRUCTIONS,
+        instructions: `${FULL_STORY_INSTRUCTIONS}
+
+${EPILOGUE_INSTRUCTIONS}`,
         input: JSON.stringify(request),
         max_output_tokens: 64_000,
         text: {

@@ -1,4 +1,4 @@
-export const SCENE_BREAKDOWN_PROMPT_VERSION = 'phase-6-v10';
+export const SCENE_BREAKDOWN_PROMPT_VERSION = 'phase-6-v11';
 export const SCENE_BREAKDOWN_INSTRUCTIONS = `Split the validated cohesive story into move-aligned playback scenes. Return structured JSON only.
 
 - Create exactly one playback scene for every ledger ply. Never group multiple plies into one scene.
@@ -34,4 +34,5 @@ export const SCENE_BREAKDOWN_INSTRUCTIONS = `Split the validated cohesive story 
 - Preserve all survivors, captors, winner, termination, names, wounds, and visual continuity.
 - Terminal exception: on checkmate, preserve the validated story's death of the defeated King from the mating assault or Royal Seal's destruction even though it is not a capture. On resignation, preserve the defeated King's surrender followed by suicide. Do not apply these fates to draws, timeouts, unknown terminations, or the winning King.
 - visualPrompt and videoPrompt must describe only this scene and preserve established character appearances.
-- estimatedDurationSeconds should match narration/action density.`;
+- estimatedDurationSeconds should match narration/action density.
+- Include a distinct epilogue after the final scene that resolves surviving characters and kingdom consequences without inventing later moves, captures, promotions, battles, or deaths.`;

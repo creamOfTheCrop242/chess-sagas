@@ -106,6 +106,24 @@ The Southern King poured his strength into the Royal Seal, but every remaining r
     expect(markdown).not.toMatch(/\b[a-h][1-8]\b/i);
   });
 
+  it('appends a distinct epilogue after the final scene', () => {
+    const scenes = [
+      {
+        actNumber: 1,
+        fantasyNarration: 'The final banner fell into the rain.',
+      },
+    ] as SceneBreakdown['scenes'];
+    const markdown = assembleStoryMarkdown(
+      scenes,
+      ['The Last Assault'],
+      'At dawn, the survivors carried their dead home.',
+    );
+
+    expect(markdown).toContain(
+      'The final banner fell into the rain.\n\n## Epilogue\n\nAt dawn',
+    );
+  });
+
   it('maps termination to the required defeated King fate', () => {
     expect(expectedDefeatedKingFate('checkmate')).toBe(
       'killed-after-checkmate',

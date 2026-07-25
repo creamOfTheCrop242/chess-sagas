@@ -150,7 +150,10 @@ export class FullStoryService {
           continuityNotes: [],
         };
       });
-      const breakdown: SceneBreakdown = { scenes };
+      const epilogue = this.cleanReaderFacingProse(storyPackage.epilogue, [
+        ...pieceIds,
+      ]);
+      const breakdown: SceneBreakdown = { scenes, epilogue };
       this.sceneValidator.validate(breakdown, ledger);
       const story: GeneratedStoryDraft = {
         title: storyPackage.title,
@@ -159,6 +162,7 @@ export class FullStoryService {
           outline.acts.map((act) =>
             this.cleanReaderFacingProse(act.title, [...pieceIds]),
           ),
+          epilogue,
         ),
       };
       this.validator.validate(story, ledger, outline);
@@ -277,6 +281,7 @@ export class FullStoryService {
 export function assembleStoryMarkdown(
   scenes: SceneBreakdown['scenes'],
   actTitles: string[],
+  epilogue?: string,
 ): string {
   const sections: string[] = [];
   let currentAct = 0;
@@ -291,6 +296,9 @@ export function assembleStoryMarkdown(
     }
     sections.push(scene.fantasyNarration);
   });
+  if (epilogue) {
+    sections.push('## Epilogue', epilogue);
+  }
   return sections.join('\n\n');
 }
 

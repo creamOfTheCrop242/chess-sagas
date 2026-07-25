@@ -1,8 +1,8 @@
-export const FULL_STORY_PROMPT_VERSION = 'story-package-v8';
+export const FULL_STORY_PROMPT_VERSION = 'story-package-v9';
 
 export const FULL_STORY_INSTRUCTIONS = `Write one cohesive dark-fantasy war story package from the supplied complete ledger, validated narrative analysis, validated outline, and character registry.
 
-Return compact structured JSON containing the title, defeatedKingFate, and exactly one creative scene for every ledger ply. Each scene contains only ply, fantasyNarration, characters, locations, and decisiveActorId. The backend derives all other mechanical playback metadata. The ordered fantasyNarration fields are consecutive paragraphs of the complete story. They must read as one continuous saga when joined, not as disconnected move summaries.
+Return compact structured JSON containing the title, defeatedKingFate, epilogue, and exactly one creative scene for every ledger ply. Each scene contains only ply, fantasyNarration, characters, locations, and decisiveActorId. The backend derives all other mechanical playback metadata. The ordered fantasyNarration fields are consecutive paragraphs of the complete story. They must read as one continuous saga when joined, not as disconnected move summaries.
 
 Factual rules:
 - The ledger is the source of truth. Never invent or omit captures, change a captor, kill a survivor, revive a captured piece, alter a promotion, change the winner, or change termination.
@@ -53,3 +53,11 @@ Story rules:
 - Make total story length proportional to the game while giving decisive scenes more room than transitional scenes.
 - Before returning the package, audit every scene against its ledger event and the preceding scenes. Verify ply coverage, actor identity, captures, captors, deaths, promotions, checks, termination, names, injuries, locations, dialogue continuity, and survivor state. Correct every mismatch in the returned package.
 - End decisively at the actual termination. Do not add later battles or chess actions.`;
+
+export const EPILOGUE_INSTRUCTIONS = `Epilogue rules:
+- Write a distinct epilogue of roughly 250–600 words that occurs after the final move and its immediate outcome.
+- Resolve the defeated King's required fate, the surviving King's burden, the condition of both kingdoms, important survivors, named viewpoint grunts, promotions, grief, rivalries, and the political or emotional cost of the battle.
+- Pay off recurring imagery, dialogue, promises, fears, relationships, wounds, and sacrifices established earlier.
+- For a draw, show the concrete terms or consequences of the unresolved ending without declaring a winner or killing either King automatically.
+- Do not invent another move, attack, capture, promotion, battle, or death after the ledger ends. Survivors must remain alive, though they may grieve, depart, reconcile, face judgment, or inherit new responsibilities.
+- The epilogue must feel conclusive rather than teasing an immediate continuation.`;

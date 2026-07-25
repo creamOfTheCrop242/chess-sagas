@@ -9,6 +9,7 @@ export type GeneratedStoryDraft = z.infer<typeof generatedStorySchema>;
 
 export const generatedStoryPackageSchema = z.object({
   title: z.string().min(1),
+  epilogue: z.string().min(150),
   defeatedKingFate: z.enum([
     'killed-after-checkmate',
     'suicide-after-surrender',

@@ -27,6 +27,7 @@ export class PgnViewerComponent implements OnDestroy {
   gameId: string | null = null;
   currentPly = 0;
   scenes: PlaybackScene[] = [];
+  epilogue = '';
   sagaGenerating = false;
   storyError: string | null = null;
   generationElapsedSeconds = 0;
@@ -131,6 +132,7 @@ export class PgnViewerComponent implements OnDestroy {
         this.gameId = saved.id;
         this.currentPly = 0;
         this.scenes = [];
+        this.epilogue = '';
         this.pipelineState = this.initialPipelineState();
         this.resetGenerationTimer();
         this.loading = false;
@@ -155,6 +157,7 @@ export class PgnViewerComponent implements OnDestroy {
       .subscribe({
         next: (response) => {
           this.scenes = response.sceneBreakdown.data.scenes;
+          this.epilogue = response.sceneBreakdown.data.epilogue ?? '';
           this.sagaGenerating = false;
           this.stopGenerationTimer();
         },

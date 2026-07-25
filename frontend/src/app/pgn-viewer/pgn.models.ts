@@ -143,7 +143,9 @@ export type PlaybackScene = {
 
 export type SceneBreakdownResponse = {
   status: 'COMPLETED';
-  sceneBreakdown: { data: { scenes: PlaybackScene[] } };
+  sceneBreakdown: {
+    data: { scenes: PlaybackScene[]; epilogue?: string | null };
+  };
 };
 
 export type SagaStage =

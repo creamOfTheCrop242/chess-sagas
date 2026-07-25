@@ -3,7 +3,10 @@ import type { GameLedger } from '../chess/models/game-ledger';
 import type { StoryOutline } from '../story-outline/models/story-outline';
 import type { SceneBreakdown } from '../scene-breakdown/models/scene-breakdown';
 import type { GeneratedStoryDraft } from './models/generated-story';
-import { assembleStoryMarkdown } from './full-story.service';
+import {
+  assembleStoryMarkdown,
+  expectedDefeatedKingFate,
+} from './full-story.service';
 import { FullStoryValidator } from './full-story.validator';
 
 describe('FullStoryValidator', () => {
@@ -101,5 +104,35 @@ The Southern King poured his strength into the Royal Seal, but every remaining r
 
     expect(markdown).toContain('## Act 1: The battlefield Ambush');
     expect(markdown).not.toMatch(/\b[a-h][1-8]\b/i);
+  });
+
+  it('appends a distinct epilogue after the final scene', () => {
+    const scenes = [
+      {
+        actNumber: 1,
+        fantasyNarration: 'The final banner fell into the rain.',
+      },
+    ] as SceneBreakdown['scenes'];
+    const markdown = assembleStoryMarkdown(
+      scenes,
+      ['The Last Assault'],
+      'At dawn, the survivors carried their dead home.',
+    );
+
+    expect(markdown).toContain(
+      'The final banner fell into the rain.\n\n## Epilogue\n\nAt dawn',
+    );
+  });
+
+  it('maps termination to the required defeated King fate', () => {
+    expect(expectedDefeatedKingFate('checkmate')).toBe(
+      'killed-after-checkmate',
+    );
+    expect(expectedDefeatedKingFate('resignation')).toBe(
+      'suicide-after-surrender',
+    );
+    expect(expectedDefeatedKingFate('draw')).toBe('survives');
+    expect(expectedDefeatedKingFate('timeout')).toBe('survives');
+    expect(expectedDefeatedKingFate('unknown')).toBe('survives');
   });
 });

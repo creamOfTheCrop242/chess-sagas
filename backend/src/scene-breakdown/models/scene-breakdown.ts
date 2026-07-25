@@ -21,6 +21,7 @@ export const storySceneSchema = z.object({
 
 export const sceneBreakdownSchema = z.object({
   scenes: z.array(storySceneSchema).min(1),
+  epilogue: z.string().min(1).nullable(),
 });
 
 export type SceneBreakdown = z.infer<typeof sceneBreakdownSchema>;

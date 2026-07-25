@@ -17,6 +17,7 @@ import { FullStoryValidator } from './full-story.validator';
 import {
   generatedStoryPackageSchema,
   type GeneratedStoryDraft,
+  type GeneratedStoryPackage,
 } from './models/generated-story';
 
 @Injectable()
@@ -90,6 +91,14 @@ export class FullStoryService {
           characterRegistry: ledger.pieces,
         }),
       );
+      const expectedKingFate = expectedDefeatedKingFate(
+        ledger.metadata.termination,
+      );
+      if (storyPackage.defeatedKingFate !== expectedKingFate) {
+        throw new Error(
+          `Story package has incorrect defeated King fate for ${ledger.metadata.termination}`,
+        );
+      }
       const pieceIds = new Set(ledger.pieces.map((piece) => piece.id));
       const sceneNumbers = new Map<number, number>();
       const scenes = storyPackage.scenes.map((creativeScene) => {
@@ -141,7 +150,10 @@ export class FullStoryService {
           continuityNotes: [],
         };
       });
-      const breakdown: SceneBreakdown = { scenes };
+      const epilogue = this.cleanReaderFacingProse(storyPackage.epilogue, [
+        ...pieceIds,
+      ]);
+      const breakdown: SceneBreakdown = { scenes, epilogue };
       this.sceneValidator.validate(breakdown, ledger);
       const story: GeneratedStoryDraft = {
         title: storyPackage.title,
@@ -150,6 +162,7 @@ export class FullStoryService {
           outline.acts.map((act) =>
             this.cleanReaderFacingProse(act.title, [...pieceIds]),
           ),
+          epilogue,
         ),
       };
       this.validator.validate(story, ledger, outline);
@@ -268,6 +281,7 @@ export class FullStoryService {
 export function assembleStoryMarkdown(
   scenes: SceneBreakdown['scenes'],
   actTitles: string[],
+  epilogue?: string,
 ): string {
   const sections: string[] = [];
   let currentAct = 0;
@@ -282,5 +296,16 @@ export function assembleStoryMarkdown(
     }
     sections.push(scene.fantasyNarration);
   });
+  if (epilogue) {
+    sections.push('## Epilogue', epilogue);
+  }
   return sections.join('\n\n');
+}
+
+export function expectedDefeatedKingFate(
+  termination: GameLedger['metadata']['termination'],
+): GeneratedStoryPackage['defeatedKingFate'] {
+  if (termination === 'checkmate') return 'killed-after-checkmate';
+  if (termination === 'resignation') return 'suicide-after-surrender';
+  return 'survives';
 }

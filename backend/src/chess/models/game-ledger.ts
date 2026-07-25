@@ -20,6 +20,7 @@ export interface PieceIdentity {
   permanentName: string;
   companyName?: string;
   viewpointName?: string;
+  viewpointRole?: string;
   alive: boolean;
   capturedAtPly?: number;
   promotedFromPawnId?: string;

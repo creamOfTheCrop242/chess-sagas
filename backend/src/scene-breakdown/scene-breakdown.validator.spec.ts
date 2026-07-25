@@ -34,6 +34,7 @@ describe('SceneBreakdownValidator', () => {
       continuityNotes: ['No one dies.'],
     };
     const breakdown = {
+      epilogue: null,
       scenes: [
         {
           ...base,
@@ -71,6 +72,7 @@ describe('SceneBreakdownValidator', () => {
       ],
     } as GameLedger;
     const breakdown = {
+      epilogue: null,
       scenes: [
         {
           id: 'grouped',

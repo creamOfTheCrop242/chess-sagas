@@ -143,6 +143,16 @@
               {{ currentScene.sceneNumber }}
             </p>
             <p class="story-text">{{ currentStory }}</p>
+            @if (
+              currentPly === game.positions.length &&
+              epilogue &&
+              !sagaGenerating
+            ) {
+              <div class="epilogue">
+                <h4>Epilogue</h4>
+                <p class="story-text">{{ epilogue }}</p>
+              </div>
+            }
           } @else if (currentPly === 0) {
             <p class="story-text">{{ currentStory }}</p>
           } @else if (!sagaGenerating) {

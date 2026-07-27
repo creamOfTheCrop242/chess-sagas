@@ -10,8 +10,8 @@
   --south: #c45c3a;
   --danger: #e07070;
   --seal: #6eb8a8;
-  --font-display: 'Cinzel', 'Palatino Linotype', serif;
-  --font-body: 'Source Serif 4', 'Palatino Linotype', Georgia, serif;
+  --font-display: "Cinzel", "Palatino Linotype", serif;
+  --font-body: "Source Serif 4", "Palatino Linotype", Georgia, serif;
 }
 
 *,
@@ -31,17 +31,33 @@ body {
   color: var(--ink);
   background-color: #070b12;
   background-image:
-    radial-gradient(ellipse 90% 55% at 50% -10%, rgba(142, 200, 216, 0.22), transparent 55%),
-    radial-gradient(ellipse 80% 50% at 50% 110%, rgba(196, 92, 58, 0.18), transparent 50%),
-    radial-gradient(ellipse 40% 30% at 15% 40%, rgba(110, 184, 168, 0.08), transparent 60%),
-    radial-gradient(ellipse 35% 28% at 85% 60%, rgba(196, 168, 98, 0.07), transparent 55%),
+    radial-gradient(
+      ellipse 90% 55% at 50% -10%,
+      rgba(142, 200, 216, 0.22),
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 80% 50% at 50% 110%,
+      rgba(196, 92, 58, 0.18),
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse 40% 30% at 15% 40%,
+      rgba(110, 184, 168, 0.08),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 35% 28% at 85% 60%,
+      rgba(196, 168, 98, 0.07),
+      transparent 55%
+    ),
     linear-gradient(180deg, #0a1220 0%, #0c1018 45%, #120e0c 100%);
   background-attachment: fixed;
   min-height: 100vh;
 }
 
 body::before {
-  content: '';
+  content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
@@ -71,4 +87,59 @@ app-root {
   z-index: 1;
   display: block;
   min-height: 100vh;
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+  app-pgn-viewer .game-layout.game-layout {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 0.85rem;
+  }
+
+  app-pgn-viewer .game-column {
+    display: contents;
+  }
+
+  app-pgn-viewer .board-panel {
+    position: sticky;
+    top: 0.5rem;
+    grid-column: 1;
+    grid-row: 1 / span 3;
+  }
+
+  app-pgn-viewer .board-toolbar.board-toolbar,
+  app-pgn-viewer .board-stage.board-stage {
+    max-width: min(480px, calc(100dvh - 7rem));
+  }
+
+  app-pgn-viewer .board-toolbar.board-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+
+  app-pgn-viewer button.flip-board {
+    width: 100%;
+  }
+
+  app-pgn-viewer .story-panel.story-panel {
+    position: relative;
+    grid-column: 2;
+    grid-row: 1;
+    max-height: none;
+    margin-top: 0;
+    overflow: visible;
+  }
+
+  app-pgn-viewer .playback-controls.playback-controls {
+    position: relative;
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  app-pgn-viewer .generation-panel.generation-panel {
+    position: relative;
+    grid-column: 2;
+    grid-row: 3;
+  }
 }

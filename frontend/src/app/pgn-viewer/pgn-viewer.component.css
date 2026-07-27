@@ -217,7 +217,7 @@ button:disabled {
 }
 
 .board-frame {
-  margin: 0 auto 1.15rem;
+  margin: 0 auto;
   max-width: 480px;
   padding: 0.65rem;
   background: linear-gradient(
@@ -229,6 +229,129 @@ button:disabled {
   box-shadow:
     0 0 0 1px rgba(196, 168, 98, 0.35),
     0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+.board-stage {
+  position: relative;
+  max-width: 480px;
+  margin: 0 auto 1.15rem;
+}
+
+.board-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  max-width: 480px;
+  margin: 0 auto 0.55rem;
+  color: var(--ink-dim);
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+}
+
+button.flip-board {
+  flex: 0 0 auto;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.7rem;
+}
+
+.piece-card {
+  position: absolute;
+  z-index: 10;
+  top: 0.75rem;
+  left: 0.75rem;
+  width: min(17rem, calc(100% - 1.5rem));
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(196, 168, 98, 0.65);
+  background: rgba(8, 13, 20, 0.94);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.62);
+  pointer-events: none;
+}
+
+.piece-card-pinned {
+  pointer-events: auto;
+}
+
+.piece-card h3 {
+  margin: 0.12rem 1.7rem 0.2rem 0;
+  font-family: var(--font-display);
+  color: var(--gold-bright);
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+}
+
+.piece-kingdom,
+.piece-role,
+.piece-company,
+.piece-description,
+.piece-kills,
+.piece-card-hint {
+  margin: 0;
+}
+
+.piece-kingdom {
+  color: var(--ink-dim);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.piece-role {
+  color: var(--seal);
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+}
+
+.piece-company {
+  margin-top: 0.2rem;
+  color: var(--ink-muted);
+  font-size: 0.8rem;
+}
+
+.piece-description {
+  margin-top: 0.65rem;
+  color: var(--ink);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.piece-kills {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 0.7rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid rgba(196, 168, 98, 0.25);
+  color: var(--ink-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.piece-kills strong {
+  color: var(--gold-bright);
+  font-size: 1.1rem;
+}
+
+.piece-card-hint {
+  margin-top: 0.4rem;
+  color: var(--ink-dim);
+  font-size: 0.68rem;
+}
+
+button.piece-card-close {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  padding: 0.12rem 0.38rem;
+  border-color: transparent;
+  background: transparent;
+  font-size: 1rem;
+}
+
+:host ::ng-deep app-chessboard piece:focus-visible {
+  outline: 3px solid var(--gold-bright);
+  outline-offset: -3px;
 }
 
 .game-layout {
@@ -358,6 +481,10 @@ button:disabled {
 
   .nav button {
     width: 100%;
+  }
+
+  .board-toolbar {
+    align-items: flex-start;
   }
 }
 

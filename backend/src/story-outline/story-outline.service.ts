@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import type { GameLedger } from '../chess/models/game-ledger';
 import { normalizePawnViewpoints } from '../chess/piece-identity.service';
 import { PrismaService } from '../database/prisma.service';
+import { NARRATIVE_ANALYSIS_PROMPT_VERSION } from '../narrative-analysis/narrative-analysis.prompt';
 import {
   narrativeAnalysisSchema,
   type NarrativeAnalysis,
@@ -37,6 +38,7 @@ export class StoryOutlineService {
         gameId,
         currentStage: 'NARRATIVE_ANALYSIS',
         status: 'COMPLETED',
+        promptVersion: NARRATIVE_ANALYSIS_PROMPT_VERSION,
       },
       orderBy: { createdAt: 'desc' },
       include: { narrativeAnalysis: true },
@@ -119,7 +121,12 @@ export class StoryOutlineService {
       throw new NotFoundException(`Game ${gameId} was not found`);
     }
     const run = await this.prisma.generationRun.findFirst({
-      where: { gameId, currentStage: 'OUTLINE', status: 'COMPLETED' },
+      where: {
+        gameId,
+        currentStage: 'OUTLINE',
+        status: 'COMPLETED',
+        promptVersion: STORY_OUTLINE_PROMPT_VERSION,
+      },
       orderBy: { createdAt: 'desc' },
       include: { storyOutline: true },
     });

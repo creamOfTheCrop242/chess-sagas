@@ -20,12 +20,19 @@ describe('GamesService', () => {
     jest.fn<
       (args: unknown) => Promise<{ id: string; ledger: object } | null>
     >();
+  const gameLedgerUpdate =
+    jest.fn<
+      (args: unknown) => Promise<{ schemaVersion: number; data: object }>
+    >();
   const prisma = {
     game: {
       create: gameCreate,
       findFirst: gameFindFirst,
       findMany: gameFindMany,
       findUnique: gameFindUnique,
+    },
+    gameLedger: {
+      update: gameLedgerUpdate,
     },
   } as unknown as PrismaService;
 
@@ -43,7 +50,10 @@ describe('GamesService', () => {
     let capturedArgs: unknown;
     gameFindFirst.mockImplementation((args) => {
       capturedArgs = args;
-      return Promise.resolve({ id: 'existing-game', ledger: {} });
+      return Promise.resolve({
+        id: 'existing-game',
+        ledger: { schemaVersion: 2 },
+      });
     });
 
     await expect(
@@ -53,8 +63,41 @@ describe('GamesService', () => {
     ).resolves.toMatchObject({ id: 'existing-game' });
 
     expect(gameCreate).not.toHaveBeenCalled();
+    expect(gameLedgerUpdate).not.toHaveBeenCalled();
     const findArgs = capturedArgs as { where: { pgnHash: string } };
     expect(findArgs.where.pgnHash).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  it('upgrades an existing fixed-name ledger to randomized names', async () => {
+    gameFindFirst.mockResolvedValue({
+      id: 'existing-game',
+      ledger: { schemaVersion: 1 },
+    });
+    gameLedgerUpdate.mockResolvedValue({
+      schemaVersion: 2,
+      data: {},
+    });
+
+    await service.create(
+      '[White "Ada"]\n[Black "Turing"]\n[Result "1-0"]\n\n1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6 4. Qxf7# 1-0',
+    );
+
+    expect(gameLedgerUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { gameId: 'existing-game' },
+        data: expect.objectContaining({
+          schemaVersion: 2,
+          data: expect.objectContaining({
+            pieces: expect.arrayContaining([
+              expect.objectContaining({
+                chessType: 'p',
+                viewpointName: expect.any(String),
+              }),
+            ]),
+          }),
+        }),
+      }),
+    );
   });
 
   it('persists a parsed game and immutable ledger in one nested create', async () => {
@@ -92,7 +135,7 @@ describe('GamesService', () => {
       blackPlayer: 'Turing',
       result: '1-0',
     });
-    expect(createArgs.data.ledger.create.schemaVersion).toBe(1);
+    expect(createArgs.data.ledger.create.schemaVersion).toBe(2);
     expect(createArgs.data.ledger.create.data.events).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ san: 'Qxf7#', isCheckmate: true }),

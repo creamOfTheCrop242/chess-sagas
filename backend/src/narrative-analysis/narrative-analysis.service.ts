@@ -99,6 +99,7 @@ export class NarrativeAnalysisService {
         gameId,
         currentStage: 'NARRATIVE_ANALYSIS',
         status: 'COMPLETED',
+        promptVersion: NARRATIVE_ANALYSIS_PROMPT_VERSION,
       },
       orderBy: { createdAt: 'desc' },
       include: { narrativeAnalysis: true },

@@ -11,6 +11,7 @@ import {
   createOpenAiGenerationClient,
   logOpenAiGeneration,
   promptCacheOptions,
+  serializeRequestWithCharacterRegistry,
 } from '../openai/openai-generation';
 import type {
   StoryOutlineProvider,
@@ -42,7 +43,7 @@ export class OpenAiStoryOutlineProvider implements StoryOutlineProvider {
         ...promptCacheOptions(this.model, 'chess-sagas:story-outline'),
         reasoning: { effort: 'medium' },
         instructions: STORY_OUTLINE_INSTRUCTIONS,
-        input: JSON.stringify(request),
+        input: serializeRequestWithCharacterRegistry(request),
         text: {
           format: zodTextFormat(storyOutlineSchema, 'story_outline'),
         },

@@ -36,6 +36,19 @@ export function promptCacheOptions(model: string, key: string) {
   };
 }
 
+export function serializeRequestWithCharacterRegistry<
+  T extends {
+    ledger: { pieces: unknown[] };
+    characterRegistry: unknown[];
+  },
+>(request: T): string {
+  const { pieces: _duplicatePieces, ...ledgerWithoutPieces } = request.ledger;
+  return JSON.stringify({
+    ...request,
+    ledger: ledgerWithoutPieces,
+  });
+}
+
 export function logOpenAiGeneration(
   logger: Logger,
   stage: string,

@@ -11,6 +11,7 @@ import {
   createOpenAiGenerationClient,
   logOpenAiGeneration,
   promptCacheOptions,
+  serializeRequestWithCharacterRegistry,
 } from '../openai/openai-generation';
 import type {
   FullStoryProvider,
@@ -50,7 +51,7 @@ export class OpenAiFullStoryProvider implements FullStoryProvider {
         instructions: `${FULL_STORY_INSTRUCTIONS}
 
 ${EPILOGUE_INSTRUCTIONS}`,
-        input: JSON.stringify(request),
+        input: serializeRequestWithCharacterRegistry(request),
         max_output_tokens: 64_000,
         text: {
           verbosity: 'high',

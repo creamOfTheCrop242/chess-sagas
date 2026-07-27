@@ -1,0 +1,82 @@
+import type { Logger } from '@nestjs/common';
+import type { ConfigService } from '@nestjs/config';
+import OpenAI from 'openai';
+
+const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
+const DEFAULT_MAX_RETRIES = 1;
+
+export function createOpenAiGenerationClient(
+  apiKey: string,
+  config: ConfigService,
+): OpenAI {
+  return new OpenAI({
+    apiKey,
+    timeout: positiveInteger(
+      config.get<string>('OPENAI_REQUEST_TIMEOUT_MS'),
+      DEFAULT_TIMEOUT_MS,
+    ),
+    maxRetries: nonNegativeInteger(
+      config.get<string>('OPENAI_MAX_RETRIES'),
+      DEFAULT_MAX_RETRIES,
+    ),
+  });
+}
+
+export function promptCacheOptions(model: string, key: string) {
+  return {
+    prompt_cache_key: key,
+    ...(model.startsWith('gpt-5.6')
+      ? {
+          prompt_cache_options: {
+            mode: 'implicit' as const,
+            ttl: '30m' as const,
+          },
+        }
+      : {}),
+  };
+}
+
+export function logOpenAiGeneration(
+  logger: Logger,
+  stage: string,
+  model: string,
+  startedAt: number,
+  response: {
+    usage?: {
+      input_tokens?: number;
+      output_tokens?: number;
+      output_tokens_details?: { reasoning_tokens?: number };
+      input_tokens_details?: {
+        cached_tokens?: number;
+        cache_write_tokens?: number;
+      };
+    } | null;
+  },
+): void {
+  const usage = response.usage;
+  logger.log(
+    [
+      `OpenAI ${stage} completed`,
+      `model=${model}`,
+      `durationMs=${Date.now() - startedAt}`,
+      `inputTokens=${usage?.input_tokens ?? 0}`,
+      `cachedInputTokens=${usage?.input_tokens_details?.cached_tokens ?? 0}`,
+      `cacheWriteTokens=${usage?.input_tokens_details?.cache_write_tokens ?? 0}`,
+      `reasoningTokens=${usage?.output_tokens_details?.reasoning_tokens ?? 0}`,
+      `outputTokens=${usage?.output_tokens ?? 0}`,
+    ].join(' '),
+  );
+}
+
+function positiveInteger(value: string | undefined, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function nonNegativeInteger(
+  value: string | undefined,
+  fallback: number,
+): number {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : fallback;
+}

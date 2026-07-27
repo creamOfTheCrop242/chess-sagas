@@ -158,6 +158,20 @@ export class FullStoryService {
           continuityNotes: [],
         };
       });
+      const timedFateFindings = this.deterministic.validateTimedCharacterFates(
+        scenes.map((scene) => ({
+          ply: scene.startPly,
+          fantasyNarration: scene.fantasyNarration,
+        })),
+        ledger,
+      );
+      if (timedFateFindings.length > 0) {
+        throw new Error(
+          `Generated story package contains premature character deaths: ${timedFateFindings
+            .map((finding) => finding.message)
+            .join('; ')}`,
+        );
+      }
       const epilogue = this.cleanReaderFacingProse(storyPackage.epilogue, [
         ...pieceIds,
       ]);

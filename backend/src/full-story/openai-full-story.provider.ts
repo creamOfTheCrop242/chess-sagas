@@ -1,11 +1,17 @@
 import {
   BadGatewayException,
   Injectable,
+  Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import { zodTextFormat } from 'openai/helpers/zod';
+import {
+  createOpenAiGenerationClient,
+  logOpenAiGeneration,
+  promptCacheOptions,
+} from '../openai/openai-generation';
 import type {
   FullStoryProvider,
   FullStoryRequest,
@@ -22,21 +28,24 @@ import {
 @Injectable()
 export class OpenAiFullStoryProvider implements FullStoryProvider {
   readonly model: string;
+  private readonly logger = new Logger(OpenAiFullStoryProvider.name);
   private readonly client: OpenAI | null;
 
   constructor(config: ConfigService) {
     const apiKey = config.get<string>('OPENAI_API_KEY');
     this.model = config.get<string>('FULL_STORY_MODEL') || 'gpt-5.6-terra';
-    this.client = apiKey ? new OpenAI({ apiKey }) : null;
+    this.client = apiKey ? createOpenAiGenerationClient(apiKey, config) : null;
   }
 
   async generate(request: FullStoryRequest): Promise<GeneratedStoryPackage> {
     if (!this.client) {
       throw new ServiceUnavailableException('OPENAI_API_KEY is not configured');
     }
+    const startedAt = Date.now();
     try {
       const response = await this.client.responses.parse({
         model: this.model,
+        ...promptCacheOptions(this.model, 'chess-sagas:full-story'),
         reasoning: { effort: 'medium' },
         instructions: `${FULL_STORY_INSTRUCTIONS}
 
@@ -51,6 +60,13 @@ ${EPILOGUE_INSTRUCTIONS}`,
           ),
         },
       });
+      logOpenAiGeneration(
+        this.logger,
+        'full-story',
+        this.model,
+        startedAt,
+        response,
+      );
       if (!response.output_parsed) {
         if (response.incomplete_details?.reason) {
           throw new BadGatewayException(

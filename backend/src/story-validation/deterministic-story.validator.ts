@@ -65,4 +65,76 @@ export class DeterministicStoryValidator {
     }
     return findings;
   }
+
+  validateTimedCharacterFates(
+    scenes: Array<{ ply: number; fantasyNarration: string }>,
+    ledger: GameLedger,
+  ): ValidationFinding[] {
+    const findings: ValidationFinding[] = [];
+    for (const scene of scenes) {
+      for (const piece of ledger.pieces) {
+        if (
+          piece.capturedAtPly !== undefined &&
+          piece.capturedAtPly <= scene.ply
+        ) {
+          continue;
+        }
+        const names = [piece.permanentName, piece.viewpointName].filter(
+          (name, index, all): name is string =>
+            Boolean(name) && all.indexOf(name) === index,
+        );
+        const excerpt = names
+          .map((name) => prematureDeathExcerpt(scene.fantasyNarration, name))
+          .find((match): match is string => Boolean(match));
+        if (!excerpt) continue;
+        findings.push({
+          type:
+            piece.capturedAtPly === undefined
+              ? 'survivor-killed'
+              : 'invented-capture',
+          severity: 'error',
+          message:
+            piece.capturedAtPly === undefined
+              ? `${piece.permanentName} survives the ledger but is described as dead`
+              : `${piece.permanentName} is described as dead before capture at ply ${piece.capturedAtPly}`,
+          ply: scene.ply,
+          pieceId: piece.id,
+          excerpt,
+        });
+      }
+    }
+    return findings;
+  }
+}
+
+function prematureDeathExcerpt(
+  narration: string,
+  characterName: string,
+): string | undefined {
+  const name = escapeRegex(characterName);
+  const patterns = [
+    new RegExp(
+      `\\b(?:dead|slain|lifeless|deceased)\\s+${name}(?:['’]s)?\\b`,
+      'i',
+    ),
+    new RegExp(
+      `\\b${name}(?:['’]s)?\\s+(?:death|corpse|remains|grave|funeral)\\b`,
+      'i',
+    ),
+    new RegExp(
+      `\\b(?:death|corpse|remains|grave|funeral)\\s+of\\s+(?:the\\s+)?${name}\\b`,
+      'i',
+    ),
+    new RegExp(
+      `\\b${name}\\s+(?:was|is|lay|lies|fell|had\\s+been)\\s+(?:dead|slain|lifeless|killed)\\b`,
+      'i',
+    ),
+  ];
+  return patterns
+    .map((pattern) => narration.match(pattern)?.[0])
+    .find((match): match is string => Boolean(match));
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

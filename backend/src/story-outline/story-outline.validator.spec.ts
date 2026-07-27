@@ -3,7 +3,11 @@ import type { GameLedger } from '../chess/models/game-ledger';
 import type { NarrativeAnalysis } from '../narrative-analysis/models/narrative-analysis';
 import type { StoryOutline } from './models/story-outline';
 import { StoryOutlineValidator } from './story-outline.validator';
-import { normalizeStoryOutlineNumbering } from './story-outline.service';
+import {
+  normalizeStoryOutlineCharacters,
+  normalizeStoryOutlineNumbering,
+  normalizeStoryOutlineRequiredEvents,
+} from './story-outline.service';
 
 describe('StoryOutlineValidator', () => {
   const ledger = {
@@ -14,6 +18,7 @@ describe('StoryOutlineValidator', () => {
         isCheck: false,
         isCastle: false,
         isPromotion: false,
+        pieceId: 'w-q-d1',
       },
       {
         ply: 2,
@@ -21,6 +26,8 @@ describe('StoryOutlineValidator', () => {
         isCheck: true,
         isCastle: false,
         isPromotion: false,
+        pieceId: 'w-q-d1',
+        capturedPieceId: 'b-p-f7',
       },
     ],
     pieces: [{ id: 'w-q-d1' }, { id: 'b-p-f7' }],
@@ -90,6 +97,76 @@ describe('StoryOutlineValidator', () => {
     expect(() =>
       new StoryOutlineValidator().validate(invalid, ledger, analysis),
     ).toThrow(BadGatewayException);
+  });
+
+  it('adds omitted significant events to their containing scenes', () => {
+    const incomplete = structuredClone(outline);
+    incomplete.acts[0].scenes[1].requiredEventPlies = [];
+
+    const normalized = normalizeStoryOutlineRequiredEvents(incomplete, ledger);
+
+    expect(normalized.acts[0].scenes[0].requiredEventPlies).toEqual([]);
+    expect(normalized.acts[0].scenes[1].requiredEventPlies).toEqual([2]);
+    expect(() =>
+      new StoryOutlineValidator().validate(normalized, ledger, analysis),
+    ).not.toThrow();
+  });
+
+  it('sorts and deduplicates required event plies', () => {
+    const incomplete = structuredClone(outline);
+    incomplete.acts[0].scenes[1].requiredEventPlies = [2, 2];
+
+    const normalized = normalizeStoryOutlineRequiredEvents(incomplete, ledger);
+
+    expect(normalized.acts[0].scenes[1].requiredEventPlies).toEqual([2]);
+  });
+
+  it('moves model-selected event plies into their containing scenes', () => {
+    const misplaced = structuredClone(outline);
+    misplaced.acts[0].scenes[0].requiredEventPlies = [2];
+    misplaced.acts[0].scenes[1].requiredEventPlies = [];
+
+    const normalized = normalizeStoryOutlineRequiredEvents(misplaced, ledger);
+
+    expect(normalized.acts[0].scenes[0].requiredEventPlies).toEqual([]);
+    expect(normalized.acts[0].scenes[1].requiredEventPlies).toEqual([2]);
+    expect(() =>
+      new StoryOutlineValidator().validate(normalized, ledger, analysis),
+    ).not.toThrow();
+  });
+
+  it('discards required event plies that do not exist in the ledger', () => {
+    const invalid = structuredClone(outline);
+    invalid.acts[0].scenes[0].requiredEventPlies = [99];
+
+    const normalized = normalizeStoryOutlineRequiredEvents(invalid, ledger);
+
+    expect(normalized.acts[0].scenes[0].requiredEventPlies).toEqual([]);
+    expect(normalized.acts[0].scenes[1].requiredEventPlies).toEqual([2]);
+  });
+
+  it('removes unknown character IDs and retains valid supporting characters', () => {
+    const invalid = structuredClone(outline);
+    invalid.acts[0].scenes[0].characters = ['w-q-d1', 'b-p-f2'];
+
+    const normalized = normalizeStoryOutlineCharacters(invalid, ledger);
+
+    expect(normalized.acts[0].scenes[0].characters).toEqual(['w-q-d1']);
+  });
+
+  it('adds moving and captured pieces to their containing scenes', () => {
+    const incomplete = structuredClone(outline);
+    incomplete.acts[0].scenes[1].characters = [];
+
+    const normalized = normalizeStoryOutlineCharacters(incomplete, ledger);
+
+    expect(normalized.acts[0].scenes[1].characters).toEqual([
+      'w-q-d1',
+      'b-p-f7',
+    ]);
+    expect(() =>
+      new StoryOutlineValidator().validate(normalized, ledger, analysis),
+    ).not.toThrow();
   });
 
   it('allows scene numbering to restart in each act', () => {

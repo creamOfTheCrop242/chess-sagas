@@ -1,11 +1,17 @@
 import {
   BadGatewayException,
   Injectable,
+  Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import { zodTextFormat } from 'openai/helpers/zod';
+import {
+  createOpenAiGenerationClient,
+  logOpenAiGeneration,
+  promptCacheOptions,
+} from '../openai/openai-generation';
 import {
   storyValidationResultSchema,
   type StoryValidationResult,
@@ -22,12 +28,13 @@ import type {
 @Injectable()
 export class OpenAiStoryValidationProvider implements StoryValidationProvider {
   readonly model: string;
+  private readonly logger = new Logger(OpenAiStoryValidationProvider.name);
   private readonly client: OpenAI | null;
 
   constructor(config: ConfigService) {
     const apiKey = config.get<string>('OPENAI_API_KEY');
     this.model = config.get<string>('STORY_VALIDATION_MODEL') || 'gpt-5.6-sol';
-    this.client = apiKey ? new OpenAI({ apiKey }) : null;
+    this.client = apiKey ? createOpenAiGenerationClient(apiKey, config) : null;
   }
 
   async validate(
@@ -35,9 +42,11 @@ export class OpenAiStoryValidationProvider implements StoryValidationProvider {
   ): Promise<StoryValidationResult> {
     if (!this.client)
       throw new ServiceUnavailableException('OPENAI_API_KEY is not configured');
+    const startedAt = Date.now();
     try {
       const response = await this.client.responses.parse({
         model: this.model,
+        ...promptCacheOptions(this.model, 'chess-sagas:story-validation'),
         reasoning: { effort: 'medium' },
         instructions: `${STORY_VALIDATION_INSTRUCTIONS}
 
@@ -51,6 +60,13 @@ ${PROHIBITED_PROSE_TERMS}`,
           ),
         },
       });
+      logOpenAiGeneration(
+        this.logger,
+        'story-validation',
+        this.model,
+        startedAt,
+        response,
+      );
       if (!response.output_parsed)
         throw new BadGatewayException('OpenAI returned no validation result');
       return storyValidationResultSchema.parse(response.output_parsed);

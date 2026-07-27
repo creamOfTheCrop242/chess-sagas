@@ -14,7 +14,14 @@ export class GameLedgerService {
     initialFen: string,
   ): GameLedger {
     const replay = new Chess(initialFen);
-    const { pieces, squareToId } = this.identities.create(replay);
+    const identitySeed = [
+      initialFen,
+      headers.White ?? '',
+      headers.Black ?? '',
+      headers.Date ?? '',
+      history.map((move) => move.san).join(' '),
+    ].join('|');
+    const { pieces, squareToId } = this.identities.create(replay, identitySeed);
     const byId = new Map(pieces.map((piece) => [piece.id, piece]));
     const events: GameLedger['events'] = [];
     const promotedPieces: string[] = [];

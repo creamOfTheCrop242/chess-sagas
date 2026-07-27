@@ -24,14 +24,16 @@ describe('PgnService deterministic ledger', () => {
     });
     expect(game.ledger.capturedPieces).toEqual(['b-p-d7']);
     expect(game.ledger.survivors).toContain('w-p-e2');
-    expect(
-      game.ledger.pieces.find((piece) => piece.id === 'w-p-e2'),
-    ).toMatchObject({
-      permanentName: 'Jake',
-      viewpointName: 'Jake',
+    const viewpointPawn = game.ledger.pieces.find(
+      (piece) => piece.id === 'w-p-e2',
+    )!;
+    expect(viewpointPawn).toMatchObject({
+      permanentName: expect.any(String),
+      viewpointName: expect.any(String),
       viewpointRole: 'spearman',
       companyName: 'Northern Ember Company',
     });
+    expect(viewpointPawn.permanentName).toBe(viewpointPawn.viewpointName);
     expect(game.ledger.finalFen).toBe(capture.boardFenAfterMove);
     expect(game.ledger.metadata).toMatchObject({
       whitePlayer: 'Ada',
@@ -80,14 +82,36 @@ describe('PgnService deterministic ledger', () => {
     expect(pawn).toMatchObject({
       chessType: 'p',
       currentChessType: 'q',
-      permanentName: 'Rowan',
-      viewpointName: 'Rowan',
+      permanentName: expect.any(String),
+      viewpointName: expect.any(String),
       viewpointRole: 'scout',
       companyName: 'Northern Dawn Company',
       promotedFromPawnId: 'w-p-a7',
       alive: true,
     });
+    expect(pawn?.permanentName).toBe(pawn?.viewpointName);
     expect(game.ledger.promotedPieces).toEqual(['w-p-a7']);
+  });
+
+  it('assigns unique pawn names deterministically for each game', () => {
+    const pgn =
+      '[White "Ada"]\n[Black "Turing"]\n[Date "2026.07.27"]\n[Result "*"]\n\n1. e4 e5 *';
+    const firstNames = service
+      .parse(pgn)
+      .ledger.pieces.filter((piece) => piece.chessType === 'p')
+      .map((piece) => piece.viewpointName);
+    const repeatedNames = service
+      .parse(pgn)
+      .ledger.pieces.filter((piece) => piece.chessType === 'p')
+      .map((piece) => piece.viewpointName);
+    const differentGameNames = service
+      .parse(pgn.replace('1. e4 e5', '1. d4 d5'))
+      .ledger.pieces.filter((piece) => piece.chessType === 'p')
+      .map((piece) => piece.viewpointName);
+
+    expect(repeatedNames).toEqual(firstNames);
+    expect(new Set(firstNames).size).toBe(firstNames.length);
+    expect(differentGameNames).not.toEqual(firstNames);
   });
 
   it('marks checks and checkmate and derives termination', () => {

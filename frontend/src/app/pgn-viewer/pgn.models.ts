@@ -57,6 +57,9 @@ export type PieceIdentity = {
   currentChessType: PieceCode;
   fantasyType: string;
   permanentName: string;
+  companyName?: string;
+  viewpointName?: string;
+  viewpointRole?: string;
   alive: boolean;
   capturedAtPly?: number;
   promotedFromPawnId?: string;

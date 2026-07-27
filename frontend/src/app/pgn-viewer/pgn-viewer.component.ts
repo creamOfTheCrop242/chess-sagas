@@ -7,7 +7,9 @@ import { PgnApiService } from './pgn-api.service';
 import {
   ParsedPgn,
   ParsedPosition,
+  PieceIdentity,
   PlaybackScene,
+  ChessEvent,
   SagaStage,
   SagaStageState,
 } from './pgn.models';
@@ -26,6 +28,9 @@ export class PgnViewerComponent implements OnDestroy {
   game: ParsedPgn | null = null;
   gameId: string | null = null;
   currentPly = 0;
+  boardOrientation: 'white' | 'black' = 'black';
+  hoveredPieceId: string | null = null;
+  selectedPieceId: string | null = null;
   scenes: PlaybackScene[] = [];
   epilogue = '';
   sagaGenerating = false;
@@ -89,6 +94,23 @@ export class PgnViewerComponent implements OnDestroy {
     if (this.currentPly === 0) return this.introStory();
     return this.currentScene?.fantasyNarration ?? '';
   }
+  get inspectedPiece(): PieceIdentity | null {
+    if (!this.game) return null;
+    const pieceId = this.hoveredPieceId ?? this.selectedPieceId;
+    return (
+      this.game.ledger.pieces.find((piece) => piece.id === pieceId) ?? null
+    );
+  }
+  get inspectedPieceKills(): number {
+    const piece = this.inspectedPiece;
+    if (!this.game || !piece) return 0;
+    return this.game.ledger.events.filter(
+      (event) =>
+        event.ply <= this.currentPly &&
+        event.pieceId === piece.id &&
+        event.isCapture,
+    ).length;
+  }
   get pipelineVisible(): boolean {
     return this.pipelineSteps.some(
       (step) => this.pipelineState[step.id] !== 'pending',
@@ -131,6 +153,8 @@ export class PgnViewerComponent implements OnDestroy {
         this.game = parsed;
         this.gameId = saved.id;
         this.currentPly = 0;
+        this.hoveredPieceId = null;
+        this.selectedPieceId = null;
         this.scenes = [];
         this.epilogue = '';
         this.pipelineState = this.initialPipelineState();
@@ -179,6 +203,64 @@ export class PgnViewerComponent implements OnDestroy {
   forward(): void {
     if (this.canGoForward) this.currentPly += 1;
   }
+  flipBoard(): void {
+    this.boardOrientation =
+      this.boardOrientation === 'black' ? 'white' : 'black';
+  }
+  inspectPieceAt(square: string | null): void {
+    this.hoveredPieceId = square
+      ? (this.piecesBySquare.get(square) ?? null)
+      : null;
+  }
+  selectPieceAt(square: string): void {
+    const pieceId = this.piecesBySquare.get(square);
+    if (!pieceId) return;
+    this.selectedPieceId = this.selectedPieceId === pieceId ? null : pieceId;
+  }
+  clearSelectedPiece(): void {
+    this.selectedPieceId = null;
+  }
+  pieceKingdom(piece: PieceIdentity): string {
+    return piece.side === 'north'
+      ? 'Light Kingdom · North'
+      : 'Dark Kingdom · South';
+  }
+  pieceRole(piece: PieceIdentity): string {
+    if (piece.chessType === 'p') {
+      const promotion = this.currentPromotionFor(piece);
+      if (promotion) {
+        return `Ascended ${this.displayRole(
+          promotion.promotionType ?? piece.fantasyType,
+        )}`;
+      }
+      return this.displayRole(piece.viewpointRole ?? 'company soldier');
+    }
+    return this.displayRole(piece.fantasyType);
+  }
+  pieceDescription(piece: PieceIdentity): string {
+    if (piece.chessType === 'p') {
+      const role = this.displayRole(piece.viewpointRole ?? 'soldier');
+      const company = piece.companyName ?? 'their company';
+      return !this.currentPromotionFor(piece)
+        ? `${role} of ${company}, carrying the company’s story through the battle.`
+        : `Once the ${role.toLowerCase()} of ${company}, now transformed without surrendering their former identity.`;
+    }
+    const descriptions: Record<string, string> = {
+      king: 'Bearer of the Royal Seal and living source of the kingdom’s magic.',
+      queen:
+        'Master swordfighter, Archwizard, and living fortress of the realm.',
+      archwizard:
+        'An Archwizard who bends battlefield magic to the kingdom’s cause.',
+      'moving-fortress':
+        'A colossal mobile stronghold built to dominate ranks and roads.',
+      'knight-commander':
+        'An elite commander who strikes across the battlefield by unexpected paths.',
+    };
+    return (
+      descriptions[piece.fantasyType] ??
+      'A sworn champion whose fate is bound to the kingdom.'
+    );
+  }
 
   @HostListener('window:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
@@ -197,6 +279,51 @@ export class PgnViewerComponent implements OnDestroy {
 
   private introStory(): string {
     return 'After the Calamity, the Light Kingdom of the north and the Dark Kingdom of the south collided. Each king now pours his strength into a Royal Seal while their armies decide which realm will endure.';
+  }
+  private get piecesBySquare(): Map<string, string> {
+    const pieces = new Map<string, string>();
+    if (!this.game) return pieces;
+    for (const piece of this.game.ledger.pieces) {
+      pieces.set(piece.originalSquare, piece.id);
+    }
+    for (const event of this.game.ledger.events) {
+      if (event.ply > this.currentPly) break;
+      if (event.capturedPieceId) {
+        for (const [square, pieceId] of pieces) {
+          if (pieceId === event.capturedPieceId) {
+            pieces.delete(square);
+            break;
+          }
+        }
+      }
+      pieces.delete(event.from);
+      pieces.set(event.to, event.pieceId);
+      if (event.isCastle && event.castleSide) {
+        const rank = event.side === 'north' ? '1' : '8';
+        const rookFrom = `${event.castleSide === 'king' ? 'h' : 'a'}${rank}`;
+        const rookTo = `${event.castleSide === 'king' ? 'f' : 'd'}${rank}`;
+        const rookId = pieces.get(rookFrom);
+        if (rookId) {
+          pieces.delete(rookFrom);
+          pieces.set(rookTo, rookId);
+        }
+      }
+    }
+    return pieces;
+  }
+  private currentPromotionFor(piece: PieceIdentity): ChessEvent | undefined {
+    return this.game?.ledger.events.find(
+      (event) =>
+        event.ply <= this.currentPly &&
+        event.pieceId === piece.id &&
+        event.isPromotion,
+    );
+  }
+  private displayRole(role: string): string {
+    return role
+      .split(/[-\s]+/)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   }
   private extractError(error: unknown, fallback: string): string {
     if (error instanceof HttpErrorResponse) {

@@ -46,91 +46,162 @@
 
       <div class="game-layout">
         <div class="game-column">
-          <div class="board-frame">
-            <app-chessboard [fen]="currentFen" />
-          </div>
-
-          <p class="move-label">{{ currentMoveLabel }}</p>
-          <p class="ply-meta">
-            Beat {{ currentPly }} of {{ game.positions.length }}
-          </p>
-
-          <div class="nav">
-            <button
-              type="button"
-              (click)="back()"
-              [disabled]="!canGoBack"
-              aria-label="Previous move"
-            >
-              ← Retreat
-            </button>
-            <button
-              type="button"
-              class="primary"
-              (click)="forward()"
-              [disabled]="!canGoForward"
-              aria-label="Next move"
-            >
-              Advance →
-            </button>
-          </div>
-
-          <div class="actions">
-            <button
-              type="button"
-              class="primary"
-              (click)="generateSaga()"
-              [disabled]="sagaGenerating || !gameId"
-            >
-              {{
-                sagaGenerating
-                  ? "Forging the complete saga…"
-                  : scenes.length
-                    ? "Refresh story beats"
-                    : "Forge cohesive saga"
-              }}
-            </button>
-          </div>
-          @if (sagaGenerating) {
-            <p class="story-status">
-              The chronicler is analyzing, outlining, writing, validating, and
-              aligning the saga…
-            </p>
-          }
-
-          @if (pipelineVisible) {
-            <section class="pipeline-progress" aria-live="polite">
-              <div class="pipeline-heading">
-                <h3>Saga pipeline</h3>
-                <div class="pipeline-summary">
-                  <span
-                    >{{ completedPipelineSteps }} of
-                    {{ pipelineSteps.length }}</span
-                  >
-                  <time
-                    class="generation-timer"
-                    [attr.datetime]="'PT' + generationElapsedSeconds + 'S'"
-                  >
-                    {{ sagaGenerating ? "Elapsed" : "Finished in" }}
-                    {{ formattedGenerationTime }}
-                  </time>
-                </div>
+          <div class="board-panel">
+            <div class="board-toolbar">
+              <div>
+                <span class="orientation-label" aria-live="polite">
+                  {{
+                    boardOrientation === "black"
+                      ? "White · North is above"
+                      : "Black · South is above"
+                  }}
+                </span>
+                <br />
+                <small> Since the Calamity, east and west are reversed. </small>
               </div>
-              <ol>
-                @for (step of pipelineSteps; track step.id) {
-                  <li [class]="'pipeline-' + pipelineState[step.id]">
-                    <span class="pipeline-icon" aria-hidden="true">
-                      {{ pipelineIcon(pipelineState[step.id]) }}
-                    </span>
-                    <span class="pipeline-label">{{ step.label }}</span>
-                    <span class="pipeline-state">
-                      {{ pipelineStatus(pipelineState[step.id]) }}
-                    </span>
-                  </li>
-                }
-              </ol>
-            </section>
-          }
+              <button
+                type="button"
+                class="flip-board"
+                (click)="flipBoard()"
+                [attr.aria-label]="
+                  boardOrientation === 'black'
+                    ? 'Flip board to place Black at the top'
+                    : 'Flip board to place White at the top'
+                "
+              >
+                ↻ Flip board
+              </button>
+            </div>
+            <div class="board-stage">
+              <div class="board-frame">
+                <app-chessboard
+                  [fen]="currentFen"
+                  [orientation]="boardOrientation"
+                  (pieceHovered)="inspectPieceAt($event)"
+                  (pieceSelected)="selectPieceAt($event)"
+                />
+              </div>
+
+              @if (inspectedPiece; as piece) {
+                <aside
+                  class="piece-card"
+                  [class.piece-card-pinned]="selectedPieceId === piece.id"
+                  aria-live="polite"
+                >
+                  @if (selectedPieceId === piece.id) {
+                    <button
+                      type="button"
+                      class="piece-card-close"
+                      (click)="clearSelectedPiece()"
+                      aria-label="Close character details"
+                    >
+                      ×
+                    </button>
+                  }
+                  <p class="piece-kingdom">{{ pieceKingdom(piece) }}</p>
+                  <h3>{{ piece.permanentName }}</h3>
+                  <p class="piece-role">{{ pieceRole(piece) }}</p>
+                  @if (piece.companyName) {
+                    <p class="piece-company">{{ piece.companyName }}</p>
+                  }
+                  <p class="piece-description">{{ pieceDescription(piece) }}</p>
+                  <p class="piece-kills">
+                    <span>Kills</span>
+                    <strong>{{ inspectedPieceKills }}</strong>
+                  </p>
+                  @if (!selectedPieceId) {
+                    <p class="piece-card-hint">Click or press Enter to pin</p>
+                  }
+                </aside>
+              }
+            </div>
+          </div>
+
+          <div class="playback-controls">
+            <p class="move-label">{{ currentMoveLabel }}</p>
+            <p class="ply-meta">
+              Beat {{ currentPly }} of {{ game.positions.length }}
+            </p>
+
+            <div class="nav">
+              <button
+                type="button"
+                (click)="back()"
+                [disabled]="!canGoBack"
+                aria-label="Previous move"
+              >
+                ← Retreat
+              </button>
+              <button
+                type="button"
+                class="primary"
+                (click)="forward()"
+                [disabled]="!canGoForward"
+                aria-label="Next move"
+              >
+                Advance →
+              </button>
+            </div>
+          </div>
+
+          <div class="generation-panel">
+            <div class="actions">
+              <button
+                type="button"
+                class="primary"
+                (click)="generateSaga()"
+                [disabled]="sagaGenerating || !gameId"
+              >
+                {{
+                  sagaGenerating
+                    ? "Forging the complete saga…"
+                    : scenes.length
+                      ? "Refresh story beats"
+                      : "Forge cohesive saga"
+                }}
+              </button>
+            </div>
+            @if (sagaGenerating) {
+              <p class="story-status">
+                The chronicler is analyzing, outlining, writing, validating, and
+                aligning the saga…
+              </p>
+            }
+
+            @if (pipelineVisible) {
+              <section class="pipeline-progress" aria-live="polite">
+                <div class="pipeline-heading">
+                  <h3>Saga pipeline</h3>
+                  <div class="pipeline-summary">
+                    <span
+                      >{{ completedPipelineSteps }} of
+                      {{ pipelineSteps.length }}</span
+                    >
+                    <time
+                      class="generation-timer"
+                      [attr.datetime]="'PT' + generationElapsedSeconds + 'S'"
+                    >
+                      {{ sagaGenerating ? "Elapsed" : "Finished in" }}
+                      {{ formattedGenerationTime }}
+                    </time>
+                  </div>
+                </div>
+                <ol>
+                  @for (step of pipelineSteps; track step.id) {
+                    <li [class]="'pipeline-' + pipelineState[step.id]">
+                      <span class="pipeline-icon" aria-hidden="true">
+                        {{ pipelineIcon(pipelineState[step.id]) }}
+                      </span>
+                      <span class="pipeline-label">{{ step.label }}</span>
+                      <span class="pipeline-state">
+                        {{ pipelineStatus(pipelineState[step.id]) }}
+                      </span>
+                    </li>
+                  }
+                </ol>
+              </section>
+            }
+          </div>
         </div>
 
         <aside class="story-panel" aria-live="polite">

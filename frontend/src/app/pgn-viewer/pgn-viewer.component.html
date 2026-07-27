@@ -160,6 +160,14 @@
                       : "Forge cohesive saga"
                 }}
               </button>
+              <button
+                type="button"
+                (click)="toggleFallenRoster()"
+                [attr.aria-expanded]="fallenRosterOpen"
+                aria-controls="fallen-roster"
+              >
+                Hall of the Fallen
+              </button>
             </div>
             @if (sagaGenerating) {
               <p class="story-status">
@@ -237,6 +245,83 @@
           }
         </aside>
       </div>
+
+      @if (fallenRosterOpen) {
+        <div
+          class="fallen-backdrop"
+          (click)="closeFallenRoster()"
+          role="presentation"
+        >
+          <section
+            id="fallen-roster"
+            class="fallen-roster"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="fallen-roster-title"
+            (click)="$event.stopPropagation()"
+          >
+            <button
+              type="button"
+              class="fallen-close"
+              (click)="closeFallenRoster()"
+              aria-label="Close Hall of the Fallen"
+            >
+              ×
+            </button>
+            <p class="fallen-kicker">Battlefield record</p>
+            <h3 id="fallen-roster-title">Hall of the Fallen</h3>
+            <p class="fallen-intro">
+              Losses recorded through beat {{ currentPly }}. Future fates remain
+              veiled.
+            </p>
+
+            <div class="fallen-columns">
+              <section>
+                <h4>Light Kingdom losses</h4>
+                @if (lightKingdomFallen.length) {
+                  <ol>
+                    @for (
+                      fallen of lightKingdomFallen;
+                      track fallen.victim.id
+                    ) {
+                      <li>
+                        <strong>{{ fallen.victim.permanentName }}</strong>
+                        <span>{{ pieceRole(fallen.victim) }}</span>
+                        <small>
+                          Destroyed by {{ fallen.killer.permanentName }} · Beat
+                          {{ fallen.ply }}
+                        </small>
+                      </li>
+                    }
+                  </ol>
+                } @else {
+                  <p class="fallen-empty">No losses recorded.</p>
+                }
+              </section>
+
+              <section>
+                <h4>Dark Kingdom losses</h4>
+                @if (darkKingdomFallen.length) {
+                  <ol>
+                    @for (fallen of darkKingdomFallen; track fallen.victim.id) {
+                      <li>
+                        <strong>{{ fallen.victim.permanentName }}</strong>
+                        <span>{{ pieceRole(fallen.victim) }}</span>
+                        <small>
+                          Destroyed by {{ fallen.killer.permanentName }} · Beat
+                          {{ fallen.ply }}
+                        </small>
+                      </li>
+                    }
+                  </ol>
+                } @else {
+                  <p class="fallen-empty">No losses recorded.</p>
+                }
+              </section>
+            </div>
+          </section>
+        </div>
+      }
     </section>
   }
 </main>

@@ -14,6 +14,12 @@ import {
   SagaStageState,
 } from './pgn.models';
 
+type FallenPiece = {
+  victim: PieceIdentity;
+  killer: PieceIdentity;
+  ply: number;
+};
+
 @Component({
   selector: 'app-pgn-viewer',
   standalone: true,
@@ -31,6 +37,7 @@ export class PgnViewerComponent implements OnDestroy {
   boardOrientation: 'white' | 'black' = 'black';
   hoveredPieceId: string | null = null;
   selectedPieceId: string | null = null;
+  fallenRosterOpen = false;
   scenes: PlaybackScene[] = [];
   epilogue = '';
   sagaGenerating = false;
@@ -111,6 +118,12 @@ export class PgnViewerComponent implements OnDestroy {
         event.isCapture,
     ).length;
   }
+  get lightKingdomFallen(): FallenPiece[] {
+    return this.fallenPiecesFor('north');
+  }
+  get darkKingdomFallen(): FallenPiece[] {
+    return this.fallenPiecesFor('south');
+  }
   get pipelineVisible(): boolean {
     return this.pipelineSteps.some(
       (step) => this.pipelineState[step.id] !== 'pending',
@@ -155,6 +168,7 @@ export class PgnViewerComponent implements OnDestroy {
         this.currentPly = 0;
         this.hoveredPieceId = null;
         this.selectedPieceId = null;
+        this.fallenRosterOpen = false;
         this.scenes = [];
         this.epilogue = '';
         this.pipelineState = this.initialPipelineState();
@@ -220,6 +234,12 @@ export class PgnViewerComponent implements OnDestroy {
   clearSelectedPiece(): void {
     this.selectedPieceId = null;
   }
+  toggleFallenRoster(): void {
+    this.fallenRosterOpen = !this.fallenRosterOpen;
+  }
+  closeFallenRoster(): void {
+    this.fallenRosterOpen = false;
+  }
   pieceKingdom(piece: PieceIdentity): string {
     return piece.side === 'north'
       ? 'Light Kingdom · North'
@@ -265,6 +285,11 @@ export class PgnViewerComponent implements OnDestroy {
   @HostListener('window:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
     if (!this.game) return;
+    if (event.key === 'Escape' && this.fallenRosterOpen) {
+      event.preventDefault();
+      this.closeFallenRoster();
+      return;
+    }
     const target = event.target as HTMLElement | null;
     if (target && ['TEXTAREA', 'INPUT'].includes(target.tagName)) return;
     if (event.key === 'ArrowLeft') {
@@ -279,6 +304,26 @@ export class PgnViewerComponent implements OnDestroy {
 
   private introStory(): string {
     return 'After the Calamity, the Light Kingdom of the north and the Dark Kingdom of the south collided. Each king now pours his strength into a Royal Seal while their armies decide which realm will endure.';
+  }
+  private fallenPiecesFor(side: 'north' | 'south'): FallenPiece[] {
+    if (!this.game) return [];
+    const pieces = new Map(
+      this.game.ledger.pieces.map((piece) => [piece.id, piece]),
+    );
+    return this.game.ledger.events
+      .filter(
+        (event) =>
+          event.ply <= this.currentPly &&
+          event.isCapture &&
+          Boolean(event.capturedPieceId),
+      )
+      .flatMap((event) => {
+        const victim = pieces.get(event.capturedPieceId!);
+        const killer = pieces.get(event.pieceId);
+        return victim?.side === side && killer
+          ? [{ victim, killer, ply: event.ply }]
+          : [];
+      });
   }
   private get piecesBySquare(): Map<string, string> {
     const pieces = new Map<string, string>();

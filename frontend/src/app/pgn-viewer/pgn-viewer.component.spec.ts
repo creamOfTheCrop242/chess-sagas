@@ -61,6 +61,37 @@ describe('PgnViewerComponent character inspection', () => {
       'transformed',
     );
   });
+
+  it('lists fallen pieces with their killers without revealing future losses', () => {
+    component.currentPly = 2;
+
+    expect(component.darkKingdomFallen).toEqual([]);
+
+    component.currentPly = 3;
+
+    expect(component.darkKingdomFallen).toEqual([
+      {
+        victim: jasmine.objectContaining({
+          id: 'b-p-d7',
+          permanentName: 'Nessa',
+        }),
+        killer: jasmine.objectContaining({
+          id: 'w-p-e2',
+          permanentName: 'Mara',
+        }),
+        ply: 3,
+      },
+    ]);
+    expect(component.lightKingdomFallen).toEqual([]);
+  });
+
+  it('opens and closes the Hall of the Fallen', () => {
+    component.toggleFallenRoster();
+    expect(component.fallenRosterOpen).toBeTrue();
+
+    component.closeFallenRoster();
+    expect(component.fallenRosterOpen).toBeFalse();
+  });
 });
 
 const game: ParsedPgn = {

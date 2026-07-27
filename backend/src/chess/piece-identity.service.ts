@@ -20,6 +20,65 @@ const PAWN_COMPANIES = [
   'Dusk Company',
 ] as const;
 
+const PAWN_NAMES = [
+  'Alden',
+  'Ansel',
+  'Aric',
+  'Bram',
+  'Cedric',
+  'Corwin',
+  'Dain',
+  'Edric',
+  'Elian',
+  'Emrys',
+  'Falk',
+  'Gareth',
+  'Garrick',
+  'Godric',
+  'Hadrian',
+  'Ivor',
+  'Jareth',
+  'Kael',
+  'Leoric',
+  'Lucan',
+  'Merek',
+  'Niall',
+  'Orin',
+  'Perrin',
+  'Quillan',
+  'Roderic',
+  'Rowan',
+  'Stellan',
+  'Tarin',
+  'Theron',
+  'Ulric',
+  'Wystan',
+  'Aveline',
+  'Brienne',
+  'Catrin',
+  'Elara',
+  'Elowen',
+  'Fiora',
+  'Gwendolyn',
+  'Isolde',
+  'Jessamine',
+  'Kerra',
+  'Lyra',
+  'Maela',
+  'Mara',
+  'Mirelle',
+  'Nerys',
+  'Odette',
+  'Rhiannon',
+  'Sabine',
+  'Sera',
+  'Tamsin',
+  'Veyra',
+  'Wren',
+  'Ysolde',
+  'Zara',
+] as const;
+
 const PAWN_VIEWPOINT_NAMES = {
   north: ['Rowan', 'Elian', 'Mara', 'Tomas', 'Jake', 'Lyra', 'Corin', 'Sera'],
   south: ['Dain', 'Veyra', 'Cassian', 'Nessa', 'Rei', 'Maela', 'Orin', 'Zara'],
@@ -53,15 +112,36 @@ export class PieceIdentityService {
   create(chess: Chess): {
     pieces: PieceIdentity[];
     squareToId: Map<string, string>;
+  };
+  create(
+    chess: Chess,
+    seed?: string,
+  ): {
+    pieces: PieceIdentity[];
+    squareToId: Map<string, string>;
+  };
+  create(
+    chess: Chess,
+    seed = chess.fen(),
+  ): {
+    pieces: PieceIdentity[];
+    squareToId: Map<string, string>;
   } {
     const pieces: PieceIdentity[] = [];
     const squareToId = new Map<string, string>();
+    const pawnNames = shuffledPawnNames(seed);
+    let pawnIndex = 0;
 
     for (const row of chess.board()) {
       for (const piece of row) {
         if (!piece) continue;
         const square = piece.square;
-        const identity = this.identity(piece.color, piece.type, square);
+        const identity = this.identity(
+          piece.color,
+          piece.type,
+          square,
+          piece.type === 'p' ? pawnNames[pawnIndex++] : undefined,
+        );
         pieces.push(identity);
         squareToId.set(square, identity.id);
       }
@@ -86,11 +166,12 @@ export class PieceIdentityService {
     color: ChessColor,
     type: ChessPieceType,
     square: string,
+    pawnName?: string,
   ): PieceIdentity {
     const side: Side = color === 'w' ? 'north' : 'south';
     const id = `${color}-${type}-${square}`;
     const pawnProfile =
-      type === 'p' ? pawnNarrativeProfile(side, square) : undefined;
+      type === 'p' ? pawnNarrativeProfile(side, square, pawnName) : undefined;
     return {
       id,
       chessColor: color,
@@ -126,6 +207,7 @@ export class PieceIdentityService {
 function pawnNarrativeProfile(
   side: Side,
   square: string,
+  randomizedName?: string,
 ): { companyName: string; viewpointName: string; viewpointRole: string } {
   const fileIndex = Math.max(
     0,
@@ -134,7 +216,7 @@ function pawnNarrativeProfile(
   const kingdom = side === 'north' ? 'Northern' : 'Southern';
   return {
     companyName: `${kingdom} ${PAWN_COMPANIES[fileIndex]}`,
-    viewpointName: PAWN_VIEWPOINT_NAMES[side][fileIndex],
+    viewpointName: randomizedName ?? PAWN_VIEWPOINT_NAMES[side][fileIndex],
     viewpointRole: PAWN_VIEWPOINT_ROLES[side][fileIndex],
   };
 }
@@ -144,7 +226,11 @@ export function normalizePawnViewpoints(ledger: GameLedger): GameLedger {
     ...ledger,
     pieces: ledger.pieces.map((piece) => {
       if (piece.chessType !== 'p') return piece;
-      const profile = pawnNarrativeProfile(piece.side, piece.originalSquare);
+      const profile = pawnNarrativeProfile(
+        piece.side,
+        piece.originalSquare,
+        piece.viewpointName ?? piece.permanentName,
+      );
       return {
         ...piece,
         permanentName: profile.viewpointName,
@@ -154,4 +240,24 @@ export function normalizePawnViewpoints(ledger: GameLedger): GameLedger {
       };
     }),
   };
+}
+
+function shuffledPawnNames(seed: string): string[] {
+  const names = [...PAWN_NAMES];
+  let state = hashSeed(seed);
+  for (let index = names.length - 1; index > 0; index -= 1) {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    const swapIndex = state % (index + 1);
+    [names[index], names[swapIndex]] = [names[swapIndex], names[index]];
+  }
+  return names;
+}
+
+function hashSeed(value: string): number {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
 }

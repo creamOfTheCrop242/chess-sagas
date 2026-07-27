@@ -6,8 +6,10 @@ import {
   concatMap,
   Observable,
   of,
+  retry,
   switchMap,
   tap,
+  timer,
   throwError,
 } from 'rxjs';
 import {
@@ -77,9 +79,10 @@ export class PgnApiService {
       catchError((error: unknown) => {
         if (error instanceof HttpErrorResponse && error.status === 404) {
           onProgress(stage, 'generating');
-          return this.http
-            .post<T>(url, {})
-            .pipe(tap(() => onProgress(stage, 'completed')));
+          return this.http.post<T>(url, {}).pipe(
+            this.retryFailedStage<T>(),
+            tap(() => onProgress(stage, 'completed')),
+          );
         }
         return throwError(() => error);
       }),
@@ -112,11 +115,27 @@ export class PgnApiService {
   ): Observable<unknown> {
     onProgress('validation', 'generating');
     return this.http.post(url, {}).pipe(
+      this.retryFailedStage(),
       tap(() => onProgress('validation', 'completed')),
       catchError((error: unknown) => {
         onProgress('validation', 'failed');
         return throwError(() => error);
       }),
     );
+  }
+
+  private retryFailedStage<T>() {
+    return retry<T>({
+      count: 1,
+      delay: (error: unknown) => {
+        if (
+          error instanceof HttpErrorResponse &&
+          (error.status === 0 || error.status >= 500)
+        ) {
+          return timer(500);
+        }
+        return throwError(() => error);
+      },
+    });
   }
 }

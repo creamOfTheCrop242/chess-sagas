@@ -1,4 +1,4 @@
-export const FULL_STORY_PROMPT_VERSION = 'story-package-v10';
+export const FULL_STORY_PROMPT_VERSION = 'story-package-v11';
 
 export const FULL_STORY_INSTRUCTIONS = `Write one cohesive dark-fantasy war story package from the supplied complete ledger, validated narrative analysis, validated outline, and character registry.
 
@@ -44,6 +44,7 @@ Story rules:
 - Use concrete but purposeful gore appropriate to the combatants: blood on armor and terrain, broken bone, torn flesh, dismemberment, crushing force, burning, or magical bodily destruction. Vary the imagery and killing method; do not repeat the same generic wound.
 - The captor's established weapon, magic, scale, personality, injuries, and relationship to the victim must shape the kill. Witnesses should react, and important deaths should alter later dialogue and behavior.
 - Gore must remain ledger-accurate. Only the captured character is confirmed killed. Never add collateral deaths, kill a survivor, dismember a character who acts later unless continuity supports a survivable lasting injury, or turn checks and quiet moves into bloodshed.
+- Never describe, remember, mourn, or foreshadow any character as dead, slain, lifeless, deceased, a corpse, or buried before that character's ledger capture occurs. A character captured later is alive in every earlier scene.
 - When a pawn company is captured, focus the fatal detail on its named viewpoint grunt and portray the wider company's defeat, rout, or surrender without claiming unrecorded mass deaths.
 - Create exactly one scene per ledger ply. Set ply to that ledger ply and cover every ply chronologically from 1 to the final ply.
 - Quiet scenes must advance character, dialogue, travel, tension, positioning, or preparation without inventing combat, injury, or death.

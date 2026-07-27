@@ -63,14 +63,20 @@ export class StoryOutlineService {
       );
       const narrativeAnalysis: NarrativeAnalysis =
         narrativeAnalysisSchema.parse(analysisRun.narrativeAnalysis.data);
-      const outline = normalizeStoryOutlineNumbering(
-        storyOutlineSchema.parse(
-          await this.provider.generate({
-            ledger,
-            narrativeAnalysis,
-            characterRegistry: ledger.pieces,
-          }),
+      const outline = normalizeStoryOutlineCharacters(
+        normalizeStoryOutlineRequiredEvents(
+          normalizeStoryOutlineNumbering(
+            storyOutlineSchema.parse(
+              await this.provider.generate({
+                ledger,
+                narrativeAnalysis,
+                characterRegistry: ledger.pieces,
+              }),
+            ),
+          ),
+          ledger,
         ),
+        ledger,
       );
       this.validator.validate(outline, ledger, narrativeAnalysis);
       const data = JSON.parse(JSON.stringify(outline)) as Prisma.InputJsonValue;
@@ -138,6 +144,75 @@ export function normalizeStoryOutlineNumbering(
         ...scene,
         sceneNumber: sceneIndex + 1,
       })),
+    })),
+  };
+}
+
+export function normalizeStoryOutlineRequiredEvents(
+  outline: StoryOutline,
+  ledger: GameLedger,
+): StoryOutline {
+  const ledgerPlies = new Set(ledger.events.map((event) => event.ply));
+  const modelSelectedPlies = outline.acts.flatMap((act) =>
+    act.scenes.flatMap((scene) => scene.requiredEventPlies),
+  );
+  const significantPlies = ledger.events
+    .filter(
+      (event) =>
+        event.isCapture || event.isCheck || event.isCastle || event.isPromotion,
+    )
+    .map((event) => event.ply);
+  const requiredPlies = new Set(
+    [...modelSelectedPlies, ...significantPlies].filter((ply) =>
+      ledgerPlies.has(ply),
+    ),
+  );
+
+  return {
+    ...outline,
+    acts: outline.acts.map((act) => ({
+      ...act,
+      scenes: act.scenes.map((scene) => ({
+        ...scene,
+        requiredEventPlies: [...requiredPlies]
+          .filter((ply) => ply >= scene.startPly && ply <= scene.endPly)
+          .sort((left, right) => left - right),
+      })),
+    })),
+  };
+}
+
+export function normalizeStoryOutlineCharacters(
+  outline: StoryOutline,
+  ledger: GameLedger,
+): StoryOutline {
+  const validPieceIds = new Set(ledger.pieces.map((piece) => piece.id));
+
+  return {
+    ...outline,
+    acts: outline.acts.map((act) => ({
+      ...act,
+      scenes: act.scenes.map((scene) => {
+        const eventCharacters = ledger.events
+          .filter(
+            (event) => event.ply >= scene.startPly && event.ply <= scene.endPly,
+          )
+          .flatMap((event) => [
+            event.pieceId,
+            ...(event.capturedPieceId ? [event.capturedPieceId] : []),
+          ]);
+
+        return {
+          ...scene,
+          characters: [
+            ...new Set(
+              [...scene.characters, ...eventCharacters].filter((pieceId) =>
+                validPieceIds.has(pieceId),
+              ),
+            ),
+          ],
+        };
+      }),
     })),
   };
 }

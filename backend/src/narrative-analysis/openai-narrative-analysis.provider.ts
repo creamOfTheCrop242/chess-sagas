@@ -1,11 +1,17 @@
 import {
   BadGatewayException,
   Injectable,
+  Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import { zodTextFormat } from 'openai/helpers/zod';
+import {
+  createOpenAiGenerationClient,
+  logOpenAiGeneration,
+  promptCacheOptions,
+} from '../openai/openai-generation';
 import type {
   NarrativeAnalysisProvider,
   NarrativeAnalysisRequest,
@@ -19,13 +25,14 @@ import { NARRATIVE_ANALYSIS_INSTRUCTIONS } from './narrative-analysis.prompt';
 @Injectable()
 export class OpenAiNarrativeAnalysisProvider implements NarrativeAnalysisProvider {
   readonly model: string;
+  private readonly logger = new Logger(OpenAiNarrativeAnalysisProvider.name);
   private readonly client: OpenAI | null;
 
   constructor(config: ConfigService) {
     const apiKey = config.get<string>('OPENAI_API_KEY');
     this.model =
       config.get<string>('NARRATIVE_ANALYSIS_MODEL') || 'gpt-5.6-luna';
-    this.client = apiKey ? new OpenAI({ apiKey }) : null;
+    this.client = apiKey ? createOpenAiGenerationClient(apiKey, config) : null;
   }
 
   async analyze({
@@ -35,9 +42,11 @@ export class OpenAiNarrativeAnalysisProvider implements NarrativeAnalysisProvide
       throw new ServiceUnavailableException('OPENAI_API_KEY is not configured');
     }
 
+    const startedAt = Date.now();
     try {
       const response = await this.client.responses.parse({
         model: this.model,
+        ...promptCacheOptions(this.model, 'chess-sagas:narrative-analysis'),
         reasoning: { effort: 'medium' },
         instructions: NARRATIVE_ANALYSIS_INSTRUCTIONS,
         input: JSON.stringify({ completeLedger: ledger }),
@@ -45,6 +54,13 @@ export class OpenAiNarrativeAnalysisProvider implements NarrativeAnalysisProvide
           format: zodTextFormat(narrativeAnalysisSchema, 'narrative_analysis'),
         },
       });
+      logOpenAiGeneration(
+        this.logger,
+        'narrative-analysis',
+        this.model,
+        startedAt,
+        response,
+      );
 
       if (!response.output_parsed) {
         throw new BadGatewayException('OpenAI returned no narrative analysis');

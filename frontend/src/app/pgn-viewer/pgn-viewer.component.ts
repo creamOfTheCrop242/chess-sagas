@@ -60,16 +60,22 @@ export class PgnViewerComponent implements OnDestroy {
   get currentFen(): string {
     if (!this.game)
       return 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+    if (this.currentPly > this.game.positions.length) {
+      return this.game.ledger.finalFen;
+    }
     return this.currentPly === 0
       ? this.game.startFen
       : this.game.positions[this.currentPly - 1].fen;
   }
   get currentMove(): ParsedPosition | null {
-    return !this.game || this.currentPly === 0
+    return !this.game ||
+      this.currentPly === 0 ||
+      this.currentPly > this.game.positions.length
       ? null
       : this.game.positions[this.currentPly - 1];
   }
   get currentMoveLabel(): string {
+    if (this.isEpiloguePage) return 'Epilogue';
     const move = this.currentMove;
     if (!move) return 'Start position';
     const number = Math.ceil(move.ply / 2);
@@ -86,10 +92,22 @@ export class PgnViewerComponent implements OnDestroy {
     return !!this.game && this.currentPly > 0;
   }
   get canGoForward(): boolean {
-    return !!this.game && this.currentPly < this.game.positions.length;
+    return !!this.game && this.currentPly < this.finalPlaybackPly;
+  }
+  get isEpiloguePage(): boolean {
+    return (
+      !!this.game &&
+      Boolean(this.epilogue) &&
+      this.currentPly === this.game.positions.length + 1
+    );
   }
   get currentScene(): PlaybackScene | null {
-    if (this.currentPly <= 0) return null;
+    if (
+      this.currentPly <= 0 ||
+      !this.game ||
+      this.currentPly > this.game.positions.length
+    )
+      return null;
     return (
       this.scenes.find(
         (scene) =>
@@ -99,6 +117,7 @@ export class PgnViewerComponent implements OnDestroy {
   }
   get currentStory(): string {
     if (this.currentPly === 0) return this.introStory();
+    if (this.isEpiloguePage) return this.epilogue;
     return this.currentScene?.fantasyNarration ?? '';
   }
   get inspectedPiece(): PieceIdentity | null {
@@ -304,6 +323,10 @@ export class PgnViewerComponent implements OnDestroy {
 
   private introStory(): string {
     return 'After the Calamity, the Light Kingdom of the north and the Dark Kingdom of the south collided. Each king now pours his strength into a Royal Seal while their armies decide which realm will endure.';
+  }
+  private get finalPlaybackPly(): number {
+    if (!this.game) return 0;
+    return this.game.positions.length + (this.epilogue ? 1 : 0);
   }
   private fallenPiecesFor(side: 'north' | 'south'): FallenPiece[] {
     if (!this.game) return [];

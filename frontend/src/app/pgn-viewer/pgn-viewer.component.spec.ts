@@ -92,6 +92,28 @@ describe('PgnViewerComponent character inspection', () => {
     component.closeFallenRoster();
     expect(component.fallenRosterOpen).toBeFalse();
   });
+
+  it('presents the epilogue as a final playback page', () => {
+    component.epilogue = 'The surviving kingdoms counted the cost.';
+    component.currentPly = game.positions.length;
+
+    expect(component.canGoForward).toBeTrue();
+
+    component.forward();
+
+    expect(component.isEpiloguePage).toBeTrue();
+    expect(component.currentMoveLabel).toBe('Epilogue');
+    expect(component.currentStory).toBe(
+      'The surviving kingdoms counted the cost.',
+    );
+    expect(component.currentFen).toBe(game.ledger.finalFen);
+    expect(component.canGoForward).toBeFalse();
+
+    component.back();
+
+    expect(component.currentPly).toBe(game.positions.length);
+    expect(component.isEpiloguePage).toBeFalse();
+  });
 });
 
 const game: ParsedPgn = {

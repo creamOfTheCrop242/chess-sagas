@@ -120,7 +120,11 @@
           <div class="playback-controls">
             <p class="move-label">{{ currentMoveLabel }}</p>
             <p class="ply-meta">
-              Beat {{ currentPly }} of {{ game.positions.length }}
+              @if (isEpiloguePage) {
+                Final chronicle
+              } @else {
+                Beat {{ currentPly }} of {{ game.positions.length }}
+              }
             </p>
 
             <div class="nav">
@@ -216,22 +220,18 @@
           <h3>The chronicler’s ink</h3>
           @if (storyError) {
             <p class="error" role="alert">{{ storyError }}</p>
+          } @else if (isEpiloguePage) {
+            <p class="ply-meta">Aftermath</p>
+            <div class="epilogue-page">
+              <h4>Epilogue</h4>
+              <p class="story-text">{{ currentStory }}</p>
+            </div>
           } @else if (currentScene) {
             <p class="ply-meta">
               Act {{ currentScene.actNumber }} · Scene
               {{ currentScene.sceneNumber }}
             </p>
             <p class="story-text">{{ currentStory }}</p>
-            @if (
-              currentPly === game.positions.length &&
-              epilogue &&
-              !sagaGenerating
-            ) {
-              <div class="epilogue">
-                <h4>Epilogue</h4>
-                <p class="story-text">{{ epilogue }}</p>
-              </div>
-            }
           } @else if (currentPly === 0) {
             <p class="story-text">{{ currentStory }}</p>
           } @else if (!sagaGenerating) {

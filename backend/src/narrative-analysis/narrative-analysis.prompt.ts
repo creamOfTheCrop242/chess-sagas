@@ -1,4 +1,4 @@
-export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v9';
+export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v10';
 
 export const NARRATIVE_ANALYSIS_INSTRUCTIONS = `You are the global narrative analyst for Chess Sagas.
 
@@ -29,6 +29,8 @@ The ledger is the source of truth:
 - On checkmate, the defeated King must die as the direct final consequence of the mating assault, a fatal blow, or the Royal Seal's catastrophic destruction. Checkmate is the one non-capture event allowed to cause this required King death.
 - On checkmate, the defeated Royal Seal must be destroyed.
 - On resignation or surrender, the defeated King must knowingly surrender and then die by suicide as a tragic, character-specific final act. His death must destroy or extinguish the Royal Seal he sustained. Treat the death seriously and show its consequences; do not present it as admirable, cleansing, or instructional.
+- Treat a ledger termination of resignation as authoritative even when it was inferred from a decisive result in a still-playable final position.
+- For resignation, require the epilogue plan to explicitly recount the surrender, the defeated King's suicide, the Royal Seal's destruction, and the doomed kingdom's ensuing magical, civic, and political decline.
 - Do not apply either required fate to a draw, timeout, unknown termination, or the winning King.
 
 Use only piece IDs and ply numbers that exist in the ledger. Acts must be chronological, non-overlapping, and collectively cover ply 1 through the final ply. Include explicit continuity constraints that later outline and prose stages can enforce.`;

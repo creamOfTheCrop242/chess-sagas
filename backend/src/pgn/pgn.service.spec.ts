@@ -125,6 +125,24 @@ describe('PgnService deterministic ledger', () => {
     });
   });
 
+  it('infers resignation from a decisive result in a playable position', () => {
+    const game = service.parse('[Result "0-1"]\n\n1. e4 e5 0-1');
+
+    expect(game.ledger.events.at(-1)?.isCheckmate).toBe(false);
+    expect(game.ledger.metadata).toMatchObject({
+      result: '0-1',
+      termination: 'resignation',
+    });
+  });
+
+  it('does not override an explicit timeout with inferred resignation', () => {
+    const game = service.parse(
+      '[Result "0-1"]\n[Termination "White lost on time"]\n\n1. e4 e5 0-1',
+    );
+
+    expect(game.ledger.metadata.termination).toBe('timeout');
+  });
+
   it('rejects empty PGN input', () => {
     expect(() => service.parse('')).toThrow(BadRequestException);
   });

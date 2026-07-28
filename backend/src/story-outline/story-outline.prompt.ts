@@ -1,4 +1,4 @@
-export const STORY_OUTLINE_PROMPT_VERSION = 'phase-3-v9';
+export const STORY_OUTLINE_PROMPT_VERSION = 'phase-3-v10';
 
 export const STORY_OUTLINE_INSTRUCTIONS = `Create a structured outline for one cohesive dark-fantasy story. Return planning JSON only; do not write story prose.
 
@@ -26,6 +26,7 @@ The complete ledger is factual source of truth. The narrative analysis supplies 
 - For checkmate, outline the defeated King's on-page death as the final consequence of the mating attack or Royal Seal's destruction, even though the King is not recorded as a captured piece.
 - For checkmate, the defeated Royal Seal must also be destroyed.
 - For resignation or surrender, outline the defeated King consciously yielding and then dying by suicide in a character-specific tragic scene. His death destroys or extinguishes the Seal he sustained. Include witness and kingdom reactions without romanticizing the act or providing instructional detail.
+- For resignation, require the epilogue to explicitly name the surrender, the defeated King's suicide, the Royal Seal's destruction, and the defeated kingdom's resulting magical, civic, and political decline.
 - Treat each Royal Seal as the source powering its kingdom's magic. Plan the defeated realm's gradual decline as stored magic runs out: wards fail, enchanted infrastructure decays, harvests and healing suffer, political order fractures, and survivors must adapt.
 - Draws, timeouts, and unknown terminations must not automatically kill either King.
 - Queens must use both swordplay and magic in later prose.

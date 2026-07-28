@@ -10,6 +10,7 @@ import { zodTextFormat } from 'openai/helpers/zod';
 import {
   createOpenAiGenerationClient,
   logOpenAiGeneration,
+  logOpenAiGenerationFailure,
   promptCacheOptions,
 } from '../openai/openai-generation';
 import {
@@ -60,6 +61,11 @@ ${PROHIBITED_PROSE_TERMS}`,
           ),
         },
       });
+      if (!response.output_parsed)
+        throw new BadGatewayException('OpenAI returned no validation result');
+      const validation = storyValidationResultSchema.parse(
+        response.output_parsed,
+      );
       logOpenAiGeneration(
         this.logger,
         'story-validation',
@@ -67,10 +73,15 @@ ${PROHIBITED_PROSE_TERMS}`,
         startedAt,
         response,
       );
-      if (!response.output_parsed)
-        throw new BadGatewayException('OpenAI returned no validation result');
-      return storyValidationResultSchema.parse(response.output_parsed);
+      return validation;
     } catch (error) {
+      logOpenAiGenerationFailure(
+        this.logger,
+        'story-validation',
+        this.model,
+        startedAt,
+        error,
+      );
       if (
         error instanceof ServiceUnavailableException ||
         error instanceof BadGatewayException

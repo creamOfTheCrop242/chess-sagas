@@ -10,6 +10,7 @@ import { zodTextFormat } from 'openai/helpers/zod';
 import {
   createOpenAiGenerationClient,
   logOpenAiGeneration,
+  logOpenAiGenerationFailure,
   promptCacheOptions,
   serializeRequestWithCharacterRegistry,
 } from '../openai/openai-generation';
@@ -48,6 +49,10 @@ export class OpenAiStoryOutlineProvider implements StoryOutlineProvider {
           format: zodTextFormat(storyOutlineSchema, 'story_outline'),
         },
       });
+      if (!response.output_parsed) {
+        throw new BadGatewayException('OpenAI returned no story outline');
+      }
+      const outline = storyOutlineSchema.parse(response.output_parsed);
       logOpenAiGeneration(
         this.logger,
         'story-outline',
@@ -55,11 +60,15 @@ export class OpenAiStoryOutlineProvider implements StoryOutlineProvider {
         startedAt,
         response,
       );
-      if (!response.output_parsed) {
-        throw new BadGatewayException('OpenAI returned no story outline');
-      }
-      return storyOutlineSchema.parse(response.output_parsed);
+      return outline;
     } catch (error) {
+      logOpenAiGenerationFailure(
+        this.logger,
+        'story-outline',
+        this.model,
+        startedAt,
+        error,
+      );
       if (
         error instanceof ServiceUnavailableException ||
         error instanceof BadGatewayException

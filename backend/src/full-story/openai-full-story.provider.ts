@@ -10,6 +10,7 @@ import { zodTextFormat } from 'openai/helpers/zod';
 import {
   createOpenAiGenerationClient,
   logOpenAiGeneration,
+  logOpenAiGenerationFailure,
   promptCacheOptions,
   serializeRequestWithCharacterRegistry,
 } from '../openai/openai-generation';
@@ -61,13 +62,6 @@ ${EPILOGUE_INSTRUCTIONS}`,
           ),
         },
       });
-      logOpenAiGeneration(
-        this.logger,
-        'full-story',
-        this.model,
-        startedAt,
-        response,
-      );
       if (!response.output_parsed) {
         if (response.incomplete_details?.reason) {
           throw new BadGatewayException(
@@ -81,8 +75,25 @@ ${EPILOGUE_INSTRUCTIONS}`,
         }
         throw new BadGatewayException('OpenAI returned no full story');
       }
-      return generatedStoryPackageSchema.parse(response.output_parsed);
+      const storyPackage = generatedStoryPackageSchema.parse(
+        response.output_parsed,
+      );
+      logOpenAiGeneration(
+        this.logger,
+        'full-story',
+        this.model,
+        startedAt,
+        response,
+      );
+      return storyPackage;
     } catch (error) {
+      logOpenAiGenerationFailure(
+        this.logger,
+        'full-story',
+        this.model,
+        startedAt,
+        error,
+      );
       if (
         error instanceof ServiceUnavailableException ||
         error instanceof BadGatewayException

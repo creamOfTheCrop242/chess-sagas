@@ -5,6 +5,7 @@ import type { StoryOutline } from './models/story-outline';
 import { StoryOutlineValidator } from './story-outline.validator';
 import {
   normalizeStoryOutlineCharacters,
+  normalizeStoryOutlineEndingSequence,
   normalizeStoryOutlineNumbering,
   normalizeStoryOutlineRequiredEvents,
   normalizeStoryOutlineSetupPayoffs,
@@ -172,6 +173,37 @@ describe('StoryOutlineValidator', () => {
     expect(() =>
       new StoryOutlineValidator().validate(normalized, ledger, analysis),
     ).toThrow('Invalid setup/payoff relationship gate');
+  });
+
+  it('uses an adjacent setup only after targeted retry is exhausted', () => {
+    const invalid = structuredClone(outline);
+    invalid.setupPayoffs[0].setupPlies = [2];
+    invalid.setupPayoffs[0].payoffPly = 2;
+
+    const normalized = normalizeStoryOutlineSetupPayoffs(invalid, ledger, true);
+
+    expect(normalized.setupPayoffs[0]).toMatchObject({
+      setupPlies: [1],
+      payoffPly: 2,
+    });
+    expect(() =>
+      new StoryOutlineValidator().validate(normalized, ledger, analysis),
+    ).not.toThrow();
+  });
+
+  it('moves the final planned ending beat to the ledger final ply', () => {
+    const invalid = structuredClone(outline);
+    invalid.endingSequence = [{ ply: 1, beat: 'The attack begins.' }];
+
+    const normalized = normalizeStoryOutlineEndingSequence(invalid, ledger);
+
+    expect(normalized.endingSequence).toEqual([
+      { ply: 1, beat: 'The attack begins.' },
+      { ply: 2, beat: 'The attack begins.' },
+    ]);
+    expect(() =>
+      new StoryOutlineValidator().validate(normalized, ledger, analysis),
+    ).not.toThrow();
   });
 
   it('removes unknown character IDs and retains valid supporting characters', () => {

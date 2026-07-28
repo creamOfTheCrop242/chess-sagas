@@ -70,16 +70,20 @@ export class StoryOutlineService {
       for (let attempt = 0; attempt < 2; attempt += 1) {
         const candidate = normalizeStoryOutlineCharacters(
           normalizeStoryOutlineRequiredEvents(
-            normalizeStoryOutlineSetupPayoffs(
-              normalizeStoryOutlineNumbering(
-                storyOutlineSchema.parse(
-                  await this.provider.generate({
-                    ledger,
-                    narrativeAnalysis,
-                    characterRegistry: ledger.pieces,
-                    validationFeedback,
-                  }),
+            normalizeStoryOutlineEndingSequence(
+              normalizeStoryOutlineSetupPayoffs(
+                normalizeStoryOutlineNumbering(
+                  storyOutlineSchema.parse(
+                    await this.provider.generate({
+                      ledger,
+                      narrativeAnalysis,
+                      characterRegistry: ledger.pieces,
+                      validationFeedback,
+                    }),
+                  ),
                 ),
+                ledger,
+                attempt > 0,
               ),
               ledger,
             ),
@@ -98,7 +102,8 @@ export class StoryOutlineService {
               : 'Outline validation failed';
           if (
             attempt === 0 &&
-            message.includes('Invalid setup/payoff relationship')
+            (message.includes('Invalid setup/payoff relationship') ||
+              message.includes('Ending sequence must include the final ply'))
           ) {
             validationFeedback = message;
             continue;
@@ -220,11 +225,12 @@ export function normalizeStoryOutlineRequiredEvents(
 export function normalizeStoryOutlineSetupPayoffs(
   outline: StoryOutline,
   ledger: GameLedger,
+  repairUnrecoverable = false,
 ): StoryOutline {
   const finalPly = ledger.events.length;
   return {
     ...outline,
-    setupPayoffs: outline.setupPayoffs.map((relationship) => {
+    setupPayoffs: outline.setupPayoffs.flatMap((relationship) => {
       const payoffPly = Math.min(relationship.payoffPly, finalPly);
       const setupPlies = [
         ...new Set(
@@ -232,10 +238,46 @@ export function normalizeStoryOutlineSetupPayoffs(
         ),
       ].sort((left, right) => left - right);
 
-      return setupPlies.length
-        ? { ...relationship, setupPlies, payoffPly }
-        : { ...relationship, payoffPly };
+      if (setupPlies.length) {
+        return [{ ...relationship, setupPlies, payoffPly }];
+      }
+      if (repairUnrecoverable && payoffPly > 1) {
+        return [{ ...relationship, setupPlies: [payoffPly - 1], payoffPly }];
+      }
+      if (repairUnrecoverable) {
+        return [];
+      }
+      return [{ ...relationship, payoffPly }];
     }),
+  };
+}
+
+export function normalizeStoryOutlineEndingSequence(
+  outline: StoryOutline,
+  ledger: GameLedger,
+): StoryOutline {
+  const finalPly = ledger.events.length;
+  const normalized = outline.endingSequence
+    .map((endingBeat) => ({
+      ...endingBeat,
+      ply: Math.min(endingBeat.ply, finalPly),
+    }))
+    .filter((endingBeat) => endingBeat.ply >= 1)
+    .sort((left, right) => left.ply - right.ply);
+  if (!normalized.some((endingBeat) => endingBeat.ply === finalPly)) {
+    const finalBeat = normalized.at(-1);
+    if (finalBeat) {
+      normalized.push({ ...finalBeat, ply: finalPly });
+    }
+  }
+
+  return {
+    ...outline,
+    endingSequence: normalized.filter(
+      (endingBeat, index, all) =>
+        all.findIndex((candidate) => candidate.ply === endingBeat.ply) ===
+        index,
+    ),
   };
 }
 

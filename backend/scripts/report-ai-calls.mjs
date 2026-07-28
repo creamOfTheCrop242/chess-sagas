@@ -1,5 +1,8 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import pg from 'pg';
+
+loadLocalEnvironment();
 
 const hoursArgument = process.argv.find((argument) =>
   argument.startsWith('--hours='),
@@ -102,6 +105,75 @@ if (failures.length) {
   );
 }
 
+if (process.env.DATABASE_URL) {
+  const databaseUrl = new URL(process.env.DATABASE_URL);
+  const isLocal = ['localhost', '127.0.0.1', '::1'].includes(
+    databaseUrl.hostname,
+  );
+  const client = new pg.Client({
+    connectionString: process.env.DATABASE_URL,
+    ssl: isLocal ? false : { rejectUnauthorized: false },
+  });
+  try {
+    await client.connect();
+    const outcomes = await client.query(
+      `SELECT "currentStage" AS stage, status, COUNT(*)::int AS count
+       FROM "GenerationRun"
+       WHERE "createdAt" >= $1
+         AND status IN ('COMPLETED', 'FAILED')
+       GROUP BY "currentStage", status
+       ORDER BY "currentStage", status`,
+      [new Date(cutoff)],
+    );
+    const pipelineGroups = new Map();
+    for (const row of outcomes.rows) {
+      const group = pipelineGroups.get(row.stage) || {
+        stage: row.stage,
+        completed: 0,
+        failed: 0,
+      };
+      group[row.status === 'COMPLETED' ? 'completed' : 'failed'] = row.count;
+      pipelineGroups.set(row.stage, group);
+    }
+    console.log(
+      '\nPipeline outcomes (includes semantic and deterministic validation)',
+    );
+    console.table(
+      [...pipelineGroups.values()].map((group) => {
+        const attempts = group.completed + group.failed;
+        return {
+          stage: group.stage,
+          attempts,
+          completed: group.completed,
+          failed: group.failed,
+          failureRate: attempts
+            ? `${((group.failed / attempts) * 100).toFixed(1)}%`
+            : '0.0%',
+        };
+      }),
+    );
+    const pipelineFailures = await client.query(
+      `SELECT "createdAt", "currentStage" AS stage, model, error
+       FROM "GenerationRun"
+       WHERE "createdAt" >= $1 AND status = 'FAILED'
+       ORDER BY "createdAt"`,
+      [new Date(cutoff)],
+    );
+    if (pipelineFailures.rows.length) {
+      console.log('\nPipeline failures');
+      console.table(pipelineFailures.rows);
+    }
+  } catch (error) {
+    console.warn(
+      `Could not load pipeline outcomes: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  } finally {
+    await client.end().catch(() => undefined);
+  }
+}
+
 function estimateCost(entry) {
   const rates = {
     'gpt-5.6-luna': { input: 1, cached: 0.1, write: 1.25, output: 6 },
@@ -119,4 +191,23 @@ function estimateCost(entry) {
       (entry.outputTokens || 0) * rates.output) /
     1_000_000
   );
+}
+
+function loadLocalEnvironment() {
+  const path = join(process.cwd(), '.env');
+  if (!existsSync(path)) return;
+  for (const line of readFileSync(path, 'utf8').split('\n')) {
+    const match = line.match(
+      /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$/,
+    );
+    if (!match || process.env[match[1]] !== undefined) continue;
+    let value = match[2].trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    process.env[match[1]] = value;
+  }
 }

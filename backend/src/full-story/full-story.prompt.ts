@@ -1,4 +1,4 @@
-export const FULL_STORY_PROMPT_VERSION = 'story-package-v16';
+export const FULL_STORY_PROMPT_VERSION = 'story-package-v17';
 
 export const FULL_STORY_INSTRUCTIONS = `Write one cohesive dark-fantasy war story package from the supplied complete ledger, validated narrative analysis, validated outline, and character registry.
 
@@ -29,6 +29,7 @@ Factual rules:
 - If a pawn promotes, the viewpoint grunt personally undergoes the ascension and becomes the promoted Queen or other champion. The company does not collectively become one person. Preserve the grunt's exact name, memories, wounds, personality, relationships, loyalties, and emotional arc after transformation.
 - For checkmate, set defeatedKingFate to killed-after-checkmate and show the defeated King's on-page death as the direct culmination of the mating assault, a fatal blow, or catastrophic Royal Seal destruction. This required terminal death is allowed even though the King was not captured.
 - For checkmate, set defeatedSealFate to destroyed and depict the defeated Seal's destruction as part of the climax.
+- For checkmate, dramatize the final event's complete checkmateExplanation. Show why the King cannot take the checking attacker, name or portray the allies protecting that attacker, turn every controlled escape square and friendly obstruction into a concrete battlefield constraint, and show why no defender can capture the attacker or interpose. The King must recognize the closed mating net before the final blow and Royal Seal destruction.
 - For resignation or surrender, set defeatedKingFate to suicide-after-surrender and defeatedSealFate to destroyed. Show the defeated King knowingly surrendering and then dying by suicide as a tragic, character-specific final act; his death destroys or extinguishes the Seal he sustained. Show emotional and political consequences without romanticizing the death or turning it into procedural instruction.
 - Treat a ledger termination of resignation as authoritative even when inferred from a decisive result in a still-playable final position. The epilogue must explicitly state that the defeated King surrendered, recount his suicide without procedural detail, show the Royal Seal being destroyed or extinguished, and describe the defeated kingdom's ensuing magical, civic, and political decline.
 - For draws, timeouts, and unknown terminations, set defeatedKingFate to survives and defeatedSealFate to intact. Do not automatically kill either King or destroy either Seal.

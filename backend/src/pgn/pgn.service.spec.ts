@@ -184,6 +184,40 @@ describe('PgnService deterministic ledger', () => {
       result: '0-1',
       termination: 'checkmate',
     });
+    expect(mate.checkmateExplanation).toMatchObject({
+      kingId: 'w-k-e1',
+      kingSquare: 'e1',
+      checkingPieceIds: ['b-q-d8'],
+      checkingSquares: ['h4'],
+      canCaptureCheckingPiece: false,
+      canBlockCheck: false,
+      legalResponseCount: 0,
+    });
+  });
+
+  it('records why a nearby protected checking piece cannot be captured', () => {
+    const game = service.parse(
+      '[Result "1-0"]\n\n1. e4 e5 2. Bc4 Nc6 3. Qh5 Nf6 4. Qxf7# 1-0',
+    );
+    const explanation = game.ledger.events.at(-1)?.checkmateExplanation;
+
+    expect(explanation).toMatchObject({
+      kingId: 'b-k-e8',
+      kingSquare: 'e8',
+      checkingPieceIds: ['w-q-d1'],
+      checkingSquares: ['f7'],
+      checkingPieces: [
+        {
+          pieceId: 'w-q-d1',
+          square: 'f7',
+          kingCanReach: true,
+          protectedByPieceIds: expect.arrayContaining(['w-b-f1']),
+        },
+      ],
+      canCaptureCheckingPiece: false,
+      canBlockCheck: false,
+      legalResponseCount: 0,
+    });
   });
 
   it('infers resignation from a decisive result in a playable position', () => {

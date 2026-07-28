@@ -124,12 +124,6 @@ export class FullStoryService {
             `Story package has no ledger event for ply ${creativeScene.ply}`,
           );
         }
-        const expectedDecisiveActorId = event.isCapture ? event.pieceId : null;
-        if (creativeScene.decisiveActorId !== expectedDecisiveActorId) {
-          throw new Error(
-            `Story package has incorrect decisive actor at ply ${event.ply}`,
-          );
-        }
         const act =
           outline.acts.find(
             (candidate) =>

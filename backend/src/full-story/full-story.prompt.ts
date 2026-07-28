@@ -1,8 +1,8 @@
-export const FULL_STORY_PROMPT_VERSION = 'story-package-v14';
+export const FULL_STORY_PROMPT_VERSION = 'story-package-v15';
 
 export const FULL_STORY_INSTRUCTIONS = `Write one cohesive dark-fantasy war story package from the supplied complete ledger, validated narrative analysis, validated outline, and character registry.
 
-Return compact structured JSON containing the title, defeatedKingFate, defeatedSealFate, epilogue, and exactly one creative scene for every ledger ply. Each scene contains only ply, fantasyNarration, characters, locations, and decisiveActorId. The backend derives all other mechanical playback metadata. The ordered fantasyNarration fields are consecutive paragraphs of the complete story. They must read as one continuous saga when joined, not as disconnected move summaries.
+Return compact structured JSON containing the title, defeatedKingFate, defeatedSealFate, epilogue, and exactly one creative scene for every ledger ply. Each scene contains only ply, fantasyNarration, characters, and locations. The backend derives all mechanical playback metadata, including the decisive actor, directly from the ledger. The ordered fantasyNarration fields are consecutive paragraphs of the complete story. They must read as one continuous saga when joined, not as disconnected move summaries.
 
 Factual rules:
 - The ledger is the source of truth. Never invent or omit captures, change a captor, kill a survivor, revive a captured piece, alter a promotion, change the winner, or change termination.
@@ -55,7 +55,7 @@ Story rules:
 - Capture scenes may expand to 4–7 sentences when needed to portray the full killing and aftermath without rushing.
 - fantasyNarration must contain publishable fantasy prose without chess terminology or coordinates.
 - Use piece IDs only in the structured characters field. Preserve established names in fantasyNarration.
-- Set decisiveActorId to the capturing pieceId for a capture and null for every non-capture. The prose must give that exact character credit for the decisive action.
+- For every capture, the prose must give the ledger event's exact pieceId character credit for the decisive action.
 - locations must use stable fantasy place names and preserve established geography.
 - Make total story length proportional to the game while giving decisive scenes more room than transitional scenes.
 - Before returning the package, audit every scene against its ledger event and the preceding scenes. Verify ply coverage, actor identity, captures, captors, deaths, promotions, checks, termination, names, injuries, locations, dialogue continuity, and survivor state. Correct every mismatch in the returned package.

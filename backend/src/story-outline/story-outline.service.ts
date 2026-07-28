@@ -83,7 +83,6 @@ export class StoryOutlineService {
                   ),
                 ),
                 ledger,
-                attempt > 0,
               ),
               ledger,
             ),
@@ -105,7 +104,12 @@ export class StoryOutlineService {
             (message.includes('Invalid setup/payoff relationship') ||
               message.includes('Ending sequence must include the final ply'))
           ) {
-            validationFeedback = message;
+            validationFeedback = [
+              message,
+              `The ledger final ply is ${ledger.events.length}.`,
+              `Rejected setupPayoffs: ${JSON.stringify(candidate.setupPayoffs)}.`,
+              'Rebuild each cited relationship with at least one real setup ply strictly before its payoff. Preserve meaningful narrative distance between setup and payoff.',
+            ].join(' ');
             continue;
           }
           throw error;
@@ -225,7 +229,6 @@ export function normalizeStoryOutlineRequiredEvents(
 export function normalizeStoryOutlineSetupPayoffs(
   outline: StoryOutline,
   ledger: GameLedger,
-  repairUnrecoverable = false,
 ): StoryOutline {
   const finalPly = ledger.events.length;
   return {
@@ -240,12 +243,6 @@ export function normalizeStoryOutlineSetupPayoffs(
 
       if (setupPlies.length) {
         return [{ ...relationship, setupPlies, payoffPly }];
-      }
-      if (repairUnrecoverable && payoffPly > 1) {
-        return [{ ...relationship, setupPlies: [payoffPly - 1], payoffPly }];
-      }
-      if (repairUnrecoverable) {
-        return [];
       }
       return [{ ...relationship, payoffPly }];
     }),

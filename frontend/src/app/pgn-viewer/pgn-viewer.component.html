@@ -224,7 +224,11 @@
             <p class="ply-meta">Aftermath</p>
             <div class="epilogue-page">
               <h4>Epilogue</h4>
-              <p class="story-text">{{ currentStory }}</p>
+              <div class="epilogue-prose">
+                @for (paragraph of epilogueParagraphs; track $index) {
+                  <p class="story-text">{{ paragraph }}</p>
+                }
+              </div>
             </div>
           } @else if (currentScene) {
             <p class="ply-meta">

@@ -452,6 +452,27 @@ button.piece-card-close {
   color: var(--gold-bright);
 }
 
+.epilogue-prose {
+  max-width: 42rem;
+}
+
+.epilogue-prose .story-text {
+  line-height: 1.78;
+}
+
+.epilogue-prose .story-text + .story-text {
+  margin-top: 1.15rem;
+}
+
+.epilogue-prose .story-text:first-child::first-letter {
+  float: left;
+  margin: 0.08em 0.12em 0 0;
+  color: var(--gold-bright);
+  font-family: var(--font-display);
+  font-size: 3.15em;
+  line-height: 0.82;
+}
+
 .story-text,
 .story-status {
   margin: 0;

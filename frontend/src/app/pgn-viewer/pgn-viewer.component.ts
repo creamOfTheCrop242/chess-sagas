@@ -120,6 +120,25 @@ export class PgnViewerComponent implements OnDestroy {
     if (this.isEpiloguePage) return this.epilogue;
     return this.currentScene?.fantasyNarration ?? '';
   }
+  get epilogueParagraphs(): string[] {
+    if (!this.epilogue.trim()) return [];
+    return this.epilogue
+      .split(/\n\s*\n/)
+      .flatMap((paragraph) => {
+        const sentences =
+          paragraph
+            .trim()
+            .match(/[^.!?]+(?:[.!?]+(?:["'’”]+)?|$)/g)
+            ?.map((sentence) => sentence.trim())
+            .filter(Boolean) ?? [];
+        const grouped: string[] = [];
+        for (let index = 0; index < sentences.length; index += 2) {
+          grouped.push(sentences.slice(index, index + 2).join(' '));
+        }
+        return grouped;
+      })
+      .filter(Boolean);
+  }
   get inspectedPiece(): PieceIdentity | null {
     if (!this.game) return null;
     const pieceId = this.hoveredPieceId ?? this.selectedPieceId;

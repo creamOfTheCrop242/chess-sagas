@@ -1,6 +1,9 @@
 import { BadRequestException } from '@nestjs/common';
 import { GameLedgerService } from '../chess/game-ledger.service';
-import { PieceIdentityService } from '../chess/piece-identity.service';
+import {
+  normalizePawnViewpoints,
+  PieceIdentityService,
+} from '../chess/piece-identity.service';
 import { PgnService } from './pgn.service';
 
 describe('PgnService deterministic ledger', () => {
@@ -30,7 +33,7 @@ describe('PgnService deterministic ledger', () => {
     expect(viewpointPawn).toMatchObject({
       permanentName: expect.any(String),
       viewpointName: expect.any(String),
-      viewpointRole: 'spearman',
+      viewpointRole: expect.any(String),
       companyName: 'Northern Ember Company',
     });
     expect(viewpointPawn.permanentName).toBe(viewpointPawn.viewpointName);
@@ -84,7 +87,7 @@ describe('PgnService deterministic ledger', () => {
       currentChessType: 'q',
       permanentName: expect.any(String),
       viewpointName: expect.any(String),
-      viewpointRole: 'scout',
+      viewpointRole: expect.any(String),
       companyName: 'Northern Dawn Company',
       promotedFromPawnId: 'w-p-a7',
       alive: true,
@@ -112,6 +115,54 @@ describe('PgnService deterministic ledger', () => {
     expect(repeatedNames).toEqual(firstNames);
     expect(new Set(firstNames).size).toBe(firstNames.length);
     expect(differentGameNames).not.toEqual(firstNames);
+  });
+
+  it('assigns balanced pawn roles deterministically for each game', () => {
+    const pgn =
+      '[White "Ada"]\n[Black "Turing"]\n[Date "2026.07.27"]\n[Result "*"]\n\n1. e4 e5 *';
+    const roles = (gamePgn: string, side: 'north' | 'south') =>
+      service
+        .parse(gamePgn)
+        .ledger.pieces.filter(
+          (piece) => piece.chessType === 'p' && piece.side === side,
+        )
+        .sort((left, right) =>
+          left.originalSquare.localeCompare(right.originalSquare),
+        )
+        .map((piece) => piece.viewpointRole);
+    const expectedRoles = [
+      'company captain',
+      'company captain',
+      'field medic',
+      'scout',
+      'sergeant',
+      'shield-bearer',
+      'spearman',
+      'standard-bearer',
+    ];
+
+    const northRoles = roles(pgn, 'north');
+    const southRoles = roles(pgn, 'south');
+
+    expect(roles(pgn, 'north')).toEqual(northRoles);
+    expect(roles(pgn, 'south')).toEqual(southRoles);
+    expect([...northRoles].sort()).toEqual(expectedRoles);
+    expect([...southRoles].sort()).toEqual(expectedRoles);
+    expect(roles(pgn.replace('1. e4 e5', '1. d4 d5'), 'north')).not.toEqual(
+      northRoles,
+    );
+  });
+
+  it('preserves pawn roles already stored in an existing ledger', () => {
+    const ledger = service.parse('[Result "*"]\n\n1. e4 e5 *').ledger;
+    const pawn = ledger.pieces.find((piece) => piece.id === 'w-p-e2')!;
+    pawn.viewpointRole = 'royal cartographer';
+
+    const normalized = normalizePawnViewpoints(ledger);
+
+    expect(
+      normalized.pieces.find((piece) => piece.id === pawn.id)?.viewpointRole,
+    ).toBe('royal cartographer');
   });
 
   it('assigns a permanent soldier-operator to every Moving Fortress', () => {

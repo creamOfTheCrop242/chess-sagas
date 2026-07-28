@@ -135,6 +135,10 @@ export class PieceIdentityService {
     const pieces: PieceIdentity[] = [];
     const squareToId = new Map<string, string>();
     const pawnNames = shuffledPawnNames(seed);
+    const pawnRoles = {
+      north: shuffledPawnRoles(seed, 'north'),
+      south: shuffledPawnRoles(seed, 'south'),
+    };
     let pawnIndex = 0;
 
     for (const row of chess.board()) {
@@ -146,6 +150,11 @@ export class PieceIdentityService {
           piece.type,
           square,
           piece.type === 'p' ? pawnNames[pawnIndex++] : undefined,
+          piece.type === 'p'
+            ? pawnRoles[piece.color === 'w' ? 'north' : 'south'][
+                square.charCodeAt(0) - 'a'.charCodeAt(0)
+              ]
+            : undefined,
         );
         pieces.push(identity);
         squareToId.set(square, identity.id);
@@ -172,11 +181,14 @@ export class PieceIdentityService {
     type: ChessPieceType,
     square: string,
     pawnName?: string,
+    pawnRole?: string,
   ): PieceIdentity {
     const side: Side = color === 'w' ? 'north' : 'south';
     const id = `${color}-${type}-${square}`;
     const pawnProfile =
-      type === 'p' ? pawnNarrativeProfile(side, square, pawnName) : undefined;
+      type === 'p'
+        ? pawnNarrativeProfile(side, square, pawnName, pawnRole)
+        : undefined;
     return {
       id,
       chessColor: color,
@@ -217,6 +229,7 @@ function pawnNarrativeProfile(
   side: Side,
   square: string,
   randomizedName?: string,
+  randomizedRole?: string,
 ): { companyName: string; viewpointName: string; viewpointRole: string } {
   const fileIndex = Math.max(
     0,
@@ -226,7 +239,7 @@ function pawnNarrativeProfile(
   return {
     companyName: `${kingdom} ${PAWN_COMPANIES[fileIndex]}`,
     viewpointName: randomizedName ?? PAWN_VIEWPOINT_NAMES[side][fileIndex],
-    viewpointRole: PAWN_VIEWPOINT_ROLES[side][fileIndex],
+    viewpointRole: randomizedRole ?? PAWN_VIEWPOINT_ROLES[side][fileIndex],
   };
 }
 
@@ -239,6 +252,7 @@ export function normalizePawnViewpoints(ledger: GameLedger): GameLedger {
         piece.side,
         piece.originalSquare,
         piece.viewpointName ?? piece.permanentName,
+        piece.viewpointRole,
       );
       return {
         ...piece,
@@ -252,14 +266,22 @@ export function normalizePawnViewpoints(ledger: GameLedger): GameLedger {
 }
 
 function shuffledPawnNames(seed: string): string[] {
-  const names = [...PAWN_NAMES];
+  return shuffledValues(PAWN_NAMES, seed);
+}
+
+function shuffledPawnRoles(seed: string, side: Side): string[] {
+  return shuffledValues(PAWN_VIEWPOINT_ROLES[side], `${seed}:${side}:roles`);
+}
+
+function shuffledValues<T>(source: readonly T[], seed: string): T[] {
+  const values = [...source];
   let state = hashSeed(seed);
-  for (let index = names.length - 1; index > 0; index -= 1) {
+  for (let index = values.length - 1; index > 0; index -= 1) {
     state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
     const swapIndex = state % (index + 1);
-    [names[index], names[swapIndex]] = [names[swapIndex], names[index]];
+    [values[index], values[swapIndex]] = [values[swapIndex], values[index]];
   }
-  return names;
+  return values;
 }
 
 function hashSeed(value: string): number {

@@ -8,6 +8,7 @@ export interface StoryOutlineRequest {
   ledger: GameLedger;
   narrativeAnalysis: NarrativeAnalysis;
   characterRegistry: PieceIdentity[];
+  validationFeedback?: string;
 }
 
 export interface StoryOutlineProvider {

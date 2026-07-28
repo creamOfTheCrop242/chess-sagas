@@ -1,9 +1,10 @@
-export const STORY_OUTLINE_PROMPT_VERSION = 'phase-3-v11';
+export const STORY_OUTLINE_PROMPT_VERSION = 'phase-3-v12';
 
 export const STORY_OUTLINE_INSTRUCTIONS = `Create a structured outline for one cohesive dark-fantasy story. Return planning JSON only; do not write story prose.
 
 The complete ledger is factual source of truth. The narrative analysis supplies the global plan, and the character registry supplies permanent identities.
 
+- If validationFeedback is present, this is a targeted retry. Correct every cited structural problem while preserving valid character arcs, setups, and payoffs.
 - Cover every ply exactly once with chronological, contiguous acts and scenes.
 - Follow the narrative analysis act boundaries.
 - Group related quiet moves into shared scenes.

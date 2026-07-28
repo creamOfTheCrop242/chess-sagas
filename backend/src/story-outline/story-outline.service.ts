@@ -65,22 +65,50 @@ export class StoryOutlineService {
       );
       const narrativeAnalysis: NarrativeAnalysis =
         narrativeAnalysisSchema.parse(analysisRun.narrativeAnalysis.data);
-      const outline = normalizeStoryOutlineCharacters(
-        normalizeStoryOutlineRequiredEvents(
-          normalizeStoryOutlineNumbering(
-            storyOutlineSchema.parse(
-              await this.provider.generate({
-                ledger,
-                narrativeAnalysis,
-                characterRegistry: ledger.pieces,
-              }),
+      let outline: StoryOutline | undefined;
+      let validationFeedback: string | undefined;
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const candidate = normalizeStoryOutlineCharacters(
+          normalizeStoryOutlineRequiredEvents(
+            normalizeStoryOutlineSetupPayoffs(
+              normalizeStoryOutlineNumbering(
+                storyOutlineSchema.parse(
+                  await this.provider.generate({
+                    ledger,
+                    narrativeAnalysis,
+                    characterRegistry: ledger.pieces,
+                    validationFeedback,
+                  }),
+                ),
+              ),
+              ledger,
             ),
+            ledger,
           ),
           ledger,
-        ),
-        ledger,
-      );
-      this.validator.validate(outline, ledger, narrativeAnalysis);
+        );
+        try {
+          this.validator.validate(candidate, ledger, narrativeAnalysis);
+          outline = candidate;
+          break;
+        } catch (error) {
+          const message =
+            error instanceof Error
+              ? error.message
+              : 'Outline validation failed';
+          if (
+            attempt === 0 &&
+            message.includes('Invalid setup/payoff relationship')
+          ) {
+            validationFeedback = message;
+            continue;
+          }
+          throw error;
+        }
+      }
+      if (!outline) {
+        throw new Error('Outline generation exhausted its validation retry');
+      }
       const data = JSON.parse(JSON.stringify(outline)) as Prisma.InputJsonValue;
 
       await this.prisma.generationRun.update({
@@ -186,6 +214,28 @@ export function normalizeStoryOutlineRequiredEvents(
           .sort((left, right) => left - right),
       })),
     })),
+  };
+}
+
+export function normalizeStoryOutlineSetupPayoffs(
+  outline: StoryOutline,
+  ledger: GameLedger,
+): StoryOutline {
+  const finalPly = ledger.events.length;
+  return {
+    ...outline,
+    setupPayoffs: outline.setupPayoffs.map((relationship) => {
+      const payoffPly = Math.min(relationship.payoffPly, finalPly);
+      const setupPlies = [
+        ...new Set(
+          relationship.setupPlies.filter((ply) => ply >= 1 && ply < payoffPly),
+        ),
+      ].sort((left, right) => left - right);
+
+      return setupPlies.length
+        ? { ...relationship, setupPlies, payoffPly }
+        : { ...relationship, payoffPly };
+    }),
   };
 }
 

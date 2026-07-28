@@ -68,29 +68,25 @@ export class StoryOutlineService {
       let outline: StoryOutline | undefined;
       let validationFeedback: string | undefined;
       for (let attempt = 0; attempt < 2; attempt += 1) {
-        const candidate = normalizeStoryOutlineRelationshipScenes(
-          normalizeStoryOutlineCharacters(
-            normalizeStoryOutlineRequiredEvents(
-              normalizeStoryOutlineEndingSequence(
-                normalizeStoryOutlineSetupPayoffs(
-                  normalizeStoryOutlineNumbering(
-                    storyOutlineSchema.parse(
-                      await this.provider.generate({
-                        ledger,
-                        narrativeAnalysis,
-                        characterRegistry: ledger.pieces,
-                        validationFeedback,
-                      }),
-                    ),
-                  ),
-                  ledger,
-                ),
-                ledger,
-              ),
-              ledger,
-            ),
+        let candidate = storyOutlineSchema.parse(
+          await this.provider.generate({
             ledger,
-          ),
+            narrativeAnalysis,
+            characterRegistry: ledger.pieces,
+            validationFeedback,
+          }),
+        );
+        candidate = normalizeStoryOutlineNumbering(candidate);
+        candidate = normalizeStoryOutlineStructure(
+          candidate,
+          narrativeAnalysis,
+        );
+        candidate = normalizeStoryOutlineSetupPayoffs(candidate, ledger);
+        candidate = normalizeStoryOutlineEndingSequence(candidate, ledger);
+        candidate = normalizeStoryOutlineRequiredEvents(candidate, ledger);
+        candidate = normalizeStoryOutlineCharacters(candidate, ledger);
+        candidate = normalizeStoryOutlineRelationshipScenes(
+          candidate,
           narrativeAnalysis,
         );
         try {
@@ -217,6 +213,70 @@ export function normalizeStoryOutlineRelationshipScenes(
       })),
     })),
   };
+}
+
+export function normalizeStoryOutlineStructure(
+  outline: StoryOutline,
+  analysis: NarrativeAnalysis,
+): StoryOutline {
+  if (outline.acts.length !== analysis.acts.length) return outline;
+  return {
+    ...outline,
+    acts: outline.acts.map((act, actIndex) => {
+      const plannedAct = analysis.acts[actIndex];
+      const actLength = plannedAct.endPly - plannedAct.startPly + 1;
+      const scenes = collapseExcessScenes(act.scenes, actLength);
+      let nextPly = plannedAct.startPly;
+      return {
+        ...act,
+        startPly: plannedAct.startPly,
+        endPly: plannedAct.endPly,
+        scenes: scenes.map((scene, sceneIndex) => {
+          const remainingScenes = scenes.length - sceneIndex - 1;
+          const endPly =
+            sceneIndex === scenes.length - 1
+              ? plannedAct.endPly
+              : Math.max(
+                  nextPly,
+                  Math.min(scene.endPly, plannedAct.endPly - remainingScenes),
+                );
+          const normalized = { ...scene, startPly: nextPly, endPly };
+          nextPly = endPly + 1;
+          return normalized;
+        }),
+      };
+    }),
+  };
+}
+
+function collapseExcessScenes(
+  scenes: StoryOutline['acts'][number]['scenes'],
+  maximumScenes: number,
+): StoryOutline['acts'][number]['scenes'] {
+  if (scenes.length <= maximumScenes) return scenes;
+  const retained = scenes.slice(0, maximumScenes);
+  const finalScene = retained[retained.length - 1];
+  const overflow = scenes.slice(maximumScenes);
+  retained[retained.length - 1] = {
+    ...finalScene,
+    purpose: [finalScene, ...overflow].map((scene) => scene.purpose).join(' '),
+    emotionalBeat: [finalScene, ...overflow]
+      .map((scene) => scene.emotionalBeat)
+      .join(' → '),
+    characters: [
+      ...finalScene.characters,
+      ...overflow.flatMap((scene) => scene.characters),
+    ].filter((pieceId, index, all) => all.indexOf(pieceId) === index),
+    requiredEventPlies: [
+      ...finalScene.requiredEventPlies,
+      ...overflow.flatMap((scene) => scene.requiredEventPlies),
+    ],
+    continuityNotes: [
+      ...finalScene.continuityNotes,
+      ...overflow.flatMap((scene) => scene.continuityNotes),
+    ],
+  };
+  return retained;
 }
 
 export function normalizeStoryOutlineNumbering(

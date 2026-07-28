@@ -10,6 +10,7 @@ import {
   normalizeStoryOutlineRelationshipScenes,
   normalizeStoryOutlineRequiredEvents,
   normalizeStoryOutlineSetupPayoffs,
+  normalizeStoryOutlineStructure,
 } from './story-outline.service';
 
 describe('StoryOutlineValidator', () => {
@@ -116,6 +117,30 @@ describe('StoryOutlineValidator', () => {
   it('accepts a complete ledger-aligned outline', () => {
     expect(() =>
       new StoryOutlineValidator().validate(outline, ledger, analysis),
+    ).not.toThrow();
+  });
+
+  it('repairs overlapping and gapped scene ranges from analysis boundaries', () => {
+    const invalid = structuredClone(outline);
+    invalid.acts[0].startPly = 2;
+    invalid.acts[0].endPly = 99;
+    invalid.acts[0].scenes[0].startPly = 2;
+    invalid.acts[0].scenes[0].endPly = 2;
+    invalid.acts[0].scenes[1].startPly = 2;
+    invalid.acts[0].scenes[1].endPly = 99;
+
+    const normalized = normalizeStoryOutlineStructure(invalid, analysis);
+
+    expect(normalized.acts[0]).toMatchObject({
+      startPly: 1,
+      endPly: 2,
+      scenes: [
+        { startPly: 1, endPly: 1 },
+        { startPly: 2, endPly: 2 },
+      ],
+    });
+    expect(() =>
+      new StoryOutlineValidator().validate(normalized, ledger, analysis),
     ).not.toThrow();
   });
 

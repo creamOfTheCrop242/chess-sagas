@@ -1,4 +1,4 @@
-export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v11';
+export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v12';
 
 export const NARRATIVE_ANALYSIS_INSTRUCTIONS = `You are the global narrative analyst for Chess Sagas.
 
@@ -23,6 +23,9 @@ The ledger is the source of truth:
 - If a pawn promotes, the viewpoint grunt personally undergoes the ascension and becomes the promoted champion. The same individual retains their name, memories, injuries, loyalties, relationships, personality, and resentment; the company does not collectively transform into a Queen.
 - Give every promoting grunt setup, personal motivation, and recognizable character development before promotion.
 - Important deaths must influence later plans. Set up rivalries and payoffs before they occur.
+- Create 2–4 explicit relationshipPlans for recurring characters. Every plan must identify exactly two real piece IDs, state their starting dynamic and relationship type, schedule concrete development plies, describe how the bond or rivalry changes, and give it a payoff ply when the ledger permits.
+- Prefer relationships that can materially affect choices and emotional consequences: friendship, loyalty, rivalry, mentorship, command tension, family-like attachment, ideological conflict, debt, fear, or reluctant respect. Do not call two characters related unless the ledger-compatible story can establish it.
+- Scale relationship count modestly: normally 2 for short games, 3 for medium games, and 4 only for long games with enough recurring characters. Relationships may cross kingdoms, but their meetings and changes must remain compatible with the characters' ledger activity and survival.
 - Plan every capture as a specific, visceral dark-fantasy death for the ledger-confirmed victim. Match the killing method to the captor's established weapon, magic, body, scale, and personality, and plan an emotional and physical aftermath.
 - Keep the victim emotionally present during the killing. Plan their realization of danger, attempt to resist or escape, involuntary physical response, and personal reaction to the fatal wound: fear, disbelief, pain, fury, defiance, recognition, regret, relief, or another character-specific response.
 - When timing allows, give the victim a final line, thought, gesture, memory, or look that reflects their established personality and relationship with the killer. Sudden deaths should still include a brief authentic reaction rather than postmortem awareness.

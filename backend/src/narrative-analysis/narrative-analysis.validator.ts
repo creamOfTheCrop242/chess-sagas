@@ -15,6 +15,7 @@ export class NarrativeAnalysisValidator {
       ...analysis.characterArcs.map((item) => item.pieceId),
       ...analysis.acts.flatMap((act) => act.majorCharacters),
       ...analysis.promotingPawnPlans.map((plan) => plan.pieceId),
+      ...analysis.relationshipPlans.flatMap((plan) => plan.characterIds),
     ];
     for (const pieceId of referencedPieceIds) {
       if (!pieceIds.has(pieceId)) {
@@ -40,9 +41,35 @@ export class NarrativeAnalysisValidator {
         plan.payoffPly,
         ...plan.setupPlies,
       ]),
+      ...analysis.relationshipPlans.flatMap((plan) => [
+        ...plan.developmentPlies,
+        ...(plan.payoffPly === null ? [] : [plan.payoffPly]),
+      ]),
     ];
     if (referencedPlies.some((ply) => !validPly(ply))) {
       errors.push(`Analysis references a ply outside 1-${finalPly}`);
+    }
+    const relationshipIds = new Set<string>();
+    for (const relationship of analysis.relationshipPlans) {
+      if (relationshipIds.has(relationship.id)) {
+        errors.push(`Duplicate relationship ID: ${relationship.id}`);
+      }
+      relationshipIds.add(relationship.id);
+      if (relationship.characterIds[0] === relationship.characterIds[1]) {
+        errors.push(
+          `Relationship ${relationship.id} must involve two characters`,
+        );
+      }
+      if (
+        relationship.payoffPly !== null &&
+        relationship.developmentPlies.some(
+          (ply) => ply > relationship.payoffPly!,
+        )
+      ) {
+        errors.push(
+          `Relationship ${relationship.id} develops after its payoff`,
+        );
+      }
     }
 
     let nextActPly = 1;

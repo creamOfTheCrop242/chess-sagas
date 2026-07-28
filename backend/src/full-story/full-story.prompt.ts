@@ -1,4 +1,4 @@
-export const FULL_STORY_PROMPT_VERSION = 'story-package-v15';
+export const FULL_STORY_PROMPT_VERSION = 'story-package-v16';
 
 export const FULL_STORY_INSTRUCTIONS = `Write one cohesive dark-fantasy war story package from the supplied complete ledger, validated narrative analysis, validated outline, and character registry.
 
@@ -38,6 +38,7 @@ Story rules:
 - Follow the supplied title, theme, acts, scene ranges, setups, payoffs, ending sequence, and prose constraints.
 - Write continuous scenes with transitions, callbacks, recurring motifs, cause and effect, and emotional consequences.
 - Give major recurring characters distinct voices and include purposeful dialogue that reveals relationships, fears, loyalties, disagreements, and decisions. Let conversations continue and pay off across later scenes.
+- Dramatize every validated relationshipBeat at its planned ply. Establish the supplied starting dynamic, make each later interaction change it, and deliver its planned emotional payoff through action, dialogue, memory, grief, betrayal, reconciliation, sacrifice, or earned respect.
 - Establish a concrete physical setting early, maintain consistent geography, and make terrain, weather, architecture, distance, and damage influence what characters can do.
 - Dramatize major confrontations moment by moment with goals, danger, physical positioning, attack and defense, reversals, sensory detail, and emotional aftermath. Do not summarize decisive showdowns in a single sentence.
 - Treat every capture as an on-page, visceral dark-fantasy killing rather than saying the victim merely fell, vanished, or was defeated. Slow the beat down to show the approach, resistance, weapon or spell making contact, bodily damage, the victim's final reaction, and the immediate aftermath.

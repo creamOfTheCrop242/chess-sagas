@@ -68,19 +68,22 @@ export class StoryOutlineService {
       let outline: StoryOutline | undefined;
       let validationFeedback: string | undefined;
       for (let attempt = 0; attempt < 2; attempt += 1) {
-        const candidate = normalizeStoryOutlineCharacters(
-          normalizeStoryOutlineRequiredEvents(
-            normalizeStoryOutlineEndingSequence(
-              normalizeStoryOutlineSetupPayoffs(
-                normalizeStoryOutlineNumbering(
-                  storyOutlineSchema.parse(
-                    await this.provider.generate({
-                      ledger,
-                      narrativeAnalysis,
-                      characterRegistry: ledger.pieces,
-                      validationFeedback,
-                    }),
+        const candidate = normalizeStoryOutlineRelationshipScenes(
+          normalizeStoryOutlineCharacters(
+            normalizeStoryOutlineRequiredEvents(
+              normalizeStoryOutlineEndingSequence(
+                normalizeStoryOutlineSetupPayoffs(
+                  normalizeStoryOutlineNumbering(
+                    storyOutlineSchema.parse(
+                      await this.provider.generate({
+                        ledger,
+                        narrativeAnalysis,
+                        characterRegistry: ledger.pieces,
+                        validationFeedback,
+                      }),
+                    ),
                   ),
+                  ledger,
                 ),
                 ledger,
               ),
@@ -88,7 +91,7 @@ export class StoryOutlineService {
             ),
             ledger,
           ),
-          ledger,
+          narrativeAnalysis,
         );
         try {
           this.validator.validate(candidate, ledger, narrativeAnalysis);
@@ -102,12 +105,14 @@ export class StoryOutlineService {
           if (
             attempt === 0 &&
             (message.includes('Invalid setup/payoff relationship') ||
-              message.includes('Ending sequence must include the final ply'))
+              message.includes('Ending sequence must include the final ply') ||
+              message.includes('Relationship'))
           ) {
             validationFeedback = [
               message,
               `The ledger final ply is ${ledger.events.length}.`,
               `Rejected setupPayoffs: ${JSON.stringify(candidate.setupPayoffs)}.`,
+              `Rejected relationshipBeats: ${JSON.stringify(candidate.relationshipBeats)}.`,
               'Rebuild each cited relationship with at least one real setup ply strictly before its payoff. Preserve meaningful narrative distance between setup and payoff.',
             ].join(' ');
             continue;
@@ -174,6 +179,44 @@ export class StoryOutlineService {
     }
     return run;
   }
+}
+
+export function normalizeStoryOutlineRelationshipScenes(
+  outline: StoryOutline,
+  analysis: NarrativeAnalysis,
+): StoryOutline {
+  const relationshipCharactersByPly = new Map<number, Set<string>>();
+  const plannedRelationships = new Map(
+    (analysis.relationshipPlans ?? []).map((relationship) => [
+      relationship.id,
+      relationship,
+    ]),
+  );
+  for (const relationship of outline.relationshipBeats) {
+    const planned = plannedRelationships.get(relationship.relationshipId);
+    if (!planned) continue;
+    for (const ply of relationship.beatPlies) {
+      const characters =
+        relationshipCharactersByPly.get(ply) ?? new Set<string>();
+      planned.characterIds.forEach((pieceId) => characters.add(pieceId));
+      relationshipCharactersByPly.set(ply, characters);
+    }
+  }
+  return {
+    ...outline,
+    acts: outline.acts.map((act) => ({
+      ...act,
+      scenes: act.scenes.map((scene) => ({
+        ...scene,
+        characters: [
+          ...scene.characters,
+          ...[...relationshipCharactersByPly.entries()]
+            .filter(([ply]) => ply >= scene.startPly && ply <= scene.endPly)
+            .flatMap(([, characters]) => [...characters]),
+        ].filter((pieceId, index, all) => all.indexOf(pieceId) === index),
+      })),
+    })),
+  };
 }
 
 export function normalizeStoryOutlineNumbering(

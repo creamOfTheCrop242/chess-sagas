@@ -83,6 +83,59 @@ export class StoryOutlineValidator {
         errors.push(`Invalid setup/payoff relationship ${relationship.id}`);
       }
     });
+    const plannedRelationships = new Map(
+      (analysis.relationshipPlans ?? []).map((relationship) => [
+        relationship.id,
+        relationship,
+      ]),
+    );
+    const outlinedRelationships = new Set<string>();
+    for (const relationship of outline.relationshipBeats) {
+      const planned = plannedRelationships.get(relationship.relationshipId);
+      if (!planned) {
+        errors.push(`Unknown relationship plan ${relationship.relationshipId}`);
+        continue;
+      }
+      outlinedRelationships.add(relationship.relationshipId);
+      if (
+        relationship.characterIds.length !== planned.characterIds.length ||
+        relationship.characterIds.some(
+          (pieceId) => !planned.characterIds.includes(pieceId),
+        )
+      ) {
+        errors.push(
+          `Relationship ${relationship.relationshipId} has incorrect characters`,
+        );
+      }
+      if (relationship.beatPlies.some((ply) => ply < 1 || ply > finalPly)) {
+        errors.push(
+          `Relationship ${relationship.relationshipId} references an invalid ply`,
+        );
+      }
+      for (const ply of relationship.beatPlies) {
+        const scene = outline.acts
+          .flatMap((act) => act.scenes)
+          .find(
+            (candidate) => ply >= candidate.startPly && ply <= candidate.endPly,
+          );
+        if (
+          !scene ||
+          planned.characterIds.some(
+            (pieceId) => !scene.characters.includes(pieceId),
+          )
+        ) {
+          errors.push(
+            `Relationship ${relationship.relationshipId} must place both characters in each planned scene`,
+          );
+          break;
+        }
+      }
+    }
+    for (const relationshipId of plannedRelationships.keys()) {
+      if (!outlinedRelationships.has(relationshipId)) {
+        errors.push(`Relationship plan ${relationshipId} is missing`);
+      }
+    }
     if (
       outline.endingSequence.some(
         (beat) => beat.ply < 1 || beat.ply > finalPly,

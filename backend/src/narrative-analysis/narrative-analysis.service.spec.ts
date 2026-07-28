@@ -145,6 +145,12 @@ describe('NarrativeAnalysisService', () => {
 
 function makeAnalysis(ledger: GameLedger): NarrativeAnalysis {
   const queenId = ledger.events.at(-1)!.pieceId;
+  const southernKingId = ledger.pieces.find(
+    (piece) => piece.chessColor === 'b' && piece.chessType === 'k',
+  )!.id;
+  const northernBishopId = ledger.pieces.find(
+    (piece) => piece.chessColor === 'w' && piece.chessType === 'b',
+  )!.id;
   return {
     titleConcepts: ['The Broken Seal'],
     dominantThemes: ['ambition', 'collapse'],
@@ -190,6 +196,26 @@ function makeAnalysis(ledger: GameLedger): NarrativeAnalysis {
         personalityTraits: ['ruthless'],
         visualTraits: ['radiant blade', 'battle magic'],
         narrativeFunction: 'Carries the decisive assault.',
+      },
+    ],
+    relationshipPlans: [
+      {
+        id: 'queen-king-rivalry',
+        characterIds: [queenId, southernKingId],
+        relationshipType: 'rivalry',
+        startingDynamic: 'The King dismisses the approaching champion.',
+        developmentPlies: [5, 7],
+        payoffPly: 7,
+        intendedChange: 'Dismissal becomes fatal recognition.',
+      },
+      {
+        id: 'bishop-queen-trust',
+        characterIds: [northernBishopId, queenId],
+        relationshipType: 'battlefield trust',
+        startingDynamic: 'The Archwizard opens a path for the Queen.',
+        developmentPlies: [3, 5],
+        payoffPly: 7,
+        intendedChange: 'Their coordinated assault breaks the final defense.',
       },
     ],
     promotingPawnPlans: [],

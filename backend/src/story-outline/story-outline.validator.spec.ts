@@ -7,6 +7,7 @@ import {
   normalizeStoryOutlineCharacters,
   normalizeStoryOutlineEndingSequence,
   normalizeStoryOutlineNumbering,
+  normalizeStoryOutlineRelationshipScenes,
   normalizeStoryOutlineRequiredEvents,
   normalizeStoryOutlineSetupPayoffs,
 } from './story-outline.service';
@@ -36,6 +37,16 @@ describe('StoryOutlineValidator', () => {
   } as GameLedger;
   const analysis = {
     acts: [{ startPly: 1, endPly: 2 }],
+    relationshipPlans: [
+      {
+        id: 'queen-soldier-rivalry',
+        characterIds: ['w-q-d1', 'b-p-f7'],
+      },
+      {
+        id: 'queen-soldier-respect',
+        characterIds: ['w-q-d1', 'b-p-f7'],
+      },
+    ],
   } as NarrativeAnalysis;
   const outline: StoryOutline = {
     selectedTitle: 'The Last Gate',
@@ -55,7 +66,7 @@ describe('StoryOutlineValidator', () => {
             endPly: 1,
             purpose: 'Establish the attacker.',
             emotionalBeat: 'dread',
-            characters: ['w-q-d1'],
+            characters: ['w-q-d1', 'b-p-f7'],
             requiredEventPlies: [],
             continuityNotes: ['No deaths occur.'],
           },
@@ -82,6 +93,22 @@ describe('StoryOutlineValidator', () => {
         payoff: 'The queen breaks through.',
       },
     ],
+    relationshipBeats: [
+      {
+        relationshipId: 'queen-soldier-rivalry',
+        characterIds: ['w-q-d1', 'b-p-f7'],
+        beatPlies: [1, 2],
+        progression: 'The soldier recognizes the approaching Queen.',
+        payoff: 'Their rivalry ends in the final confrontation.',
+      },
+      {
+        relationshipId: 'queen-soldier-respect',
+        characterIds: ['w-q-d1', 'b-p-f7'],
+        beatPlies: [1, 2],
+        progression: 'Defiance becomes reluctant respect.',
+        payoff: 'The Queen acknowledges the soldier’s courage.',
+      },
+    ],
     endingSequence: [{ ply: 2, beat: 'The seal fails.' }],
     proseConstraints: ['Do not mention coordinates.'],
   };
@@ -89,6 +116,33 @@ describe('StoryOutlineValidator', () => {
   it('accepts a complete ledger-aligned outline', () => {
     expect(() =>
       new StoryOutlineValidator().validate(outline, ledger, analysis),
+    ).not.toThrow();
+  });
+
+  it('rejects an outline that omits an analyzed relationship', () => {
+    const invalid = structuredClone(outline);
+    invalid.relationshipBeats = invalid.relationshipBeats.slice(0, 1);
+
+    expect(() =>
+      new StoryOutlineValidator().validate(invalid, ledger, analysis),
+    ).toThrow('Relationship plan queen-soldier-respect is missing');
+  });
+
+  it('places both relationship characters in every planned scene', () => {
+    const incomplete = structuredClone(outline);
+    incomplete.acts[0].scenes[0].characters = ['w-q-d1'];
+
+    const normalized = normalizeStoryOutlineRelationshipScenes(
+      incomplete,
+      analysis,
+    );
+
+    expect(normalized.acts[0].scenes[0].characters).toEqual([
+      'w-q-d1',
+      'b-p-f7',
+    ]);
+    expect(() =>
+      new StoryOutlineValidator().validate(normalized, ledger, analysis),
     ).not.toThrow();
   });
 
@@ -220,6 +274,7 @@ describe('StoryOutlineValidator', () => {
         { startPly: 1, endPly: 1 },
         { startPly: 2, endPly: 2 },
       ],
+      relationshipPlans: analysis.relationshipPlans,
     } as NarrativeAnalysis;
     const twoActOutline = structuredClone(outline);
     const [approach, fall] = twoActOutline.acts[0].scenes;

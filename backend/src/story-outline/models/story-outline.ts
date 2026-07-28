@@ -29,6 +29,14 @@ const setupPayoffSchema = z.object({
   payoff: z.string().min(1),
 });
 
+const relationshipBeatSchema = z.object({
+  relationshipId: z.string().min(1),
+  characterIds: z.array(z.string().min(1)).length(2),
+  beatPlies: z.array(z.number().int().positive()).min(1),
+  progression: z.string().min(1),
+  payoff: z.string().min(1),
+});
+
 const endingBeatSchema = z.object({
   ply: z.number().int().positive(),
   beat: z.string().min(1),
@@ -39,6 +47,7 @@ export const storyOutlineSchema = z.object({
   theme: z.string().min(1),
   acts: z.array(outlineActSchema).min(1),
   setupPayoffs: z.array(setupPayoffSchema),
+  relationshipBeats: z.array(relationshipBeatSchema).min(2).max(4),
   endingSequence: z.array(endingBeatSchema).min(1),
   proseConstraints: z.array(z.string().min(1)).min(1),
 });

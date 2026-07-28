@@ -155,6 +155,12 @@ textarea:focus {
   margin-top: 1rem;
 }
 
+.generation-panel .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
 button {
   appearance: none;
   font-family: var(--font-display);
@@ -433,19 +439,38 @@ button.piece-card-close {
   color: var(--seal);
 }
 
-.epilogue {
-  margin-top: 1.5rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid rgba(196, 168, 98, 0.3);
+.epilogue-page {
+  padding-top: 0.25rem;
 }
 
-.epilogue h4 {
+.epilogue-page h4 {
   margin: 0 0 0.75rem;
   font-family: var(--font-display);
   font-size: 0.8rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--gold-bright);
+}
+
+.epilogue-prose {
+  max-width: 42rem;
+}
+
+.epilogue-prose .story-text {
+  line-height: 1.78;
+}
+
+.epilogue-prose .story-text + .story-text {
+  margin-top: 1.15rem;
+}
+
+.epilogue-prose .story-text:first-child::first-letter {
+  float: left;
+  margin: 0.08em 0.12em 0 0;
+  color: var(--gold-bright);
+  font-family: var(--font-display);
+  font-size: 3.15em;
+  line-height: 0.82;
 }
 
 .story-text,
@@ -585,5 +610,138 @@ button.piece-card-close {
 @keyframes pipeline-pulse {
   to {
     opacity: 0.35;
+  }
+}
+
+.fallen-backdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(2, 5, 9, 0.78);
+  backdrop-filter: blur(5px);
+}
+
+.fallen-roster {
+  position: relative;
+  width: min(760px, 100%);
+  max-height: min(720px, calc(100vh - 2rem));
+  overflow-y: auto;
+  padding: 1.5rem;
+  border: 1px solid rgba(196, 168, 98, 0.62);
+  background:
+    linear-gradient(145deg, rgba(34, 27, 22, 0.36), transparent 42%), #0b1119;
+  box-shadow:
+    0 0 0 8px rgba(196, 168, 98, 0.06),
+    0 24px 70px rgba(0, 0, 0, 0.75);
+}
+
+.fallen-kicker,
+.fallen-intro,
+.fallen-empty {
+  margin: 0;
+}
+
+.fallen-kicker {
+  color: var(--danger);
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.fallen-roster > h3 {
+  margin: 0.2rem 2rem 0;
+  color: var(--gold-bright);
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+}
+
+.fallen-intro {
+  margin-top: 0.4rem;
+  color: var(--ink-muted);
+}
+
+button.fallen-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  padding: 0.15rem 0.45rem;
+  border-color: transparent;
+  background: transparent;
+  font-size: 1.2rem;
+}
+
+.fallen-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.fallen-columns > section {
+  padding: 1rem;
+  border: 1px solid rgba(196, 168, 98, 0.2);
+  background: rgba(7, 11, 17, 0.66);
+}
+
+.fallen-columns h4 {
+  margin: 0 0 0.85rem;
+  color: var(--seal);
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.fallen-columns ol {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fallen-columns li {
+  display: grid;
+  gap: 0.12rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(196, 168, 98, 0.14);
+}
+
+.fallen-columns li:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.fallen-columns strong {
+  color: var(--ink);
+  font-family: var(--font-display);
+}
+
+.fallen-columns span {
+  color: var(--ink-muted);
+  font-size: 0.82rem;
+}
+
+.fallen-columns small {
+  color: var(--gold);
+  line-height: 1.4;
+}
+
+.fallen-empty {
+  color: var(--ink-dim);
+  font-style: italic;
+}
+
+@media (max-width: 620px) {
+  .fallen-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .fallen-roster {
+    padding: 1.1rem;
   }
 }

@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import type { GameLedger } from '../chess/models/game-ledger';
 import { normalizePawnViewpoints } from '../chess/piece-identity.service';
 import { PrismaService } from '../database/prisma.service';
+import { NARRATIVE_ANALYSIS_PROMPT_VERSION } from '../narrative-analysis/narrative-analysis.prompt';
 import {
   narrativeAnalysisSchema,
   type NarrativeAnalysis,
@@ -37,6 +38,7 @@ export class StoryOutlineService {
         gameId,
         currentStage: 'NARRATIVE_ANALYSIS',
         status: 'COMPLETED',
+        promptVersion: NARRATIVE_ANALYSIS_PROMPT_VERSION,
       },
       orderBy: { createdAt: 'desc' },
       include: { narrativeAnalysis: true },
@@ -63,22 +65,59 @@ export class StoryOutlineService {
       );
       const narrativeAnalysis: NarrativeAnalysis =
         narrativeAnalysisSchema.parse(analysisRun.narrativeAnalysis.data);
-      const outline = normalizeStoryOutlineCharacters(
-        normalizeStoryOutlineRequiredEvents(
-          normalizeStoryOutlineNumbering(
-            storyOutlineSchema.parse(
-              await this.provider.generate({
+      let outline: StoryOutline | undefined;
+      let validationFeedback: string | undefined;
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const candidate = normalizeStoryOutlineCharacters(
+          normalizeStoryOutlineRequiredEvents(
+            normalizeStoryOutlineEndingSequence(
+              normalizeStoryOutlineSetupPayoffs(
+                normalizeStoryOutlineNumbering(
+                  storyOutlineSchema.parse(
+                    await this.provider.generate({
+                      ledger,
+                      narrativeAnalysis,
+                      characterRegistry: ledger.pieces,
+                      validationFeedback,
+                    }),
+                  ),
+                ),
                 ledger,
-                narrativeAnalysis,
-                characterRegistry: ledger.pieces,
-              }),
+              ),
+              ledger,
             ),
+            ledger,
           ),
           ledger,
-        ),
-        ledger,
-      );
-      this.validator.validate(outline, ledger, narrativeAnalysis);
+        );
+        try {
+          this.validator.validate(candidate, ledger, narrativeAnalysis);
+          outline = candidate;
+          break;
+        } catch (error) {
+          const message =
+            error instanceof Error
+              ? error.message
+              : 'Outline validation failed';
+          if (
+            attempt === 0 &&
+            (message.includes('Invalid setup/payoff relationship') ||
+              message.includes('Ending sequence must include the final ply'))
+          ) {
+            validationFeedback = [
+              message,
+              `The ledger final ply is ${ledger.events.length}.`,
+              `Rejected setupPayoffs: ${JSON.stringify(candidate.setupPayoffs)}.`,
+              'Rebuild each cited relationship with at least one real setup ply strictly before its payoff. Preserve meaningful narrative distance between setup and payoff.',
+            ].join(' ');
+            continue;
+          }
+          throw error;
+        }
+      }
+      if (!outline) {
+        throw new Error('Outline generation exhausted its validation retry');
+      }
       const data = JSON.parse(JSON.stringify(outline)) as Prisma.InputJsonValue;
 
       await this.prisma.generationRun.update({
@@ -119,7 +158,12 @@ export class StoryOutlineService {
       throw new NotFoundException(`Game ${gameId} was not found`);
     }
     const run = await this.prisma.generationRun.findFirst({
-      where: { gameId, currentStage: 'OUTLINE', status: 'COMPLETED' },
+      where: {
+        gameId,
+        currentStage: 'OUTLINE',
+        status: 'COMPLETED',
+        promptVersion: STORY_OUTLINE_PROMPT_VERSION,
+      },
       orderBy: { createdAt: 'desc' },
       include: { storyOutline: true },
     });
@@ -179,6 +223,58 @@ export function normalizeStoryOutlineRequiredEvents(
           .sort((left, right) => left - right),
       })),
     })),
+  };
+}
+
+export function normalizeStoryOutlineSetupPayoffs(
+  outline: StoryOutline,
+  ledger: GameLedger,
+): StoryOutline {
+  const finalPly = ledger.events.length;
+  return {
+    ...outline,
+    setupPayoffs: outline.setupPayoffs.flatMap((relationship) => {
+      const payoffPly = Math.min(relationship.payoffPly, finalPly);
+      const setupPlies = [
+        ...new Set(
+          relationship.setupPlies.filter((ply) => ply >= 1 && ply < payoffPly),
+        ),
+      ].sort((left, right) => left - right);
+
+      if (setupPlies.length) {
+        return [{ ...relationship, setupPlies, payoffPly }];
+      }
+      return [{ ...relationship, payoffPly }];
+    }),
+  };
+}
+
+export function normalizeStoryOutlineEndingSequence(
+  outline: StoryOutline,
+  ledger: GameLedger,
+): StoryOutline {
+  const finalPly = ledger.events.length;
+  const normalized = outline.endingSequence
+    .map((endingBeat) => ({
+      ...endingBeat,
+      ply: Math.min(endingBeat.ply, finalPly),
+    }))
+    .filter((endingBeat) => endingBeat.ply >= 1)
+    .sort((left, right) => left.ply - right.ply);
+  if (!normalized.some((endingBeat) => endingBeat.ply === finalPly)) {
+    const finalBeat = normalized.at(-1);
+    if (finalBeat) {
+      normalized.push({ ...finalBeat, ply: finalPly });
+    }
+  }
+
+  return {
+    ...outline,
+    endingSequence: normalized.filter(
+      (endingBeat, index, all) =>
+        all.findIndex((candidate) => candidate.ply === endingBeat.ply) ===
+        index,
+    ),
   };
 }
 

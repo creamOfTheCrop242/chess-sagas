@@ -4,6 +4,8 @@ import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { PgnService } from '../pgn/pgn.service';
 
+export const GAME_LEDGER_SCHEMA_VERSION = 4;
+
 @Injectable()
 export class GamesService {
   constructor(
@@ -23,7 +25,24 @@ export class GamesService {
       orderBy: { createdAt: 'desc' },
       include: { ledger: true },
     });
-    if (existing) return existing;
+    if (existing) {
+      if (
+        existing.ledger &&
+        existing.ledger.schemaVersion < GAME_LEDGER_SCHEMA_VERSION
+      ) {
+        const ledger = await this.prisma.gameLedger.update({
+          where: { gameId: existing.id },
+          data: {
+            schemaVersion: GAME_LEDGER_SCHEMA_VERSION,
+            initialFen: parsed.ledger.initialFen,
+            finalFen: parsed.ledger.finalFen,
+            data: ledgerData,
+          },
+        });
+        return { ...existing, ledger };
+      }
+      return existing;
+    }
 
     return this.prisma.game.create({
       data: {
@@ -34,7 +53,7 @@ export class GamesService {
         result: parsed.ledger.metadata.result,
         ledger: {
           create: {
-            schemaVersion: 1,
+            schemaVersion: GAME_LEDGER_SCHEMA_VERSION,
             initialFen: parsed.ledger.initialFen,
             finalFen: parsed.ledger.finalFen,
             data: ledgerData,

@@ -153,7 +153,9 @@ export class GameLedgerService {
           ? 'timeout'
           : terminationText.includes('resign')
             ? 'resignation'
-            : 'unknown';
+            : result === '1-0' || result === '0-1'
+              ? 'resignation'
+              : 'unknown';
     const number = (value?: string) =>
       value && /^\d+$/.test(value) ? Number(value) : undefined;
     return {

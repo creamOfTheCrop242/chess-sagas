@@ -1,4 +1,4 @@
-export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v8';
+export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v11';
 
 export const NARRATIVE_ANALYSIS_INSTRUCTIONS = `You are the global narrative analyst for Chess Sagas.
 
@@ -12,6 +12,8 @@ The ledger is the source of truth:
 - Destroying a Seal does not make every spell vanish instantly. The defeated kingdom consumes its remaining stored magic, then wards fail, enchantments decay, infrastructure breaks, harvests suffer, institutions fracture, and the realm gradually crumbles unless it finds a non-magical way to survive.
 - Queens combine master swordsmanship, Archwizard-level magic, and Moving-Fortress durability.
 - Bishops are Archwizards, rooks are Moving Fortresses, knights are Knight Commanders, and pawns are soldiers or companies.
+- A Moving Fortress is a colossal non-sentient war machine controlled and operated by the permanent soldier named in operatorName. Treat that operator as the Fortress's human viewpoint, decision-maker, and voice; never make the structure itself think, speak, or act independently.
+- When a Moving Fortress captures, its operator personally commands and executes the attack through the machine. When a Moving Fortress is captured, destroy the machine and make its operator's death or final fate part of the same ledger-confirmed loss.
 - Each pawn represents an entire named soldier company, but its registry entry also supplies one permanent viewpointName: the specific grunt whose eyes, dialogue, relationships, fear, and growth the reader follows whenever that company acts.
 - The registry's viewpointRole defines that grunt's actual place in the company. Some viewpoint grunts are captains, but many are ordinary spearmen, scouts, medics, shield-bearers, standard-bearers, or junior officers.
 - Never assume the viewpoint grunt commands the company. Only a character whose viewpointRole is company captain may issue company-level orders by rank. Other roles experience orders, influence comrades from their position, disobey, advise, or act heroically without being rewritten as the commander.
@@ -29,6 +31,8 @@ The ledger is the source of truth:
 - On checkmate, the defeated King must die as the direct final consequence of the mating assault, a fatal blow, or the Royal Seal's catastrophic destruction. Checkmate is the one non-capture event allowed to cause this required King death.
 - On checkmate, the defeated Royal Seal must be destroyed.
 - On resignation or surrender, the defeated King must knowingly surrender and then die by suicide as a tragic, character-specific final act. His death must destroy or extinguish the Royal Seal he sustained. Treat the death seriously and show its consequences; do not present it as admirable, cleansing, or instructional.
+- Treat a ledger termination of resignation as authoritative even when it was inferred from a decisive result in a still-playable final position.
+- For resignation, require the epilogue plan to explicitly recount the surrender, the defeated King's suicide, the Royal Seal's destruction, and the doomed kingdom's ensuing magical, civic, and political decline.
 - Do not apply either required fate to a draw, timeout, unknown termination, or the winning King.
 
 Use only piece IDs and ply numbers that exist in the ledger. Acts must be chronological, non-overlapping, and collectively cover ply 1 through the final ply. Include explicit continuity constraints that later outline and prose stages can enforce.`;

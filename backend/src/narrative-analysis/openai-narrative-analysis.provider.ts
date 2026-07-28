@@ -10,6 +10,7 @@ import { zodTextFormat } from 'openai/helpers/zod';
 import {
   createOpenAiGenerationClient,
   logOpenAiGeneration,
+  logOpenAiGenerationFailure,
   promptCacheOptions,
 } from '../openai/openai-generation';
 import type {
@@ -54,6 +55,10 @@ export class OpenAiNarrativeAnalysisProvider implements NarrativeAnalysisProvide
           format: zodTextFormat(narrativeAnalysisSchema, 'narrative_analysis'),
         },
       });
+      if (!response.output_parsed) {
+        throw new BadGatewayException('OpenAI returned no narrative analysis');
+      }
+      const analysis = narrativeAnalysisSchema.parse(response.output_parsed);
       logOpenAiGeneration(
         this.logger,
         'narrative-analysis',
@@ -61,13 +66,15 @@ export class OpenAiNarrativeAnalysisProvider implements NarrativeAnalysisProvide
         startedAt,
         response,
       );
-
-      if (!response.output_parsed) {
-        throw new BadGatewayException('OpenAI returned no narrative analysis');
-      }
-
-      return narrativeAnalysisSchema.parse(response.output_parsed);
+      return analysis;
     } catch (error) {
+      logOpenAiGenerationFailure(
+        this.logger,
+        'narrative-analysis',
+        this.model,
+        startedAt,
+        error,
+      );
       if (
         error instanceof ServiceUnavailableException ||
         error instanceof BadGatewayException

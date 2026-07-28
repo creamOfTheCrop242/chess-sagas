@@ -14,6 +14,12 @@ import {
   SagaStageState,
 } from './pgn.models';
 
+type FallenPiece = {
+  victim: PieceIdentity;
+  killer: PieceIdentity;
+  ply: number;
+};
+
 @Component({
   selector: 'app-pgn-viewer',
   standalone: true,
@@ -31,6 +37,7 @@ export class PgnViewerComponent implements OnDestroy {
   boardOrientation: 'white' | 'black' = 'black';
   hoveredPieceId: string | null = null;
   selectedPieceId: string | null = null;
+  fallenRosterOpen = false;
   scenes: PlaybackScene[] = [];
   epilogue = '';
   sagaGenerating = false;
@@ -53,16 +60,22 @@ export class PgnViewerComponent implements OnDestroy {
   get currentFen(): string {
     if (!this.game)
       return 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+    if (this.currentPly > this.game.positions.length) {
+      return this.game.ledger.finalFen;
+    }
     return this.currentPly === 0
       ? this.game.startFen
       : this.game.positions[this.currentPly - 1].fen;
   }
   get currentMove(): ParsedPosition | null {
-    return !this.game || this.currentPly === 0
+    return !this.game ||
+      this.currentPly === 0 ||
+      this.currentPly > this.game.positions.length
       ? null
       : this.game.positions[this.currentPly - 1];
   }
   get currentMoveLabel(): string {
+    if (this.isEpiloguePage) return 'Epilogue';
     const move = this.currentMove;
     if (!move) return 'Start position';
     const number = Math.ceil(move.ply / 2);
@@ -79,10 +92,22 @@ export class PgnViewerComponent implements OnDestroy {
     return !!this.game && this.currentPly > 0;
   }
   get canGoForward(): boolean {
-    return !!this.game && this.currentPly < this.game.positions.length;
+    return !!this.game && this.currentPly < this.finalPlaybackPly;
+  }
+  get isEpiloguePage(): boolean {
+    return (
+      !!this.game &&
+      Boolean(this.epilogue) &&
+      this.currentPly === this.game.positions.length + 1
+    );
   }
   get currentScene(): PlaybackScene | null {
-    if (this.currentPly <= 0) return null;
+    if (
+      this.currentPly <= 0 ||
+      !this.game ||
+      this.currentPly > this.game.positions.length
+    )
+      return null;
     return (
       this.scenes.find(
         (scene) =>
@@ -92,7 +117,27 @@ export class PgnViewerComponent implements OnDestroy {
   }
   get currentStory(): string {
     if (this.currentPly === 0) return this.introStory();
+    if (this.isEpiloguePage) return this.epilogue;
     return this.currentScene?.fantasyNarration ?? '';
+  }
+  get epilogueParagraphs(): string[] {
+    if (!this.epilogue.trim()) return [];
+    return this.epilogue
+      .split(/\n\s*\n/)
+      .flatMap((paragraph) => {
+        const sentences =
+          paragraph
+            .trim()
+            .match(/[^.!?]+(?:[.!?]+(?:["'’”]+)?|$)/g)
+            ?.map((sentence) => sentence.trim())
+            .filter(Boolean) ?? [];
+        const grouped: string[] = [];
+        for (let index = 0; index < sentences.length; index += 2) {
+          grouped.push(sentences.slice(index, index + 2).join(' '));
+        }
+        return grouped;
+      })
+      .filter(Boolean);
   }
   get inspectedPiece(): PieceIdentity | null {
     if (!this.game) return null;
@@ -110,6 +155,12 @@ export class PgnViewerComponent implements OnDestroy {
         event.pieceId === piece.id &&
         event.isCapture,
     ).length;
+  }
+  get lightKingdomFallen(): FallenPiece[] {
+    return this.fallenPiecesFor('north');
+  }
+  get darkKingdomFallen(): FallenPiece[] {
+    return this.fallenPiecesFor('south');
   }
   get pipelineVisible(): boolean {
     return this.pipelineSteps.some(
@@ -155,6 +206,7 @@ export class PgnViewerComponent implements OnDestroy {
         this.currentPly = 0;
         this.hoveredPieceId = null;
         this.selectedPieceId = null;
+        this.fallenRosterOpen = false;
         this.scenes = [];
         this.epilogue = '';
         this.pipelineState = this.initialPipelineState();
@@ -220,6 +272,12 @@ export class PgnViewerComponent implements OnDestroy {
   clearSelectedPiece(): void {
     this.selectedPieceId = null;
   }
+  toggleFallenRoster(): void {
+    this.fallenRosterOpen = !this.fallenRosterOpen;
+  }
+  closeFallenRoster(): void {
+    this.fallenRosterOpen = false;
+  }
   pieceKingdom(piece: PieceIdentity): string {
     return piece.side === 'north'
       ? 'Light Kingdom · North'
@@ -251,8 +309,9 @@ export class PgnViewerComponent implements OnDestroy {
         'Master swordfighter, Archwizard, and living fortress of the realm.',
       archwizard:
         'An Archwizard who bends battlefield magic to the kingdom’s cause.',
-      'moving-fortress':
-        'A colossal mobile stronghold built to dominate ranks and roads.',
+      'moving-fortress': `A colossal mobile stronghold controlled by ${
+        piece.operatorName ?? 'a sworn soldier-operator'
+      }, who commands every movement and attack from within.`,
       'knight-commander':
         'An elite commander who strikes across the battlefield by unexpected paths.',
     };
@@ -265,6 +324,11 @@ export class PgnViewerComponent implements OnDestroy {
   @HostListener('window:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
     if (!this.game) return;
+    if (event.key === 'Escape' && this.fallenRosterOpen) {
+      event.preventDefault();
+      this.closeFallenRoster();
+      return;
+    }
     const target = event.target as HTMLElement | null;
     if (target && ['TEXTAREA', 'INPUT'].includes(target.tagName)) return;
     if (event.key === 'ArrowLeft') {
@@ -279,6 +343,30 @@ export class PgnViewerComponent implements OnDestroy {
 
   private introStory(): string {
     return 'After the Calamity, the Light Kingdom of the north and the Dark Kingdom of the south collided. Each king now pours his strength into a Royal Seal while their armies decide which realm will endure.';
+  }
+  private get finalPlaybackPly(): number {
+    if (!this.game) return 0;
+    return this.game.positions.length + (this.epilogue ? 1 : 0);
+  }
+  private fallenPiecesFor(side: 'north' | 'south'): FallenPiece[] {
+    if (!this.game) return [];
+    const pieces = new Map(
+      this.game.ledger.pieces.map((piece) => [piece.id, piece]),
+    );
+    return this.game.ledger.events
+      .filter(
+        (event) =>
+          event.ply <= this.currentPly &&
+          event.isCapture &&
+          Boolean(event.capturedPieceId),
+      )
+      .flatMap((event) => {
+        const victim = pieces.get(event.capturedPieceId!);
+        const killer = pieces.get(event.pieceId);
+        return victim?.side === side && killer
+          ? [{ victim, killer, ply: event.ply }]
+          : [];
+      });
   }
   private get piecesBySquare(): Map<string, string> {
     const pieces = new Map<string, string>();

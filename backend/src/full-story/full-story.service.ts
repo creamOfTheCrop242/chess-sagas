@@ -4,9 +4,11 @@ import type { GameLedger } from '../chess/models/game-ledger';
 import { normalizePawnViewpoints } from '../chess/piece-identity.service';
 import { PrismaService } from '../database/prisma.service';
 import { narrativeAnalysisSchema } from '../narrative-analysis/models/narrative-analysis';
+import { NARRATIVE_ANALYSIS_PROMPT_VERSION } from '../narrative-analysis/narrative-analysis.prompt';
 import { SceneBreakdownValidator } from '../scene-breakdown/scene-breakdown.validator';
 import type { SceneBreakdown } from '../scene-breakdown/models/scene-breakdown';
 import { storyOutlineSchema } from '../story-outline/models/story-outline';
+import { STORY_OUTLINE_PROMPT_VERSION } from '../story-outline/story-outline.prompt';
 import { DeterministicStoryValidator } from '../story-validation/deterministic-story.validator';
 import {
   FULL_STORY_PROVIDER,
@@ -45,12 +47,18 @@ export class FullStoryService {
           gameId,
           currentStage: 'NARRATIVE_ANALYSIS',
           status: 'COMPLETED',
+          promptVersion: NARRATIVE_ANALYSIS_PROMPT_VERSION,
         },
         orderBy: { createdAt: 'desc' },
         include: { narrativeAnalysis: true },
       }),
       this.prisma.generationRun.findFirst({
-        where: { gameId, currentStage: 'OUTLINE', status: 'COMPLETED' },
+        where: {
+          gameId,
+          currentStage: 'OUTLINE',
+          status: 'COMPLETED',
+          promptVersion: STORY_OUTLINE_PROMPT_VERSION,
+        },
         orderBy: { createdAt: 'desc' },
         include: { storyOutline: true },
       }),
@@ -114,12 +122,6 @@ export class FullStoryService {
         if (!event || event.ply !== creativeScene.ply) {
           throw new Error(
             `Story package has no ledger event for ply ${creativeScene.ply}`,
-          );
-        }
-        const expectedDecisiveActorId = event.isCapture ? event.pieceId : null;
-        if (creativeScene.decisiveActorId !== expectedDecisiveActorId) {
-          throw new Error(
-            `Story package has incorrect decisive actor at ply ${event.ply}`,
           );
         }
         const act =

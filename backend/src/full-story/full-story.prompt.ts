@@ -1,8 +1,8 @@
-export const FULL_STORY_PROMPT_VERSION = 'story-package-v11';
+export const FULL_STORY_PROMPT_VERSION = 'story-package-v15';
 
 export const FULL_STORY_INSTRUCTIONS = `Write one cohesive dark-fantasy war story package from the supplied complete ledger, validated narrative analysis, validated outline, and character registry.
 
-Return compact structured JSON containing the title, defeatedKingFate, defeatedSealFate, epilogue, and exactly one creative scene for every ledger ply. Each scene contains only ply, fantasyNarration, characters, locations, and decisiveActorId. The backend derives all other mechanical playback metadata. The ordered fantasyNarration fields are consecutive paragraphs of the complete story. They must read as one continuous saga when joined, not as disconnected move summaries.
+Return compact structured JSON containing the title, defeatedKingFate, defeatedSealFate, epilogue, and exactly one creative scene for every ledger ply. Each scene contains only ply, fantasyNarration, characters, and locations. The backend derives all mechanical playback metadata, including the decisive actor, directly from the ledger. The ordered fantasyNarration fields are consecutive paragraphs of the complete story. They must read as one continuous saga when joined, not as disconnected move summaries.
 
 Factual rules:
 - The ledger is the source of truth. Never invent or omit captures, change a captor, kill a survivor, revive a captured piece, alter a promotion, change the winner, or change termination.
@@ -16,6 +16,8 @@ Factual rules:
 - After a Seal is destroyed, existing stored magic fades rather than disappearing all at once. Wards weaken, enchantments fail, infrastructure decays, harvests and healing suffer, institutions fracture, and the kingdom gradually crumbles unless its survivors adapt without magic.
 - Queens combine master swordsmanship, Archwizard-level magic, and Moving-Fortress durability. Important Queen action must demonstrate both blade and magic.
 - Bishops are Archwizards, rooks are Moving Fortresses, knights are Knight Commanders, and pawns are soldier companies. Never call them chess pieces.
+- A Moving Fortress is a colossal non-sentient war machine controlled and operated by the permanent soldier named in operatorName. Narrate the operator as its human viewpoint, decision-maker, and voice; the structure must never think, speak, choose, or act independently.
+- When a Moving Fortress captures, its operator personally directs and executes the attack through the machine. When a Moving Fortress is captured, destroy the machine and include its operator's death or final fate in that same ledger-confirmed loss.
 - A pawn's move means its entire company advances, retreats, attacks, or repositions, but narrate that company-scale action through the specific grunt identified by viewpointName in the character registry.
 - Honor the registry's viewpointRole. Some followed grunts are company captains, but others are ordinary spearmen, scouts, medics, shield-bearers, standard-bearers, sergeants, or other ranks.
 - Never promote a viewpoint grunt socially just because the story follows them. Only a company captain may routinely issue company-level commands. Non-captains receive orders through the chain of command and act, speak, influence others, resist, or show heroism from their actual role.
@@ -28,6 +30,7 @@ Factual rules:
 - For checkmate, set defeatedKingFate to killed-after-checkmate and show the defeated King's on-page death as the direct culmination of the mating assault, a fatal blow, or catastrophic Royal Seal destruction. This required terminal death is allowed even though the King was not captured.
 - For checkmate, set defeatedSealFate to destroyed and depict the defeated Seal's destruction as part of the climax.
 - For resignation or surrender, set defeatedKingFate to suicide-after-surrender and defeatedSealFate to destroyed. Show the defeated King knowingly surrendering and then dying by suicide as a tragic, character-specific final act; his death destroys or extinguishes the Seal he sustained. Show emotional and political consequences without romanticizing the death or turning it into procedural instruction.
+- Treat a ledger termination of resignation as authoritative even when inferred from a decisive result in a still-playable final position. The epilogue must explicitly state that the defeated King surrendered, recount his suicide without procedural detail, show the Royal Seal being destroyed or extinguished, and describe the defeated kingdom's ensuing magical, civic, and political decline.
 - For draws, timeouts, and unknown terminations, set defeatedKingFate to survives and defeatedSealFate to intact. Do not automatically kill either King or destroy either Seal.
 - Never apply the defeated fate to the winning King.
 
@@ -52,7 +55,7 @@ Story rules:
 - Capture scenes may expand to 4–7 sentences when needed to portray the full killing and aftermath without rushing.
 - fantasyNarration must contain publishable fantasy prose without chess terminology or coordinates.
 - Use piece IDs only in the structured characters field. Preserve established names in fantasyNarration.
-- Set decisiveActorId to the capturing pieceId for a capture and null for every non-capture. The prose must give that exact character credit for the decisive action.
+- For every capture, the prose must give the ledger event's exact pieceId character credit for the decisive action.
 - locations must use stable fantasy place names and preserve established geography.
 - Make total story length proportional to the game while giving decisive scenes more room than transitional scenes.
 - Before returning the package, audit every scene against its ledger event and the preceding scenes. Verify ply coverage, actor identity, captures, captors, deaths, promotions, checks, termination, names, injuries, locations, dialogue continuity, and survivor state. Correct every mismatch in the returned package.

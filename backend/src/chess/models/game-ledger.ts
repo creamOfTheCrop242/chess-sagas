@@ -21,6 +21,7 @@ export interface PieceIdentity {
   companyName?: string;
   viewpointName?: string;
   viewpointRole?: string;
+  operatorName?: string;
   alive: boolean;
   capturedAtPly?: number;
   promotedFromPawnId?: string;

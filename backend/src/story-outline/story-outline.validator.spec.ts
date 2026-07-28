@@ -5,8 +5,10 @@ import type { StoryOutline } from './models/story-outline';
 import { StoryOutlineValidator } from './story-outline.validator';
 import {
   normalizeStoryOutlineCharacters,
+  normalizeStoryOutlineEndingSequence,
   normalizeStoryOutlineNumbering,
   normalizeStoryOutlineRequiredEvents,
+  normalizeStoryOutlineSetupPayoffs,
 } from './story-outline.service';
 
 describe('StoryOutlineValidator', () => {
@@ -143,6 +145,49 @@ describe('StoryOutlineValidator', () => {
 
     expect(normalized.acts[0].scenes[0].requiredEventPlies).toEqual([]);
     expect(normalized.acts[0].scenes[1].requiredEventPlies).toEqual([2]);
+  });
+
+  it('moves an ending payoff beyond the game back to the final ply', () => {
+    const invalid = structuredClone(outline);
+    invalid.setupPayoffs[0].payoffPly = 3;
+    invalid.setupPayoffs[0].setupPlies = [1, 1];
+
+    const normalized = normalizeStoryOutlineSetupPayoffs(invalid, ledger);
+
+    expect(normalized.setupPayoffs[0]).toMatchObject({
+      setupPlies: [1],
+      payoffPly: 2,
+    });
+    expect(() =>
+      new StoryOutlineValidator().validate(normalized, ledger, analysis),
+    ).not.toThrow();
+  });
+
+  it('leaves an unrecoverable setup relationship invalid for targeted retry', () => {
+    const invalid = structuredClone(outline);
+    invalid.setupPayoffs[0].setupPlies = [2];
+    invalid.setupPayoffs[0].payoffPly = 2;
+
+    const normalized = normalizeStoryOutlineSetupPayoffs(invalid, ledger);
+
+    expect(() =>
+      new StoryOutlineValidator().validate(normalized, ledger, analysis),
+    ).toThrow('Invalid setup/payoff relationship gate');
+  });
+
+  it('moves the final planned ending beat to the ledger final ply', () => {
+    const invalid = structuredClone(outline);
+    invalid.endingSequence = [{ ply: 1, beat: 'The attack begins.' }];
+
+    const normalized = normalizeStoryOutlineEndingSequence(invalid, ledger);
+
+    expect(normalized.endingSequence).toEqual([
+      { ply: 1, beat: 'The attack begins.' },
+      { ply: 2, beat: 'The attack begins.' },
+    ]);
+    expect(() =>
+      new StoryOutlineValidator().validate(normalized, ledger, analysis),
+    ).not.toThrow();
   });
 
   it('removes unknown character IDs and retains valid supporting characters', () => {

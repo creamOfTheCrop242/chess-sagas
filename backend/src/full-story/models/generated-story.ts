@@ -23,7 +23,6 @@ export const generatedStoryPackageSchema = z.object({
         fantasyNarration: z.string().min(1),
         characters: z.array(z.string().min(1)),
         locations: z.array(z.string().min(1)),
-        decisiveActorId: z.string().min(1).nullable(),
       }),
     )
     .min(1),

@@ -10,6 +10,7 @@ import { zodTextFormat } from 'openai/helpers/zod';
 import {
   createOpenAiGenerationClient,
   logOpenAiGeneration,
+  logOpenAiGenerationFailure,
   promptCacheOptions,
 } from '../openai/openai-generation';
 import {
@@ -48,6 +49,9 @@ export class OpenAiSceneBreakdownProvider implements SceneBreakdownProvider {
           format: zodTextFormat(sceneBreakdownSchema, 'scene_breakdown'),
         },
       });
+      if (!response.output_parsed)
+        throw new BadGatewayException('OpenAI returned no scene breakdown');
+      const breakdown = sceneBreakdownSchema.parse(response.output_parsed);
       logOpenAiGeneration(
         this.logger,
         'scene-breakdown',
@@ -55,10 +59,15 @@ export class OpenAiSceneBreakdownProvider implements SceneBreakdownProvider {
         startedAt,
         response,
       );
-      if (!response.output_parsed)
-        throw new BadGatewayException('OpenAI returned no scene breakdown');
-      return sceneBreakdownSchema.parse(response.output_parsed);
+      return breakdown;
     } catch (error) {
+      logOpenAiGenerationFailure(
+        this.logger,
+        'scene-breakdown',
+        this.model,
+        startedAt,
+        error,
+      );
       if (
         error instanceof ServiceUnavailableException ||
         error instanceof BadGatewayException

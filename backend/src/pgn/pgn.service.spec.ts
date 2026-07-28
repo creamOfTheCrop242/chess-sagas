@@ -166,13 +166,30 @@ describe('PgnService deterministic ledger', () => {
   });
 
   it('assigns a permanent soldier-operator to every Moving Fortress', () => {
-    const fortresses = service
-      .parse('[Result "*"]\n\n1. e4 e5 *')
-      .ledger.pieces.filter((piece) => piece.chessType === 'r');
+    const pgn = '[Result "*"]\n\n1. e4 e5 *';
+    const ledger = service.parse(pgn).ledger;
+    const fortresses = ledger.pieces.filter((piece) => piece.chessType === 'r');
+    const allSoldierNames = ledger.pieces.flatMap((piece) => [
+      ...(piece.viewpointName ? [piece.viewpointName] : []),
+      ...(piece.operatorName ? [piece.operatorName] : []),
+    ]);
+    const repeatedOperators = service
+      .parse(pgn)
+      .ledger.pieces.filter((piece) => piece.chessType === 'r')
+      .map((piece) => piece.operatorName);
+    const differentOperators = service
+      .parse('[Result "*"]\n\n1. d4 d5 *')
+      .ledger.pieces.filter((piece) => piece.chessType === 'r')
+      .map((piece) => piece.operatorName);
 
     expect(fortresses).toHaveLength(4);
     expect(fortresses.every((piece) => Boolean(piece.operatorName))).toBe(true);
     expect(new Set(fortresses.map((piece) => piece.operatorName)).size).toBe(4);
+    expect(new Set(allSoldierNames).size).toBe(allSoldierNames.length);
+    expect(repeatedOperators).toEqual(
+      fortresses.map((piece) => piece.operatorName),
+    );
+    expect(differentOperators).not.toEqual(repeatedOperators);
   });
 
   it('marks checks and checkmate and derives termination', () => {

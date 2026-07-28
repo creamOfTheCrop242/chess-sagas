@@ -107,11 +107,6 @@ const PAWN_VIEWPOINT_ROLES = {
   ],
 } as const;
 
-const FORTRESS_OPERATORS = {
-  north: { west: 'Torren', east: 'Ysabet' },
-  south: { west: 'Varric', east: 'Morwen' },
-} as const;
-
 @Injectable()
 export class PieceIdentityService {
   create(chess: Chess): {
@@ -134,12 +129,17 @@ export class PieceIdentityService {
   } {
     const pieces: PieceIdentity[] = [];
     const squareToId = new Map<string, string>();
-    const pawnNames = shuffledPawnNames(seed);
+    const characterNames = shuffledCharacterNames(seed);
+    const pawnCount = chess
+      .board()
+      .flat()
+      .filter((piece) => piece?.type === 'p').length;
     const pawnRoles = {
       north: shuffledPawnRoles(seed, 'north'),
       south: shuffledPawnRoles(seed, 'south'),
     };
     let pawnIndex = 0;
+    let fortressIndex = 0;
 
     for (const row of chess.board()) {
       for (const piece of row) {
@@ -149,11 +149,14 @@ export class PieceIdentityService {
           piece.color,
           piece.type,
           square,
-          piece.type === 'p' ? pawnNames[pawnIndex++] : undefined,
+          piece.type === 'p' ? characterNames[pawnIndex++] : undefined,
           piece.type === 'p'
             ? pawnRoles[piece.color === 'w' ? 'north' : 'south'][
                 square.charCodeAt(0) - 'a'.charCodeAt(0)
               ]
+            : undefined,
+          piece.type === 'r'
+            ? characterNames[pawnCount + fortressIndex++]
             : undefined,
         );
         pieces.push(identity);
@@ -182,6 +185,7 @@ export class PieceIdentityService {
     square: string,
     pawnName?: string,
     pawnRole?: string,
+    fortressOperatorName?: string,
   ): PieceIdentity {
     const side: Side = color === 'w' ? 'north' : 'south';
     const id = `${color}-${type}-${square}`;
@@ -202,10 +206,7 @@ export class PieceIdentityService {
       companyName: pawnProfile?.companyName,
       viewpointName: pawnProfile?.viewpointName,
       viewpointRole: pawnProfile?.viewpointRole,
-      operatorName:
-        type === 'r'
-          ? FORTRESS_OPERATORS[side][square[0] < 'e' ? 'west' : 'east']
-          : undefined,
+      operatorName: type === 'r' ? fortressOperatorName : undefined,
       alive: true,
     };
   }
@@ -265,7 +266,7 @@ export function normalizePawnViewpoints(ledger: GameLedger): GameLedger {
   };
 }
 
-function shuffledPawnNames(seed: string): string[] {
+function shuffledCharacterNames(seed: string): string[] {
   return shuffledValues(PAWN_NAMES, seed);
 }
 

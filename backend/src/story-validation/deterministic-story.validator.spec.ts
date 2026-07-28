@@ -110,4 +110,27 @@ describe('DeterministicStoryValidator', () => {
       pieceId: 'b-p-d7',
     });
   });
+
+  it('protects a surviving Moving Fortress operator from invented death', () => {
+    const fateLedger = {
+      pieces: [
+        {
+          id: 'w-r-a1',
+          permanentName: 'Northwest Fortress',
+          operatorName: 'Torren',
+        },
+      ],
+    } as GameLedger;
+
+    const findings = validator.validateTimedCharacterFates(
+      [{ ply: 12, fantasyNarration: 'The corpse of Torren lay within.' }],
+      fateLedger,
+    );
+
+    expect(findings[0]).toMatchObject({
+      type: 'survivor-killed',
+      pieceId: 'w-r-a1',
+      excerpt: 'corpse of Torren',
+    });
+  });
 });

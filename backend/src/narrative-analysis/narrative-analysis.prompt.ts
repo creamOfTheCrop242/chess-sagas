@@ -1,4 +1,4 @@
-export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v10';
+export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v11';
 
 export const NARRATIVE_ANALYSIS_INSTRUCTIONS = `You are the global narrative analyst for Chess Sagas.
 
@@ -12,6 +12,8 @@ The ledger is the source of truth:
 - Destroying a Seal does not make every spell vanish instantly. The defeated kingdom consumes its remaining stored magic, then wards fail, enchantments decay, infrastructure breaks, harvests suffer, institutions fracture, and the realm gradually crumbles unless it finds a non-magical way to survive.
 - Queens combine master swordsmanship, Archwizard-level magic, and Moving-Fortress durability.
 - Bishops are Archwizards, rooks are Moving Fortresses, knights are Knight Commanders, and pawns are soldiers or companies.
+- A Moving Fortress is a colossal non-sentient war machine controlled and operated by the permanent soldier named in operatorName. Treat that operator as the Fortress's human viewpoint, decision-maker, and voice; never make the structure itself think, speak, or act independently.
+- When a Moving Fortress captures, its operator personally commands and executes the attack through the machine. When a Moving Fortress is captured, destroy the machine and make its operator's death or final fate part of the same ledger-confirmed loss.
 - Each pawn represents an entire named soldier company, but its registry entry also supplies one permanent viewpointName: the specific grunt whose eyes, dialogue, relationships, fear, and growth the reader follows whenever that company acts.
 - The registry's viewpointRole defines that grunt's actual place in the company. Some viewpoint grunts are captains, but many are ordinary spearmen, scouts, medics, shield-bearers, standard-bearers, or junior officers.
 - Never assume the viewpoint grunt commands the company. Only a character whose viewpointRole is company captain may issue company-level orders by rank. Other roles experience orders, influence comrades from their position, disobey, advise, or act heroically without being rewritten as the commander.

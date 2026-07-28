@@ -107,6 +107,11 @@ const PAWN_VIEWPOINT_ROLES = {
   ],
 } as const;
 
+const FORTRESS_OPERATORS = {
+  north: { west: 'Torren', east: 'Ysabet' },
+  south: { west: 'Varric', east: 'Morwen' },
+} as const;
+
 @Injectable()
 export class PieceIdentityService {
   create(chess: Chess): {
@@ -185,6 +190,10 @@ export class PieceIdentityService {
       companyName: pawnProfile?.companyName,
       viewpointName: pawnProfile?.viewpointName,
       viewpointRole: pawnProfile?.viewpointRole,
+      operatorName:
+        type === 'r'
+          ? FORTRESS_OPERATORS[side][square[0] < 'e' ? 'west' : 'east']
+          : undefined,
       alive: true,
     };
   }

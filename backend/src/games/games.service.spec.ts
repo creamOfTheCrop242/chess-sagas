@@ -52,7 +52,7 @@ describe('GamesService', () => {
       capturedArgs = args;
       return Promise.resolve({
         id: 'existing-game',
-        ledger: { schemaVersion: 3 },
+        ledger: { schemaVersion: 4 },
       });
     });
 
@@ -71,10 +71,10 @@ describe('GamesService', () => {
   it('upgrades an existing fixed-name ledger to randomized names', async () => {
     gameFindFirst.mockResolvedValue({
       id: 'existing-game',
-      ledger: { schemaVersion: 2 },
+      ledger: { schemaVersion: 3 },
     });
     gameLedgerUpdate.mockResolvedValue({
-      schemaVersion: 3,
+      schemaVersion: 4,
       data: {},
     });
 
@@ -86,7 +86,7 @@ describe('GamesService', () => {
       expect.objectContaining({
         where: { gameId: 'existing-game' },
         data: expect.objectContaining({
-          schemaVersion: 3,
+          schemaVersion: 4,
           data: expect.objectContaining({
             pieces: expect.arrayContaining([
               expect.objectContaining({
@@ -135,7 +135,7 @@ describe('GamesService', () => {
       blackPlayer: 'Turing',
       result: '1-0',
     });
-    expect(createArgs.data.ledger.create.schemaVersion).toBe(3);
+    expect(createArgs.data.ledger.create.schemaVersion).toBe(4);
     expect(createArgs.data.ledger.create.data.events).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ san: 'Qxf7#', isCheckmate: true }),

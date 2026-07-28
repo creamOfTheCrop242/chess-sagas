@@ -309,8 +309,9 @@ export class PgnViewerComponent implements OnDestroy {
         'Master swordfighter, Archwizard, and living fortress of the realm.',
       archwizard:
         'An Archwizard who bends battlefield magic to the kingdom’s cause.',
-      'moving-fortress':
-        'A colossal mobile stronghold built to dominate ranks and roads.',
+      'moving-fortress': `A colossal mobile stronghold controlled by ${
+        piece.operatorName ?? 'a sworn soldier-operator'
+      }, who commands every movement and attack from within.`,
       'knight-commander':
         'An elite commander who strikes across the battlefield by unexpected paths.',
     };

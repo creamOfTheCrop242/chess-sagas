@@ -4,7 +4,7 @@ import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { PgnService } from '../pgn/pgn.service';
 
-export const GAME_LEDGER_SCHEMA_VERSION = 3;
+export const GAME_LEDGER_SCHEMA_VERSION = 4;
 
 @Injectable()
 export class GamesService {

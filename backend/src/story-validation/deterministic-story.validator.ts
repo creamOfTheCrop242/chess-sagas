@@ -79,7 +79,11 @@ export class DeterministicStoryValidator {
         ) {
           continue;
         }
-        const names = [piece.permanentName, piece.viewpointName].filter(
+        const names = [
+          piece.permanentName,
+          piece.viewpointName,
+          piece.operatorName,
+        ].filter(
           (name, index, all): name is string =>
             Boolean(name) && all.indexOf(name) === index,
         );

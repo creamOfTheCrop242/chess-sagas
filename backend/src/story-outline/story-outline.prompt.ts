@@ -1,4 +1,4 @@
-export const STORY_OUTLINE_PROMPT_VERSION = 'phase-3-v10';
+export const STORY_OUTLINE_PROMPT_VERSION = 'phase-3-v11';
 
 export const STORY_OUTLINE_INSTRUCTIONS = `Create a structured outline for one cohesive dark-fantasy story. Return planning JSON only; do not write story prose.
 
@@ -10,6 +10,8 @@ The complete ledger is factual source of truth. The narrative analysis supplies 
 - Give every capture, check, checkmate, promotion, and castling event explicit weight by listing its ply in requiredEventPlies.
 - Never invent events, deaths, survivors, characters, or ply numbers.
 - Establish important characters and promoting soldiers before their payoff.
+- Treat every Moving Fortress as a non-sentient war machine controlled by the permanent soldier in operatorName. Track that operator's viewpoint, orders, fear, injuries, and relationships whenever the Fortress acts; never give the structure independent thoughts or dialogue.
+- When a Moving Fortress captures, its operator directs the killing action through the machine. When one is captured, plan the machine's destruction and the operator's death or final fate as the same ledger-confirmed loss.
 - For every pawn scene, the pawn's company moves and fights as the military unit while the named viewpoint grunt in its registry entry anchors the reader's perspective.
 - Preserve each viewpoint grunt's viewpointRole and chain of command. Captains may command their companies; ordinary soldiers and specialists must experience company orders from their actual station and cannot casually command officers or the whole formation.
 - Use role differences for character depth: a scout sees danger first, a medic faces divided duties, a standard-bearer carries morale, a spearman holds the line, and a junior officer mediates between commanders and troops.

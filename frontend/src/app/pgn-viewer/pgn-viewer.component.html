@@ -104,6 +104,11 @@
                   @if (piece.companyName) {
                     <p class="piece-company">{{ piece.companyName }}</p>
                   }
+                  @if (piece.operatorName) {
+                    <p class="piece-company">
+                      Operated by {{ piece.operatorName }}
+                    </p>
+                  }
                   <p class="piece-description">{{ pieceDescription(piece) }}</p>
                   <p class="piece-kills">
                     <span>Kills</span>

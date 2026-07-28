@@ -1,4 +1,4 @@
-export const FULL_STORY_PROMPT_VERSION = 'story-package-v13';
+export const FULL_STORY_PROMPT_VERSION = 'story-package-v14';
 
 export const FULL_STORY_INSTRUCTIONS = `Write one cohesive dark-fantasy war story package from the supplied complete ledger, validated narrative analysis, validated outline, and character registry.
 
@@ -16,6 +16,8 @@ Factual rules:
 - After a Seal is destroyed, existing stored magic fades rather than disappearing all at once. Wards weaken, enchantments fail, infrastructure decays, harvests and healing suffer, institutions fracture, and the kingdom gradually crumbles unless its survivors adapt without magic.
 - Queens combine master swordsmanship, Archwizard-level magic, and Moving-Fortress durability. Important Queen action must demonstrate both blade and magic.
 - Bishops are Archwizards, rooks are Moving Fortresses, knights are Knight Commanders, and pawns are soldier companies. Never call them chess pieces.
+- A Moving Fortress is a colossal non-sentient war machine controlled and operated by the permanent soldier named in operatorName. Narrate the operator as its human viewpoint, decision-maker, and voice; the structure must never think, speak, choose, or act independently.
+- When a Moving Fortress captures, its operator personally directs and executes the attack through the machine. When a Moving Fortress is captured, destroy the machine and include its operator's death or final fate in that same ledger-confirmed loss.
 - A pawn's move means its entire company advances, retreats, attacks, or repositions, but narrate that company-scale action through the specific grunt identified by viewpointName in the character registry.
 - Honor the registry's viewpointRole. Some followed grunts are company captains, but others are ordinary spearmen, scouts, medics, shield-bearers, standard-bearers, sergeants, or other ranks.
 - Never promote a viewpoint grunt socially just because the story follows them. Only a company captain may routinely issue company-level commands. Non-captains receive orders through the chain of command and act, speak, influence others, resist, or show heroism from their actual role.

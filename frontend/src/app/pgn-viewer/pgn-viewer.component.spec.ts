@@ -18,6 +18,17 @@ describe('PgnViewerComponent character inspection', () => {
     expect(component.boardOrientation).toBe('white');
   });
 
+  it('highlights only the acting piece on a move beat', () => {
+    expect(component.currentBeatSquare).toBeNull();
+
+    component.currentPly = 1;
+    expect(component.currentBeatSquare).toBe('e4');
+
+    component.epilogue = 'The surviving kingdoms counted the cost.';
+    component.currentPly = component.game!.positions.length + 1;
+    expect(component.currentBeatSquare).toBeNull();
+  });
+
   it('tracks a stable pawn identity across moves and counts only past kills', () => {
     component.currentPly = 1;
     component.inspectPieceAt('e4');

@@ -82,6 +82,9 @@ export class PgnViewerComponent implements OnDestroy {
       ? null
       : this.game.positions[this.currentPly - 1];
   }
+  get currentBeatSquare(): string | null {
+    return this.currentMove?.to ?? null;
+  }
   get currentMoveLabel(): string {
     if (this.isEpiloguePage) return 'Epilogue';
     const move = this.currentMove;

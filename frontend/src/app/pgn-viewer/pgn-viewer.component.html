@@ -77,6 +77,7 @@
                 <app-chessboard
                   [fen]="currentFen"
                   [orientation]="boardOrientation"
+                  [activeSquare]="currentBeatSquare"
                   (pieceHovered)="inspectPieceAt($event)"
                   (pieceSelected)="selectPieceAt($event)"
                 />

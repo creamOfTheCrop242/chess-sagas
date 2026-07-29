@@ -1,4 +1,4 @@
-export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v6';
+export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v7';
 
 export const STORY_VALIDATION_INSTRUCTIONS = `Validate the supplied story against the complete deterministic chess ledger, narrative analysis, outline, and deterministic findings.
 
@@ -13,6 +13,7 @@ Report:
 - important Queen combat lacking either swordplay or magic
 - Queen movement portrayed without magically amplified superhuman speed, or incorrectly portrayed as teleportation
 - Archwizard movement portrayed as ordinary walking, riding, or running instead of teleportation
+- an Archwizard portrayed as possessing only teleportation magic, or repetitive combat that incorrectly turns every Archwizard spell into a portal, blink, or spatial effect
 - a Moving Fortress portrayed without magic-powered wheels, with a pilot who is not alive and physically embedded within it, or as a sentient machine acting independently of its pilot
 - any nonfatal injury or dismemberment absent from outline woundBeats, inflicted outside its recorded capture, applied to the wrong survivor, prematurely healed, forgotten in later action, or contradicted by intact anatomy
 - any fatal dismemberment outside a ledger-confirmed death, or repetitive dismemberment that weakens rather than sharpens major violence

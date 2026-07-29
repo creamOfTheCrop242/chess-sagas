@@ -1,4 +1,4 @@
-export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v21';
+export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v22';
 
 export const NARRATIVE_ANALYSIS_INSTRUCTIONS = `You are the global narrative analyst for Chess Sagas.
 
@@ -12,7 +12,7 @@ The ledger is the source of truth:
 - Destroying a Seal does not make every spell vanish instantly. The defeated kingdom consumes its remaining stored magic, then wards fail, enchantments decay, infrastructure breaks, harvests suffer, institutions fracture, and the realm gradually crumbles unless it finds a non-magical way to survive.
 - If the defeated realm has any surviving Moving Fortresses, make their fate part of the aftermath plan. As stored magic fades, their enchanted wheels seize and their life-sustaining command cradles fail, leaving the still-living embedded pilots entombed inside immobile armored hulls unless survivors can cut them free. This decline is gradual, not instantaneous.
 - Queens combine master swordsmanship, Archwizard-level magic, Moving-Fortress durability, and magically amplified superhuman speed. Plan their long or sudden movement as explosive spell-driven acceleration rather than ordinary travel.
-- Bishops are Archwizards who cross the battlefield through teleportation magic rather than running or riding. Their diagonal relocation is a blink through folded space, a portal, or another instantaneous magical transit. Rooks are Moving Fortresses, knights are Knight Commanders, and pawns are soldiers or companies.
+- Bishops are Archwizards with a broad mastery of high sorcery: destructive elemental forces, wards, bindings, counterspells, illusions, divination, transmutation, and other magic appropriate to the scene. Teleportation is specifically how they cross the battlefield rather than running or riding; it is not their only power or their default solution to every conflict. Their diagonal relocation is a blink through folded space, a portal, or another instantaneous magical transit. Rooks are Moving Fortresses, knights are Knight Commanders, and pawns are soldiers or companies.
 - A Moving Fortress is a colossal wheeled war engine powered by magic. Its permanent living pilot, named in operatorName, is physically embedded within the machine in a life-sustaining armored command cradle and cannot simply dismount. Treat that pilot as the Fortress's human viewpoint, decision-maker, and voice; never make the structure itself think, speak, choose, or act independently.
 - When a Moving Fortress captures, its operator personally commands and executes the attack through the machine. When a Moving Fortress is captured, destroy the machine and make its operator's death or final fate part of the same ledger-confirmed loss.
 - Each pawn represents an entire named soldier company, but its registry entry also supplies one permanent viewpointName: the specific grunt whose eyes, dialogue, relationships, fear, and growth the reader follows whenever that company acts.

@@ -1,4 +1,4 @@
-export const SCENE_BREAKDOWN_PROMPT_VERSION = 'phase-6-v16';
+export const SCENE_BREAKDOWN_PROMPT_VERSION = 'phase-6-v17';
 export const SCENE_BREAKDOWN_INSTRUCTIONS = `Split the validated cohesive story into move-aligned playback scenes. Return structured JSON only.
 
 - Create exactly one playback scene for every ledger ply. Never group multiple plies into one scene.
@@ -7,6 +7,7 @@ export const SCENE_BREAKDOWN_INSTRUCTIONS = `Split the validated cohesive story 
 - involvedMoves must contain exactly the one SAN string for that scene's ply.
 - Treat the scenes as consecutive paragraphs of one story, not independent move summaries. Reading fantasyNarration in ply order must feel like a single cohesive saga.
 - A Moving Fortress is a colossal wheeled war engine powered by magic. Its permanent living pilot in operatorName is physically embedded within a life-sustaining armored command cradle and cannot simply dismount. Preserve that pilot as its viewpoint and voice; never give the structure independent thoughts, speech, or decisions.
+- Archwizards use teleportation to relocate between battlefield positions, but possess broad high sorcery beyond teleportation. Preserve varied combat and utility magic—wards, elemental forces, bindings, counterspells, illusions, divination, transmutation, or established equivalents—and never rewrite every spell as a portal or blink.
 - Give each fantasyNarration enough substance to carry character, place, and consequence: usually 2–4 sentences and roughly 30–80 words. Vary sentence length and pacing naturally.
 - Preserve the validated story's central setting, atmosphere, named characters, relationships, motives, wounds, fears, rivalries, recurring imagery, and emotional arcs. Do not replace named characters with generic labels when the story established a name.
 - Copy the validated story's package-level wounds ledger exactly. Do not invent, omit, relocate, heal, or intensify an injury. From inflictedAtPly through recoveryPly, or through the epilogue when recoveryPly is null, preserve each survivor's missing limbs, scars, pain, limitations, equipment, and altered behavior.

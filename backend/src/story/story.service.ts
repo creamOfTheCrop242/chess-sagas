@@ -21,9 +21,9 @@ WORLD CANON (never contradict):
 PIECE CHARACTERS:
 - Front-line infantry: each “pawn” unit is a little battalion of grunts/soldiers (no eastern/western label). Never say the word pawn — say battalion, company, grunts, or soldiers.
 - Knights: knight commanders — always Eastern or Western
-- Bishops: archmages — always Eastern or Western
+- Bishops: archmages — always Eastern or Western; they cross the battlefield through teleportation magic, never by walking, riding, or running the route
 - Rooks: moving fortresses — always Eastern or Western
-- Queens: as durable as a fortress, wield a sword like a knight, and cast magic like a bishop (no eastern/western label)
+- Queens: as durable as a fortress, wield a sword like a knight, cast magic like a bishop, and move at magically amplified superhuman speed without teleporting (no eastern/western label)
 - Kings: strongest of all, bound to the enchanted seal that holds the realm together after the Calamity (no eastern/western label)
 
 ORIENTATION:
@@ -58,25 +58,18 @@ export class StoryService {
     this.openai = apiKey ? new OpenAI({ apiKey }) : null;
   }
 
-  async narrate(
-    dto: NarrateStoryDto,
-  ): Promise<{ ply: number; story: string }> {
+  async narrate(dto: NarrateStoryDto): Promise<{ ply: number; story: string }> {
     if (!this.openai) {
-      throw new ServiceUnavailableException(
-        'OPENAI_API_KEY is not configured',
-      );
+      throw new ServiceUnavailableException('OPENAI_API_KEY is not configured');
     }
 
     if (!dto?.ply || !dto.san || !dto.piece || !dto.realms) {
       throw new BadRequestException('Invalid narrate payload');
     }
 
-    const side =
-      dto.color === 'w' ? dto.realms.white : dto.realms.black;
+    const side = dto.color === 'w' ? dto.realms.white : dto.realms.black;
     const kingName =
-      dto.color === 'w'
-        ? dto.realms.whiteKingName
-        : dto.realms.blackKingName;
+      dto.color === 'w' ? dto.realms.whiteKingName : dto.realms.blackKingName;
 
     const wing = this.wingLabel(dto.from);
     const actingCharacter = this.characterLabel(dto.piece, wing);
@@ -209,21 +202,18 @@ Hard limit: 2-4 complete sentences only. End on a finished sentence.`;
     return file < 'e' ? 'Western' : 'Eastern';
   }
 
-  private characterLabel(
-    piece: string,
-    wing: 'Eastern' | 'Western',
-  ): string {
+  private characterLabel(piece: string, wing: 'Eastern' | 'Western'): string {
     switch (piece) {
       case 'p':
         return 'a little battalion of grunts / soldiers';
       case 'n':
         return `${wing} knight commander`;
       case 'b':
-        return `${wing} archmage`;
+        return `${wing} teleporting archmage`;
       case 'r':
         return `${wing} moving fortress`;
       case 'q':
-        return 'queen (fortress durability, knight blade, bishop magic)';
+        return 'queen (fortress durability, knight blade, archmage magic, spell-driven superhuman speed)';
       case 'k':
         return 'king bound to the enchanted seal';
       default:
@@ -269,8 +259,7 @@ Hard limit: 2-4 complete sentences only. End on a finished sentence.`;
       .map((enemy) => {
         const wing = enemy.wing ?? this.wingLabel(enemy.square);
         const label = this.enemyCharacterLabel(enemy.piece, wing);
-        const closeness =
-          enemy.distance === 1 ? 'adjacent' : 'close by';
+        const closeness = enemy.distance === 1 ? 'adjacent' : 'close by';
         return `${label} (${closeness})`;
       })
       .join('; ');
@@ -286,14 +275,16 @@ Hard limit: 2-4 complete sentences only. End on a finished sentence.`;
     if (!targeted?.length) {
       return 'none';
     }
-    return targeted
-      .filter((enemy) => enemy.piece !== 'p')
-      .slice(0, 4)
-      .map((enemy) => {
-        const wing = enemy.wing ?? this.wingLabel(enemy.square);
-        return this.enemyCharacterLabel(enemy.piece, wing);
-      })
-      .join('; ') || 'none (no champion targets)';
+    return (
+      targeted
+        .filter((enemy) => enemy.piece !== 'p')
+        .slice(0, 4)
+        .map((enemy) => {
+          const wing = enemy.wing ?? this.wingLabel(enemy.square);
+          return this.enemyCharacterLabel(enemy.piece, wing);
+        })
+        .join('; ') || 'none (no champion targets)'
+    );
   }
 
   private scrubChessJargon(story: string): string {

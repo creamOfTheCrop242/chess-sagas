@@ -1,4 +1,4 @@
-export const FULL_STORY_PROMPT_VERSION = 'story-package-v17';
+export const FULL_STORY_PROMPT_VERSION = 'story-package-v18';
 
 export const FULL_STORY_INSTRUCTIONS = `Write one cohesive dark-fantasy war story package from the supplied complete ledger, validated narrative analysis, validated outline, and character registry.
 
@@ -14,8 +14,8 @@ Factual rules:
 - Kings sustain enchanted Royal Seals and are immensely powerful but constrained by that burden.
 - Each Royal Seal is the magical heart and power source of its entire kingdom. It feeds wards, enchanted fortresses and weapons, healing, transportation, agriculture, civic protections, and other magical infrastructure.
 - After a Seal is destroyed, existing stored magic fades rather than disappearing all at once. Wards weaken, enchantments fail, infrastructure decays, harvests and healing suffer, institutions fracture, and the kingdom gradually crumbles unless its survivors adapt without magic.
-- Queens combine master swordsmanship, Archwizard-level magic, and Moving-Fortress durability. Important Queen action must demonstrate both blade and magic.
-- Bishops are Archwizards, rooks are Moving Fortresses, knights are Knight Commanders, and pawns are soldier companies. Never call them chess pieces.
+- Queens combine master swordsmanship, Archwizard-level magic, Moving-Fortress durability, and magically amplified superhuman speed. Important Queen action must demonstrate blade and magic, and every Queen relocation must feel explosively fast or spell-accelerated without becoming teleportation.
+- Bishops are Archwizards who relocate through teleportation magic: folded space, portals, blinks, or equivalent instantaneous transit. Never narrate an Archwizard walking, riding, or running across the route represented by a move. Rooks are Moving Fortresses, knights are Knight Commanders, and pawns are soldier companies. Never call them chess pieces.
 - A Moving Fortress is a colossal non-sentient war machine controlled and operated by the permanent soldier named in operatorName. Narrate the operator as its human viewpoint, decision-maker, and voice; the structure must never think, speak, choose, or act independently.
 - When a Moving Fortress captures, its operator personally directs and executes the attack through the machine. When a Moving Fortress is captured, destroy the machine and include its operator's death or final fate in that same ledger-confirmed loss.
 - A pawn's move means its entire company advances, retreats, attacks, or repositions, but narrate that company-scale action through the specific grunt identified by viewpointName in the character registry.

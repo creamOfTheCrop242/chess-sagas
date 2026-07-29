@@ -145,10 +145,22 @@ export type PlaybackScene = {
   continuityNotes: string[];
 };
 
+export type StoryWound = {
+  pieceId: string;
+  inflictedAtPly: number;
+  injury: string;
+  lastingEffects: string[];
+  recoveryPly: number | null;
+};
+
 export type SceneBreakdownResponse = {
   status: 'COMPLETED';
   sceneBreakdown: {
-    data: { scenes: PlaybackScene[]; epilogue?: string | null };
+    data: {
+      scenes: PlaybackScene[];
+      wounds?: StoryWound[];
+      epilogue?: string | null;
+    };
   };
 };
 

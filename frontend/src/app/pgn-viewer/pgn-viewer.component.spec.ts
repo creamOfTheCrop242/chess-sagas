@@ -7,7 +7,7 @@ describe('PgnViewerComponent character inspection', () => {
 
   beforeEach(() => {
     component = new PgnViewerComponent({} as PgnApiService);
-    component.game = game;
+    component.game = structuredClone(game);
   });
 
   it('puts White at the top by default and flips on request', () => {
@@ -40,6 +40,67 @@ describe('PgnViewerComponent character inspection', () => {
 
     component.inspectPieceAt('d7');
     expect(component.inspectedPiece).toBeNull();
+  });
+
+  it('reveals a lasting injury only when its infliction beat is reached', () => {
+    component.wounds = [
+      {
+        pieceId: 'w-p-e2',
+        inflictedAtPly: 3,
+        injury: 'Her left hand is severed.',
+        lastingEffects: ['She must work and fight one-handed.'],
+        recoveryPly: null,
+      },
+    ];
+    component.currentPly = 2;
+    component.inspectPieceAt('e4');
+
+    expect(component.inspectedPieceStatus.label).toBe('Unharmed');
+
+    component.currentPly = 3;
+    component.inspectPieceAt('d5');
+
+    expect(component.inspectedPieceStatus).toEqual({
+      label: 'Maimed',
+      detail: 'Her left hand is severed. · She must work and fight one-handed.',
+      tone: 'maimed',
+    });
+  });
+
+  it('shows a recovered wound as scarred and a captured character as dead', () => {
+    component.wounds = [
+      {
+        pieceId: 'w-p-e2',
+        inflictedAtPly: 3,
+        injury: 'Her ribs are broken.',
+        lastingEffects: ['Breathing remains painful.'],
+        recoveryPly: 4,
+      },
+    ];
+    component.currentPly = 4;
+    component.inspectPieceAt('d6');
+
+    expect(component.inspectedPieceStatus.label).toBe('Scarred');
+
+    component.hoveredPieceId = null;
+    component.selectedPieceId = 'b-p-d7';
+
+    expect(component.inspectedPieceStatus).toEqual({
+      label: 'Dead',
+      detail: 'Fell at beat 3.',
+      tone: 'dead',
+    });
+  });
+
+  it('shows the defeated realm’s surviving Fortress entombment threat', () => {
+    component.game!.ledger.metadata['result'] = '0-1';
+    component.game!.ledger.metadata['termination'] = 'checkmate';
+    component.epilogue = 'The Light Kingdom’s stored magic began to fade.';
+    component.currentPly = component.game!.positions.length + 1;
+    component.selectedPieceId = 'w-p-e2';
+
+    expect(component.inspectedPieceStatus.label).toBe('Entombment Threat');
+    expect(component.inspectedPieceStatus.tone).toBe('entombed');
   });
 
   it('does not reveal a pawn promotion before its promotion ply', () => {

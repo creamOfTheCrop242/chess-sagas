@@ -114,6 +114,18 @@
                     <span>Kills</span>
                     <strong>{{ inspectedPieceKills }}</strong>
                   </p>
+                  <div
+                    class="piece-status"
+                    [class]="
+                      'piece-status piece-status-' + inspectedPieceStatus.tone
+                    "
+                  >
+                    <span>Status</span>
+                    <strong>{{ inspectedPieceStatus.label }}</strong>
+                    @if (inspectedPieceStatus.detail) {
+                      <small>{{ inspectedPieceStatus.detail }}</small>
+                    }
+                  </div>
                   @if (!selectedPieceId) {
                     <p class="piece-card-hint">Click or press Enter to pin</p>
                   }

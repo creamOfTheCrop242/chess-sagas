@@ -291,6 +291,7 @@ button.flip-board {
 .piece-company,
 .piece-description,
 .piece-kills,
+.piece-status,
 .piece-card-hint {
   margin: 0;
 }
@@ -337,6 +338,45 @@ button.flip-board {
 .piece-kills strong {
   color: var(--gold-bright);
   font-size: 1.1rem;
+}
+
+.piece-status {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.15rem 0.65rem;
+  align-items: baseline;
+  margin-top: 0.5rem;
+  color: var(--ink-muted);
+}
+
+.piece-status > span {
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.piece-status > strong {
+  justify-self: end;
+  color: var(--seal);
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+}
+
+.piece-status > small {
+  grid-column: 1 / -1;
+  color: var(--ink-muted);
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+.piece-status-maimed > strong,
+.piece-status-dead > strong {
+  color: #d78376;
+}
+
+.piece-status-entombed > strong {
+  color: var(--gold-bright);
 }
 
 .piece-card-hint {

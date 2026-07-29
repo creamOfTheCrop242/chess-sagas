@@ -12,12 +12,19 @@ import {
   ChessEvent,
   SagaStage,
   SagaStageState,
+  StoryWound,
 } from './pgn.models';
 
 type FallenPiece = {
   victim: PieceIdentity;
   killer: PieceIdentity;
   ply: number;
+};
+
+type PieceStatus = {
+  label: string;
+  detail: string | null;
+  tone: 'healthy' | 'wounded' | 'maimed' | 'dead' | 'entombed';
 };
 
 @Component({
@@ -39,6 +46,7 @@ export class PgnViewerComponent implements OnDestroy {
   selectedPieceId: string | null = null;
   fallenRosterOpen = false;
   scenes: PlaybackScene[] = [];
+  wounds: StoryWound[] = [];
   epilogue = '';
   sagaGenerating = false;
   storyError: string | null = null;
@@ -156,6 +164,66 @@ export class PgnViewerComponent implements OnDestroy {
         event.isCapture,
     ).length;
   }
+  get inspectedPieceStatus(): PieceStatus {
+    const piece = this.inspectedPiece;
+    if (!piece || !this.game) {
+      return { label: 'Unharmed', detail: null, tone: 'healthy' };
+    }
+    const capturedAtPly =
+      piece.capturedAtPly ??
+      this.game.ledger.events.find(
+        (event) => event.capturedPieceId === piece.id,
+      )?.ply;
+    if (capturedAtPly && capturedAtPly <= this.currentPly) {
+      return {
+        label: 'Dead',
+        detail: `Fell at beat ${capturedAtPly}.`,
+        tone: 'dead',
+      };
+    }
+    if (this.hasFortressEntombmentThreat(piece)) {
+      return {
+        label: 'Entombment Threat',
+        detail:
+          'The broken Seal’s fading magic threatens to lock the embedded pilot inside the Fortress.',
+        tone: 'entombed',
+      };
+    }
+    const wound = [...this.wounds]
+      .filter(
+        (candidate) =>
+          candidate.pieceId === piece.id &&
+          candidate.inflictedAtPly <= this.currentPly,
+      )
+      .sort((left, right) => right.inflictedAtPly - left.inflictedAtPly)[0];
+    if (!wound) {
+      return { label: 'Unharmed', detail: null, tone: 'healthy' };
+    }
+    if (wound.recoveryPly !== null && this.currentPly >= wound.recoveryPly) {
+      return {
+        label: 'Scarred',
+        detail: `Recovered from: ${wound.injury}`,
+        tone: 'wounded',
+      };
+    }
+    const effects = wound.lastingEffects.join(' · ');
+    if (this.isMaimingInjury(wound.injury)) {
+      return {
+        label: 'Maimed',
+        detail: effects ? `${wound.injury} · ${effects}` : wound.injury,
+        tone: 'maimed',
+      };
+    }
+    const gravelyWounded =
+      /\b(grave|critical|crippl|organ|spine|skull)\b/i.test(
+        `${wound.injury} ${effects}`,
+      );
+    return {
+      label: gravelyWounded ? 'Gravely Wounded' : 'Wounded',
+      detail: effects ? `${wound.injury} · ${effects}` : wound.injury,
+      tone: 'wounded',
+    };
+  }
   get lightKingdomFallen(): FallenPiece[] {
     return this.fallenPiecesFor('north');
   }
@@ -208,6 +276,7 @@ export class PgnViewerComponent implements OnDestroy {
         this.selectedPieceId = null;
         this.fallenRosterOpen = false;
         this.scenes = [];
+        this.wounds = [];
         this.epilogue = '';
         this.pipelineState = this.initialPipelineState();
         this.resetGenerationTimer();
@@ -233,6 +302,7 @@ export class PgnViewerComponent implements OnDestroy {
       .subscribe({
         next: (response) => {
           this.scenes = response.sceneBreakdown.data.scenes;
+          this.wounds = response.sceneBreakdown.data.wounds ?? [];
           this.epilogue = response.sceneBreakdown.data.epilogue ?? '';
           this.sagaGenerating = false;
           this.stopGenerationTimer();
@@ -405,6 +475,30 @@ export class PgnViewerComponent implements OnDestroy {
         event.ply <= this.currentPly &&
         event.pieceId === piece.id &&
         event.isPromotion,
+    );
+  }
+  private hasFortressEntombmentThreat(piece: PieceIdentity): boolean {
+    if (!this.isEpiloguePage || !piece.alive) return false;
+    const isFortress =
+      piece.fantasyType === 'moving-fortress' ||
+      this.currentPromotionFor(piece)?.promotionType === 'moving-fortress';
+    if (!isFortress) return false;
+    const result = String(
+      this.game?.ledger.metadata['result'] ??
+        this.game?.headers['Result'] ??
+        '',
+    );
+    const termination = String(
+      this.game?.ledger.metadata['termination'] ?? '',
+    ).toLowerCase();
+    const sealDestroyed = ['checkmate', 'resignation'].includes(termination);
+    const defeatedSide =
+      result === '1-0' ? 'south' : result === '0-1' ? 'north' : null;
+    return sealDestroyed && piece.side === defeatedSide;
+  }
+  private isMaimingInjury(injury: string): boolean {
+    return /\b(amput\w*|dismember\w*|sever\w*|missing|lost (?:an? |the )?(?:arm|hand|leg|foot)|torn off)\b/i.test(
+      injury,
     );
   }
   private displayRole(role: string): string {

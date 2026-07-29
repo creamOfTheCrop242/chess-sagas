@@ -115,6 +115,23 @@ describe('NarrativeAnalysisService', () => {
     expect(runUpdate).toHaveBeenCalledTimes(1);
   });
 
+  it('rejects a lasting wound that is not anchored to the survivor’s capture', () => {
+    const analysis = makeAnalysis(ledger);
+    analysis.woundPlans = [
+      {
+        pieceId: ledger.events.at(-1)!.pieceId,
+        inflictedAtPly: 1,
+        injury: 'Her sword arm is severed below the elbow.',
+        lastingEffects: ['She must fight one-handed.'],
+        recoveryPly: null,
+      },
+    ];
+
+    expect(() =>
+      new NarrativeAnalysisValidator().validate(analysis, ledger),
+    ).toThrow('must be inflicted while that survivor makes');
+  });
+
   it('rejects generation when the saved ledger does not exist', async () => {
     gameFindUnique.mockResolvedValue(null);
 
@@ -145,6 +162,12 @@ describe('NarrativeAnalysisService', () => {
 
 function makeAnalysis(ledger: GameLedger): NarrativeAnalysis {
   const queenId = ledger.events.at(-1)!.pieceId;
+  const southernKingId = ledger.pieces.find(
+    (piece) => piece.chessColor === 'b' && piece.chessType === 'k',
+  )!.id;
+  const northernBishopId = ledger.pieces.find(
+    (piece) => piece.chessColor === 'w' && piece.chessType === 'b',
+  )!.id;
   return {
     titleConcepts: ['The Broken Seal'],
     dominantThemes: ['ambition', 'collapse'],
@@ -192,6 +215,26 @@ function makeAnalysis(ledger: GameLedger): NarrativeAnalysis {
         narrativeFunction: 'Carries the decisive assault.',
       },
     ],
+    relationshipPlans: [
+      {
+        id: 'queen-king-rivalry',
+        characterIds: [queenId, southernKingId],
+        relationshipType: 'rivalry',
+        startingDynamic: 'The King dismisses the approaching champion.',
+        developmentPlies: [5, 7],
+        payoffPly: 7,
+        intendedChange: 'Dismissal becomes fatal recognition.',
+      },
+      {
+        id: 'bishop-queen-trust',
+        characterIds: [northernBishopId, queenId],
+        relationshipType: 'battlefield trust',
+        startingDynamic: 'The Archwizard opens a path for the Queen.',
+        developmentPlies: [3, 5],
+        payoffPly: 7,
+        intendedChange: 'Their coordinated assault breaks the final defense.',
+      },
+    ],
     promotingPawnPlans: [],
     foreshadowing: [
       {
@@ -201,6 +244,7 @@ function makeAnalysis(ledger: GameLedger): NarrativeAnalysis {
         payoffDescription: 'She reaches and breaks its defense.',
       },
     ],
+    woundPlans: [],
     endingPlan: {
       winner: 'north',
       termination: 'checkmate',

@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Chess } from 'chess.js';
-import type { Move } from 'chess.js';
+import type { Color, Move, Square } from 'chess.js';
 import type { ChessPieceType, GameLedger } from './models/game-ledger';
 import { PieceIdentityService } from './piece-identity.service';
 
@@ -80,6 +80,9 @@ export class GameLedgerService {
 
       const isCheckmate = replay.isCheckmate();
       const isCheck = replay.isCheck();
+      const checkmateExplanation = isCheckmate
+        ? this.explainCheckmate(replay, squareToId)
+        : undefined;
       events.push({
         ply,
         moveNumber: Math.ceil(ply / 2),
@@ -103,6 +106,7 @@ export class GameLedgerService {
         isEnPassant,
         isQuietMove: !result.captured && !isCheck && !isCastle && !isPromotion,
         boardFenAfterMove: replay.fen(),
+        checkmateExplanation,
       });
     }
 
@@ -117,6 +121,61 @@ export class GameLedgerService {
         .filter((piece) => !piece.alive)
         .map((piece) => piece.id),
       promotedPieces,
+    };
+  }
+
+  private explainCheckmate(
+    chess: Chess,
+    squareToId: Map<string, string>,
+  ): NonNullable<GameLedger['events'][number]['checkmateExplanation']> {
+    const defender = chess.turn();
+    const attacker: Color = defender === 'w' ? 'b' : 'w';
+    const kingSquare = chess.findPiece({ type: 'k', color: defender })[0];
+    const kingId = kingSquare ? squareToId.get(kingSquare) : undefined;
+    if (!kingSquare || !kingId) {
+      throw new BadRequestException('Unable to identify checkmated King');
+    }
+    const checkingSquares = chess.attackers(kingSquare, attacker);
+    const checkingPieceIds = checkingSquares
+      .map((square) => squareToId.get(square))
+      .filter((pieceId): pieceId is string => Boolean(pieceId));
+    return {
+      kingId,
+      kingSquare,
+      checkingPieceIds,
+      checkingSquares,
+      escapeSquares: adjacentSquares(kingSquare).map((square) => {
+        const occupant = chess.get(square);
+        return {
+          square,
+          reason:
+            occupant?.color === defender
+              ? ('friendly-occupied' as const)
+              : ('enemy-controlled' as const),
+          occupiedByPieceId:
+            occupant?.color === defender ? squareToId.get(square) : undefined,
+          controlledByPieceIds: chess
+            .attackers(square, attacker)
+            .map((attackerSquare) => squareToId.get(attackerSquare))
+            .filter((pieceId): pieceId is string => Boolean(pieceId)),
+        };
+      }),
+      checkingPieces: checkingSquares.map((square) => ({
+        pieceId: squareToId.get(square)!,
+        square,
+        kingCanReach: areAdjacent(kingSquare, square),
+        protectedByPieceIds: chess
+          .attackers(square, attacker)
+          .map((protectorSquare) => squareToId.get(protectorSquare))
+          .filter((pieceId): pieceId is string => Boolean(pieceId)),
+      })),
+      interpositionSquares:
+        checkingSquares.length === 1
+          ? squaresBetween(kingSquare, checkingSquares[0])
+          : [],
+      canCaptureCheckingPiece: false,
+      canBlockCheck: false,
+      legalResponseCount: 0,
     };
   }
 
@@ -168,4 +227,57 @@ export class GameLedgerService {
       termination,
     };
   }
+}
+
+function adjacentSquares(square: Square): Square[] {
+  const file = square.charCodeAt(0) - 'a'.charCodeAt(0);
+  const rank = Number(square[1]) - 1;
+  const squares: Square[] = [];
+  for (let fileOffset = -1; fileOffset <= 1; fileOffset += 1) {
+    for (let rankOffset = -1; rankOffset <= 1; rankOffset += 1) {
+      if (fileOffset === 0 && rankOffset === 0) continue;
+      const targetFile = file + fileOffset;
+      const targetRank = rank + rankOffset;
+      if (
+        targetFile >= 0 &&
+        targetFile < 8 &&
+        targetRank >= 0 &&
+        targetRank < 8
+      ) {
+        squares.push(
+          `${String.fromCharCode('a'.charCodeAt(0) + targetFile)}${targetRank + 1}` as Square,
+        );
+      }
+    }
+  }
+  return squares;
+}
+
+function areAdjacent(first: Square, second: Square): boolean {
+  return (
+    Math.abs(first.charCodeAt(0) - second.charCodeAt(0)) <= 1 &&
+    Math.abs(Number(first[1]) - Number(second[1])) <= 1
+  );
+}
+
+function squaresBetween(first: Square, second: Square): Square[] {
+  const fileDelta = second.charCodeAt(0) - first.charCodeAt(0);
+  const rankDelta = Number(second[1]) - Number(first[1]);
+  const aligned =
+    fileDelta === 0 ||
+    rankDelta === 0 ||
+    Math.abs(fileDelta) === Math.abs(rankDelta);
+  if (!aligned) return [];
+  const fileStep = Math.sign(fileDelta);
+  const rankStep = Math.sign(rankDelta);
+  const distance = Math.max(Math.abs(fileDelta), Math.abs(rankDelta));
+  const squares: Square[] = [];
+  for (let step = 1; step < distance; step += 1) {
+    squares.push(
+      `${String.fromCharCode(first.charCodeAt(0) + fileStep * step)}${
+        Number(first[1]) + rankStep * step
+      }` as Square,
+    );
+  }
+  return squares;
 }

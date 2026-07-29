@@ -29,9 +29,25 @@ const setupPayoffSchema = z.object({
   payoff: z.string().min(1),
 });
 
+const relationshipBeatSchema = z.object({
+  relationshipId: z.string().min(1),
+  characterIds: z.array(z.string().min(1)).length(2),
+  beatPlies: z.array(z.number().int().positive()).min(1),
+  progression: z.string().min(1),
+  payoff: z.string().min(1),
+});
+
 const endingBeatSchema = z.object({
   ply: z.number().int().positive(),
   beat: z.string().min(1),
+});
+
+const woundBeatSchema = z.object({
+  pieceId: z.string().min(1),
+  inflictedAtPly: z.number().int().positive(),
+  injury: z.string().min(1),
+  continuityPlies: z.array(z.number().int().positive()),
+  recoveryPly: z.number().int().positive().nullable(),
 });
 
 export const storyOutlineSchema = z.object({
@@ -39,6 +55,8 @@ export const storyOutlineSchema = z.object({
   theme: z.string().min(1),
   acts: z.array(outlineActSchema).min(1),
   setupPayoffs: z.array(setupPayoffSchema),
+  relationshipBeats: z.array(relationshipBeatSchema).min(2).max(4),
+  woundBeats: z.array(woundBeatSchema).default([]),
   endingSequence: z.array(endingBeatSchema).min(1),
   proseConstraints: z.array(z.string().min(1)).min(1),
 });

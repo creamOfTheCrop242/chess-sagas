@@ -48,6 +48,30 @@ export interface ChessEvent {
   isEnPassant: boolean;
   isQuietMove: boolean;
   boardFenAfterMove: string;
+  checkmateExplanation?: CheckmateExplanation;
+}
+
+export interface CheckmateExplanation {
+  kingId: string;
+  kingSquare: string;
+  checkingPieceIds: string[];
+  checkingSquares: string[];
+  escapeSquares: Array<{
+    square: string;
+    reason: 'friendly-occupied' | 'enemy-controlled';
+    occupiedByPieceId?: string;
+    controlledByPieceIds: string[];
+  }>;
+  checkingPieces: Array<{
+    pieceId: string;
+    square: string;
+    kingCanReach: boolean;
+    protectedByPieceIds: string[];
+  }>;
+  interpositionSquares: string[];
+  canCaptureCheckingPiece: false;
+  canBlockCheck: false;
+  legalResponseCount: 0;
 }
 
 export interface GameLedger {

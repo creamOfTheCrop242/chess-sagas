@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { storyWoundSchema } from '../../full-story/models/generated-story';
 
 export const storySceneSchema = z.object({
   id: z.string().min(1),
@@ -21,6 +22,7 @@ export const storySceneSchema = z.object({
 
 export const sceneBreakdownSchema = z.object({
   scenes: z.array(storySceneSchema).min(1),
+  wounds: z.array(storyWoundSchema).default([]),
   epilogue: z.string().min(1).nullable(),
 });
 

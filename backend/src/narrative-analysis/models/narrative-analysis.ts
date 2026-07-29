@@ -49,6 +49,16 @@ const characterArcSchema = z.object({
   narrativeFunction: z.string().min(1),
 });
 
+const relationshipPlanSchema = z.object({
+  id: z.string().min(1),
+  characterIds: z.array(z.string().min(1)).length(2),
+  relationshipType: z.string().min(1),
+  startingDynamic: z.string().min(1),
+  developmentPlies: z.array(z.number().int().positive()).min(1),
+  payoffPly: z.number().int().positive().nullable(),
+  intendedChange: z.string().min(1),
+});
+
 const promotingPawnPlanSchema = z.object({
   pieceId: z.string().min(1),
   promotionPly: z.number().int().positive(),
@@ -61,6 +71,14 @@ const foreshadowingPlanSchema = z.object({
   setupPlies: z.array(z.number().int().positive()),
   setupDescription: z.string().min(1),
   payoffDescription: z.string().min(1),
+});
+
+export const woundPlanSchema = z.object({
+  pieceId: z.string().min(1),
+  inflictedAtPly: z.number().int().positive(),
+  injury: z.string().min(1),
+  lastingEffects: z.array(z.string().min(1)).min(1),
+  recoveryPly: z.number().int().positive().nullable(),
 });
 
 const endingPlanSchema = z.object({
@@ -87,8 +105,10 @@ export const narrativeAnalysisSchema = z.object({
   acts: z.array(narrativeActSchema).min(1),
   characterImportance: z.array(characterImportanceSchema),
   characterArcs: z.array(characterArcSchema),
+  relationshipPlans: z.array(relationshipPlanSchema).min(2).max(4),
   promotingPawnPlans: z.array(promotingPawnPlanSchema),
   foreshadowing: z.array(foreshadowingPlanSchema),
+  woundPlans: z.array(woundPlanSchema).default([]),
   endingPlan: endingPlanSchema,
   continuityConstraints: z.array(z.string().min(1)).min(1),
 });

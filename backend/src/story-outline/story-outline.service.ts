@@ -68,27 +68,26 @@ export class StoryOutlineService {
       let outline: StoryOutline | undefined;
       let validationFeedback: string | undefined;
       for (let attempt = 0; attempt < 2; attempt += 1) {
-        const candidate = normalizeStoryOutlineCharacters(
-          normalizeStoryOutlineRequiredEvents(
-            normalizeStoryOutlineEndingSequence(
-              normalizeStoryOutlineSetupPayoffs(
-                normalizeStoryOutlineNumbering(
-                  storyOutlineSchema.parse(
-                    await this.provider.generate({
-                      ledger,
-                      narrativeAnalysis,
-                      characterRegistry: ledger.pieces,
-                      validationFeedback,
-                    }),
-                  ),
-                ),
-                ledger,
-              ),
-              ledger,
-            ),
+        let candidate = storyOutlineSchema.parse(
+          await this.provider.generate({
             ledger,
-          ),
-          ledger,
+            narrativeAnalysis,
+            characterRegistry: ledger.pieces,
+            validationFeedback,
+          }),
+        );
+        candidate = normalizeStoryOutlineNumbering(candidate);
+        candidate = normalizeStoryOutlineStructure(
+          candidate,
+          narrativeAnalysis,
+        );
+        candidate = normalizeStoryOutlineSetupPayoffs(candidate, ledger);
+        candidate = normalizeStoryOutlineEndingSequence(candidate, ledger);
+        candidate = normalizeStoryOutlineRequiredEvents(candidate, ledger);
+        candidate = normalizeStoryOutlineCharacters(candidate, ledger);
+        candidate = normalizeStoryOutlineRelationshipScenes(
+          candidate,
+          narrativeAnalysis,
         );
         try {
           this.validator.validate(candidate, ledger, narrativeAnalysis);
@@ -102,12 +101,14 @@ export class StoryOutlineService {
           if (
             attempt === 0 &&
             (message.includes('Invalid setup/payoff relationship') ||
-              message.includes('Ending sequence must include the final ply'))
+              message.includes('Ending sequence must include the final ply') ||
+              message.includes('Relationship'))
           ) {
             validationFeedback = [
               message,
               `The ledger final ply is ${ledger.events.length}.`,
               `Rejected setupPayoffs: ${JSON.stringify(candidate.setupPayoffs)}.`,
+              `Rejected relationshipBeats: ${JSON.stringify(candidate.relationshipBeats)}.`,
               'Rebuild each cited relationship with at least one real setup ply strictly before its payoff. Preserve meaningful narrative distance between setup and payoff.',
             ].join(' ');
             continue;
@@ -174,6 +175,108 @@ export class StoryOutlineService {
     }
     return run;
   }
+}
+
+export function normalizeStoryOutlineRelationshipScenes(
+  outline: StoryOutline,
+  analysis: NarrativeAnalysis,
+): StoryOutline {
+  const relationshipCharactersByPly = new Map<number, Set<string>>();
+  const plannedRelationships = new Map(
+    (analysis.relationshipPlans ?? []).map((relationship) => [
+      relationship.id,
+      relationship,
+    ]),
+  );
+  for (const relationship of outline.relationshipBeats) {
+    const planned = plannedRelationships.get(relationship.relationshipId);
+    if (!planned) continue;
+    for (const ply of relationship.beatPlies) {
+      const characters =
+        relationshipCharactersByPly.get(ply) ?? new Set<string>();
+      planned.characterIds.forEach((pieceId) => characters.add(pieceId));
+      relationshipCharactersByPly.set(ply, characters);
+    }
+  }
+  return {
+    ...outline,
+    acts: outline.acts.map((act) => ({
+      ...act,
+      scenes: act.scenes.map((scene) => ({
+        ...scene,
+        characters: [
+          ...scene.characters,
+          ...[...relationshipCharactersByPly.entries()]
+            .filter(([ply]) => ply >= scene.startPly && ply <= scene.endPly)
+            .flatMap(([, characters]) => [...characters]),
+        ].filter((pieceId, index, all) => all.indexOf(pieceId) === index),
+      })),
+    })),
+  };
+}
+
+export function normalizeStoryOutlineStructure(
+  outline: StoryOutline,
+  analysis: NarrativeAnalysis,
+): StoryOutline {
+  if (outline.acts.length !== analysis.acts.length) return outline;
+  return {
+    ...outline,
+    acts: outline.acts.map((act, actIndex) => {
+      const plannedAct = analysis.acts[actIndex];
+      const actLength = plannedAct.endPly - plannedAct.startPly + 1;
+      const scenes = collapseExcessScenes(act.scenes, actLength);
+      let nextPly = plannedAct.startPly;
+      return {
+        ...act,
+        startPly: plannedAct.startPly,
+        endPly: plannedAct.endPly,
+        scenes: scenes.map((scene, sceneIndex) => {
+          const remainingScenes = scenes.length - sceneIndex - 1;
+          const endPly =
+            sceneIndex === scenes.length - 1
+              ? plannedAct.endPly
+              : Math.max(
+                  nextPly,
+                  Math.min(scene.endPly, plannedAct.endPly - remainingScenes),
+                );
+          const normalized = { ...scene, startPly: nextPly, endPly };
+          nextPly = endPly + 1;
+          return normalized;
+        }),
+      };
+    }),
+  };
+}
+
+function collapseExcessScenes(
+  scenes: StoryOutline['acts'][number]['scenes'],
+  maximumScenes: number,
+): StoryOutline['acts'][number]['scenes'] {
+  if (scenes.length <= maximumScenes) return scenes;
+  const retained = scenes.slice(0, maximumScenes);
+  const finalScene = retained[retained.length - 1];
+  const overflow = scenes.slice(maximumScenes);
+  retained[retained.length - 1] = {
+    ...finalScene,
+    purpose: [finalScene, ...overflow].map((scene) => scene.purpose).join(' '),
+    emotionalBeat: [finalScene, ...overflow]
+      .map((scene) => scene.emotionalBeat)
+      .join(' → '),
+    characters: [
+      ...finalScene.characters,
+      ...overflow.flatMap((scene) => scene.characters),
+    ].filter((pieceId, index, all) => all.indexOf(pieceId) === index),
+    requiredEventPlies: [
+      ...finalScene.requiredEventPlies,
+      ...overflow.flatMap((scene) => scene.requiredEventPlies),
+    ],
+    continuityNotes: [
+      ...finalScene.continuityNotes,
+      ...overflow.flatMap((scene) => scene.continuityNotes),
+    ],
+  };
+  return retained;
 }
 
 export function normalizeStoryOutlineNumbering(

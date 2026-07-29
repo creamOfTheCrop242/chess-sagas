@@ -306,12 +306,12 @@ export class PgnViewerComponent implements OnDestroy {
     const descriptions: Record<string, string> = {
       king: 'Bearer of the Royal Seal and living source of the kingdom’s magic.',
       queen:
-        'Master swordfighter, Archwizard, and living fortress of the realm.',
+        'Master swordfighter, Archwizard, and living fortress who moves at magically amplified superhuman speed.',
       archwizard:
-        'An Archwizard who bends battlefield magic to the kingdom’s cause.',
+        'An Archwizard who folds space and teleports across the battlefield.',
       'moving-fortress': `A colossal mobile stronghold controlled by ${
-        piece.operatorName ?? 'a sworn soldier-operator'
-      }, who commands every movement and attack from within.`,
+        piece.operatorName ?? 'a sworn pilot'
+      }, a living soldier permanently embedded in its armored command cradle. Magic powers its enormous wheels while the pilot commands every movement and attack from within.`,
       'knight-commander':
         'An elite commander who strikes across the battlefield by unexpected paths.',
     };

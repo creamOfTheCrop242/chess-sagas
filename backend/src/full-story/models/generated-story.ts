@@ -7,6 +7,14 @@ export const generatedStorySchema = z.object({
 
 export type GeneratedStoryDraft = z.infer<typeof generatedStorySchema>;
 
+export const storyWoundSchema = z.object({
+  pieceId: z.string().min(1),
+  inflictedAtPly: z.number().int().positive(),
+  injury: z.string().min(1),
+  lastingEffects: z.array(z.string().min(1)).min(1),
+  recoveryPly: z.number().int().positive().nullable(),
+});
+
 export const generatedStoryPackageSchema = z.object({
   title: z.string().min(1),
   epilogue: z.string().min(150),
@@ -16,6 +24,7 @@ export const generatedStoryPackageSchema = z.object({
     'survives',
   ]),
   defeatedSealFate: z.enum(['destroyed', 'intact']),
+  wounds: z.array(storyWoundSchema).default([]),
   scenes: z
     .array(
       z.object({

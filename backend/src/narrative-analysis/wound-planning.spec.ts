@@ -36,15 +36,30 @@ describe('wound planning', () => {
     expect(woundProbability('queen', 'grunt')).toBe(0.08);
   });
 
-  it('uses stable seeded rolls and never selects a captor who later dies', () => {
+  it('uses stable seeded rolls for captors even when they die later', () => {
     expect(selectRequiredWoundEvents(ledger)).toEqual(
       selectRequiredWoundEvents(ledger),
+    );
+    const laterDeadCapture = ledger.events[2];
+    const laterDeadRoll = deterministicWoundRoll(
+      ledger,
+      laterDeadCapture,
+      ledger.pieces.find((piece) => piece.id === laterDeadCapture.pieceId),
+      ledger.pieces.find(
+        (piece) => piece.id === laterDeadCapture.capturedPieceId,
+      ),
     );
     expect(
       selectRequiredWoundEvents(ledger).some(
         (event) => event.pieceId === 'b-r-a8',
       ),
-    ).toBe(false);
+    ).toBe(
+      laterDeadRoll <
+        woundProbability(
+          laterDeadCapture.pieceType,
+          laterDeadCapture.capturedPieceType!,
+        ),
+    );
     expect(
       deterministicWoundRoll(ledger, ledger.events[0]),
     ).toBeGreaterThanOrEqual(0);
@@ -55,7 +70,6 @@ describe('wound planning', () => {
     const expected = ledger.events
       .filter(
         (event) =>
-          ledger.survivors.includes(event.pieceId) &&
           deterministicWoundRoll(
             ledger,
             event,

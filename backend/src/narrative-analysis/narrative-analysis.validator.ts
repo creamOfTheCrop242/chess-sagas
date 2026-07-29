@@ -82,7 +82,7 @@ export class NarrativeAnalysisValidator {
       const event = ledger.events[wound.inflictedAtPly - 1];
       if (!event?.isCapture || event.pieceId !== wound.pieceId) {
         errors.push(
-          `Wound for ${wound.pieceId} must be inflicted while that survivor makes a ledger-confirmed capture`,
+          `Wound for ${wound.pieceId} must be inflicted while that character survives a ledger-confirmed capture`,
         );
       }
       if (
@@ -106,7 +106,7 @@ export class NarrativeAnalysisValidator {
       const key = `${required.pieceId}:${required.inflictedAtPly}`;
       if (!woundKeys.has(key)) {
         errors.push(
-          `Required survivor wound is missing at ply ${required.inflictedAtPly}`,
+          `Required wound is missing at ply ${required.inflictedAtPly}`,
         );
       }
     }

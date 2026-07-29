@@ -119,7 +119,7 @@ describe('NarrativeAnalysisService', () => {
     expect(runUpdate).toHaveBeenCalledTimes(1);
   });
 
-  it('rejects a lasting wound that is not anchored to the survivor’s capture', () => {
+  it('rejects a lasting wound that is not anchored to the character’s capture', () => {
     const analysis = makeAnalysis(ledger);
     analysis.woundPlans = [
       {
@@ -133,7 +133,7 @@ describe('NarrativeAnalysisService', () => {
 
     expect(() =>
       new NarrativeAnalysisValidator().validate(analysis, ledger),
-    ).toThrow('must be inflicted while that survivor makes');
+    ).toThrow('must be inflicted while that character survives');
   });
 
   it('rejects generation when the saved ledger does not exist', async () => {

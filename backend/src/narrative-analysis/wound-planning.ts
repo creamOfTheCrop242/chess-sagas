@@ -24,7 +24,6 @@ const COMBAT_TIER: Record<FantasyPieceType, number> = {
 export function selectRequiredWoundEvents(
   ledger: GameLedger,
 ): RequiredWoundEvent[] {
-  const survivors = new Set(ledger.survivors);
   const pieces = new Map(ledger.pieces.map((piece) => [piece.id, piece]));
   return ledger.events
     .filter(
@@ -35,7 +34,6 @@ export function selectRequiredWoundEvents(
         capturedPieceType: FantasyPieceType;
       } =>
         event.isCapture &&
-        survivors.has(event.pieceId) &&
         Boolean(event.capturedPieceId) &&
         Boolean(event.capturedPieceType),
     )

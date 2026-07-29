@@ -136,6 +136,38 @@ export class StoryOutlineValidator {
         errors.push(`Relationship plan ${relationshipId} is missing`);
       }
     }
+    const plannedWounds = new Map(
+      (analysis.woundPlans ?? []).map((wound) => [
+        `${wound.pieceId}:${wound.inflictedAtPly}`,
+        wound,
+      ]),
+    );
+    const outlinedWounds = new Set<string>();
+    for (const wound of outline.woundBeats ?? []) {
+      const key = `${wound.pieceId}:${wound.inflictedAtPly}`;
+      const planned = plannedWounds.get(key);
+      outlinedWounds.add(key);
+      if (
+        !planned ||
+        wound.injury !== planned.injury ||
+        wound.recoveryPly !== planned.recoveryPly
+      ) {
+        errors.push(`Wound beat ${key} must match the narrative analysis`);
+      }
+      const continuityEnd = wound.recoveryPly ?? finalPly;
+      if (
+        wound.continuityPlies.some(
+          (ply) => ply <= wound.inflictedAtPly || ply > continuityEnd,
+        )
+      ) {
+        errors.push(`Wound beat ${key} has an invalid continuity ply`);
+      }
+    }
+    for (const key of plannedWounds.keys()) {
+      if (!outlinedWounds.has(key)) {
+        errors.push(`Planned wound ${key} is missing from the outline`);
+      }
+    }
     if (
       outline.endingSequence.some(
         (beat) => beat.ply < 1 || beat.ply > finalPly,

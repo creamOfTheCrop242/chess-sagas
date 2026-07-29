@@ -16,6 +16,7 @@ export class NarrativeAnalysisValidator {
       ...analysis.acts.flatMap((act) => act.majorCharacters),
       ...analysis.promotingPawnPlans.map((plan) => plan.pieceId),
       ...analysis.relationshipPlans.flatMap((plan) => plan.characterIds),
+      ...(analysis.woundPlans ?? []).map((plan) => plan.pieceId),
     ];
     for (const pieceId of referencedPieceIds) {
       if (!pieceIds.has(pieceId)) {
@@ -45,6 +46,10 @@ export class NarrativeAnalysisValidator {
         ...plan.developmentPlies,
         ...(plan.payoffPly === null ? [] : [plan.payoffPly]),
       ]),
+      ...(analysis.woundPlans ?? []).flatMap((plan) => [
+        plan.inflictedAtPly,
+        ...(plan.recoveryPly === null ? [] : [plan.recoveryPly]),
+      ]),
     ];
     if (referencedPlies.some((ply) => !validPly(ply))) {
       errors.push(`Analysis references a ply outside 1-${finalPly}`);
@@ -68,6 +73,23 @@ export class NarrativeAnalysisValidator {
       ) {
         errors.push(
           `Relationship ${relationship.id} develops after its payoff`,
+        );
+      }
+    }
+
+    for (const wound of analysis.woundPlans ?? []) {
+      const event = ledger.events[wound.inflictedAtPly - 1];
+      if (!event?.isCapture || event.pieceId !== wound.pieceId) {
+        errors.push(
+          `Wound for ${wound.pieceId} must be inflicted while that survivor makes a ledger-confirmed capture`,
+        );
+      }
+      if (
+        wound.recoveryPly !== null &&
+        wound.recoveryPly <= wound.inflictedAtPly
+      ) {
+        errors.push(
+          `Wound recovery for ${wound.pieceId} must follow its infliction`,
         );
       }
     }

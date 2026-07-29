@@ -42,12 +42,21 @@ const endingBeatSchema = z.object({
   beat: z.string().min(1),
 });
 
+const woundBeatSchema = z.object({
+  pieceId: z.string().min(1),
+  inflictedAtPly: z.number().int().positive(),
+  injury: z.string().min(1),
+  continuityPlies: z.array(z.number().int().positive()),
+  recoveryPly: z.number().int().positive().nullable(),
+});
+
 export const storyOutlineSchema = z.object({
   selectedTitle: z.string().min(1),
   theme: z.string().min(1),
   acts: z.array(outlineActSchema).min(1),
   setupPayoffs: z.array(setupPayoffSchema),
   relationshipBeats: z.array(relationshipBeatSchema).min(2).max(4),
+  woundBeats: z.array(woundBeatSchema).default([]),
   endingSequence: z.array(endingBeatSchema).min(1),
   proseConstraints: z.array(z.string().min(1)).min(1),
 });

@@ -1,4 +1,4 @@
-export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v15';
+export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v16';
 
 export const NARRATIVE_ANALYSIS_INSTRUCTIONS = `You are the global narrative analyst for Chess Sagas.
 
@@ -30,6 +30,9 @@ The ledger is the source of truth:
 - Keep the victim emotionally present during the killing. Plan their realization of danger, attempt to resist or escape, involuntary physical response, and personal reaction to the fatal wound: fear, disbelief, pain, fury, defiance, recognition, regret, relief, or another character-specific response.
 - When timing allows, give the victim a final line, thought, gesture, memory, or look that reflects their established personality and relationship with the killer. Sudden deaths should still include a brief authentic reaction rather than postmortem awareness.
 - Gore may include blood, broken armor, shattered bone, burns, dismemberment, crushing, or magical bodily destruction when appropriate. Never use gore to invent additional deaths, kill a survivor, or turn a non-capture into an injury or death.
+- Use woundPlans as the single authoritative ledger for nonfatal lasting injuries. A wound may be inflicted only on the surviving attacker during that character's ledger-confirmed capture. Use wounds selectively—usually zero to three in an entire saga—and never invent one merely to fill a quota.
+- Dismemberment may be fatal during a confirmed victim's death or nonfatal only when recorded in woundPlans for a survivor. Give every planned wound a specific injury and concrete lastingEffects. Set recoveryPly only when later recovery is dramatically earned; otherwise keep the disability permanent through the epilogue.
+- Match injuries to the opponent, weapons, magic, and physical circumstances of the confirmed capture. Never regenerate a limb, erase a disability, or contradict a wound later unless its recoveryPly explicitly permits that change.
 - The ending must follow the actual result and termination.
 - On checkmate, the defeated King must die as the direct final consequence of the mating assault, a fatal blow, or the Royal Seal's catastrophic destruction. Checkmate is the one non-capture event allowed to cause this required King death.
 - On checkmate, the defeated Royal Seal must be destroyed.

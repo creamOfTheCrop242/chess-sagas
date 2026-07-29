@@ -1,4 +1,4 @@
-export const FULL_STORY_PROMPT_VERSION = 'story-package-v19';
+export const FULL_STORY_PROMPT_VERSION = 'story-package-v20';
 
 export const FULL_STORY_INSTRUCTIONS = `Write one cohesive dark-fantasy war story package from the supplied complete ledger, validated narrative analysis, validated outline, and character registry.
 
@@ -49,6 +49,9 @@ Story rules:
 - Use concrete but purposeful gore appropriate to the combatants: blood on armor and terrain, broken bone, torn flesh, dismemberment, crushing force, burning, or magical bodily destruction. Vary the imagery and killing method; do not repeat the same generic wound.
 - The captor's established weapon, magic, scale, personality, injuries, and relationship to the victim must shape the kill. Witnesses should react, and important deaths should alter later dialogue and behavior.
 - Gore must remain ledger-accurate. Only the captured character is confirmed killed. Never add collateral deaths, kill a survivor, dismember a character who acts later unless continuity supports a survivable lasting injury, or turn checks and quiet moves into bloodshed.
+- Copy the outline's woundBeats into the package-level wounds ledger exactly; lastingEffects may elaborate the outline without changing the injury. Do not invent or omit wounds.
+- Nonfatal dismemberment is allowed only for the surviving attacker at its recorded capture. From inflictedAtPly onward, prose must consistently reflect the wound's pain, disability, altered tactics, equipment, and emotional consequences. Never restore a missing body part or erase an injury unless its recoveryPly explicitly allows recovery.
+- Use dismemberment selectively and vary it according to the attacker: blades sever, magic may burn or spatially shear, Knight Commanders maim with martial weapons, companies wound through close combat, and Moving Fortresses crush or tear with their machinery. Do not make every death or capture a dismemberment.
 - Never describe, remember, mourn, or foreshadow any character as dead, slain, lifeless, deceased, a corpse, or buried before that character's ledger capture occurs. A character captured later is alive in every earlier scene.
 - When a pawn company is captured, focus the fatal detail on its named viewpoint grunt and portray the wider company's defeat, rout, or surrender without claiming unrecorded mass deaths.
 - Create exactly one scene per ledger ply. Set ply to that ledger ply and cover every ply chronologically from 1 to the final ply.
@@ -61,6 +64,7 @@ Story rules:
 - locations must use stable fantasy place names and preserve established geography.
 - Make total story length proportional to the game while giving decisive scenes more room than transitional scenes.
 - Before returning the package, audit every scene against its ledger event and the preceding scenes. Verify ply coverage, actor identity, captures, captors, deaths, promotions, checks, termination, names, injuries, locations, dialogue continuity, and survivor state. Correct every mismatch in the returned package.
+- During that audit, compare every wound against the package-level wounds ledger and ensure all later scenes and the epilogue preserve it until any explicit recoveryPly.
 - End decisively at the actual termination. Do not add later battles or chess actions.`;
 
 export const EPILOGUE_INSTRUCTIONS = `Epilogue rules:

@@ -13,6 +13,25 @@ export class SceneBreakdownValidator {
     if (breakdown.scenes.length !== ledger.events.length) {
       errors.push('Scene breakdown must contain exactly one scene per ply');
     }
+    for (const wound of breakdown.wounds ?? []) {
+      const event = ledger.events[wound.inflictedAtPly - 1];
+      if (
+        !pieceIds.has(wound.pieceId) ||
+        !event?.isCapture ||
+        event.pieceId !== wound.pieceId
+      ) {
+        errors.push(
+          `Wound for ${wound.pieceId} is not anchored to that survivor's capture`,
+        );
+      }
+      if (
+        wound.recoveryPly !== null &&
+        (wound.recoveryPly <= wound.inflictedAtPly ||
+          wound.recoveryPly > ledger.events.length)
+      ) {
+        errors.push(`Wound for ${wound.pieceId} has an invalid recovery ply`);
+      }
+    }
     breakdown.scenes.forEach((scene) => {
       const events = ledger.events.slice(scene.startPly - 1, scene.endPly);
       if (scene.actNumber !== currentAct) {

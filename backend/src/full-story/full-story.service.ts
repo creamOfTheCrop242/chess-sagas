@@ -115,6 +115,33 @@ export class FullStoryService {
           `Story package has incorrect defeated Royal Seal fate for ${ledger.metadata.termination}`,
         );
       }
+      const expectedWounds = new Map(
+        outline.woundBeats.map((wound) => [
+          `${wound.pieceId}:${wound.inflictedAtPly}`,
+          wound,
+        ]),
+      );
+      const returnedWounds = new Map(
+        storyPackage.wounds.map((wound) => [
+          `${wound.pieceId}:${wound.inflictedAtPly}`,
+          wound,
+        ]),
+      );
+      if (
+        expectedWounds.size !== returnedWounds.size ||
+        [...expectedWounds].some(([key, expected]) => {
+          const returned = returnedWounds.get(key);
+          return (
+            !returned ||
+            returned.injury !== expected.injury ||
+            returned.recoveryPly !== expected.recoveryPly
+          );
+        })
+      ) {
+        throw new Error(
+          'Story package wound ledger must match the validated outline',
+        );
+      }
       const pieceIds = new Set(ledger.pieces.map((piece) => piece.id));
       const sceneNumbers = new Map<number, number>();
       const scenes = storyPackage.scenes.map((creativeScene) => {
@@ -177,7 +204,11 @@ export class FullStoryService {
       const epilogue = this.cleanReaderFacingProse(storyPackage.epilogue, [
         ...pieceIds,
       ]);
-      const breakdown: SceneBreakdown = { scenes, epilogue };
+      const breakdown: SceneBreakdown = {
+        scenes,
+        wounds: storyPackage.wounds,
+        epilogue,
+      };
       this.sceneValidator.validate(breakdown, ledger);
       const story: GeneratedStoryDraft = {
         title: storyPackage.title,

@@ -38,6 +38,7 @@ describe('StoryOutlineValidator', () => {
   } as GameLedger;
   const analysis = {
     acts: [{ startPly: 1, endPly: 2 }],
+    woundPlans: [],
     relationshipPlans: [
       {
         id: 'queen-soldier-rivalry',
@@ -110,6 +111,7 @@ describe('StoryOutlineValidator', () => {
         payoff: 'The Queen acknowledges the soldier’s courage.',
       },
     ],
+    woundBeats: [],
     endingSequence: [{ ply: 2, beat: 'The seal fails.' }],
     proseConstraints: ['Do not mention coordinates.'],
   };
@@ -118,6 +120,54 @@ describe('StoryOutlineValidator', () => {
     expect(() =>
       new StoryOutlineValidator().validate(outline, ledger, analysis),
     ).not.toThrow();
+  });
+
+  it('preserves a planned nonfatal wound in the outline', () => {
+    const woundedAnalysis = structuredClone(analysis);
+    woundedAnalysis.woundPlans = [
+      {
+        pieceId: 'w-q-d1',
+        inflictedAtPly: 2,
+        injury: 'Her left hand is severed.',
+        lastingEffects: ['She can no longer wield a second weapon.'],
+        recoveryPly: null,
+      },
+    ];
+    const woundedOutline = structuredClone(outline);
+    woundedOutline.woundBeats = [
+      {
+        pieceId: 'w-q-d1',
+        inflictedAtPly: 2,
+        injury: 'Her left hand is severed.',
+        continuityPlies: [],
+        recoveryPly: null,
+      },
+    ];
+
+    expect(() =>
+      new StoryOutlineValidator().validate(
+        woundedOutline,
+        ledger,
+        woundedAnalysis,
+      ),
+    ).not.toThrow();
+  });
+
+  it('rejects an outline that drops a planned wound', () => {
+    const woundedAnalysis = structuredClone(analysis);
+    woundedAnalysis.woundPlans = [
+      {
+        pieceId: 'w-q-d1',
+        inflictedAtPly: 2,
+        injury: 'Her left hand is severed.',
+        lastingEffects: ['She can no longer wield a second weapon.'],
+        recoveryPly: null,
+      },
+    ];
+
+    expect(() =>
+      new StoryOutlineValidator().validate(outline, ledger, woundedAnalysis),
+    ).toThrow('Planned wound w-q-d1:2 is missing');
   });
 
   it('repairs overlapping and gapped scene ranges from analysis boundaries', () => {

@@ -115,6 +115,23 @@ describe('NarrativeAnalysisService', () => {
     expect(runUpdate).toHaveBeenCalledTimes(1);
   });
 
+  it('rejects a lasting wound that is not anchored to the survivor’s capture', () => {
+    const analysis = makeAnalysis(ledger);
+    analysis.woundPlans = [
+      {
+        pieceId: ledger.events.at(-1)!.pieceId,
+        inflictedAtPly: 1,
+        injury: 'Her sword arm is severed below the elbow.',
+        lastingEffects: ['She must fight one-handed.'],
+        recoveryPly: null,
+      },
+    ];
+
+    expect(() =>
+      new NarrativeAnalysisValidator().validate(analysis, ledger),
+    ).toThrow('must be inflicted while that survivor makes');
+  });
+
   it('rejects generation when the saved ledger does not exist', async () => {
     gameFindUnique.mockResolvedValue(null);
 
@@ -227,6 +244,7 @@ function makeAnalysis(ledger: GameLedger): NarrativeAnalysis {
         payoffDescription: 'She reaches and breaks its defense.',
       },
     ],
+    woundPlans: [],
     endingPlan: {
       winner: 'north',
       termination: 'checkmate',

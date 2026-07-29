@@ -73,6 +73,14 @@ const foreshadowingPlanSchema = z.object({
   payoffDescription: z.string().min(1),
 });
 
+export const woundPlanSchema = z.object({
+  pieceId: z.string().min(1),
+  inflictedAtPly: z.number().int().positive(),
+  injury: z.string().min(1),
+  lastingEffects: z.array(z.string().min(1)).min(1),
+  recoveryPly: z.number().int().positive().nullable(),
+});
+
 const endingPlanSchema = z.object({
   winner: z.enum(['north', 'south', 'draw', 'undecided']),
   termination: z.enum([
@@ -100,6 +108,7 @@ export const narrativeAnalysisSchema = z.object({
   relationshipPlans: z.array(relationshipPlanSchema).min(2).max(4),
   promotingPawnPlans: z.array(promotingPawnPlanSchema),
   foreshadowing: z.array(foreshadowingPlanSchema),
+  woundPlans: z.array(woundPlanSchema).default([]),
   endingPlan: endingPlanSchema,
   continuityConstraints: z.array(z.string().min(1)).min(1),
 });

@@ -1,4 +1,4 @@
-export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v18';
+export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v19';
 
 export const NARRATIVE_ANALYSIS_INSTRUCTIONS = `You are the global narrative analyst for Chess Sagas.
 
@@ -31,7 +31,7 @@ The ledger is the source of truth:
 - Keep the victim emotionally present during the killing. Plan their realization of danger, attempt to resist or escape, involuntary physical response, and personal reaction to the fatal wound: fear, disbelief, pain, fury, defiance, recognition, regret, relief, or another character-specific response.
 - When timing allows, give the victim a final line, thought, gesture, memory, or look that reflects their established personality and relationship with the killer. Sudden deaths should still include a brief authentic reaction rather than postmortem awareness.
 - Gore may include blood, broken armor, shattered bone, burns, dismemberment, crushing, or magical bodily destruction when appropriate. Never use gore to invent additional deaths, kill a survivor, or turn a non-capture into an injury or death.
-- Use woundPlans as the single authoritative ledger for nonfatal lasting injuries. The input's requiredWoundEvents were selected deterministically from ledger-confirmed captures by attackers who survive the game. Create exactly one woundPlan for every requiredWoundEvent, preserving its pieceId and inflictedAtPly. When at least two eligible events exist, these records guarantee at least two lasting wounds. You may add at most one additional wound at another eligible surviving-attacker capture when it materially strengthens the story.
+- Use woundPlans as the single authoritative ledger for nonfatal lasting injuries. The input's requiredWoundEvents were selected by deterministic seeded probability rolls over ledger-confirmed captures by attackers who survive the game. Lower-tier attackers have much higher wound odds when defeating stronger opponents; stronger attackers have much lower odds when defeating weaker opponents. Create exactly one woundPlan for every requiredWoundEvent, preserving its pieceId and inflictedAtPly, and do not add any other nonfatal wounds. An empty requiredWoundEvents array means this saga has no lasting survivor wounds.
 - Dismemberment may be fatal during a confirmed victim's death or nonfatal only when recorded in woundPlans for a survivor. Give every planned wound a specific injury and concrete lastingEffects. Set recoveryPly only when later recovery is dramatically earned; otherwise keep the disability permanent through the epilogue.
 - Match injuries to the opponent, weapons, magic, and physical circumstances of the confirmed capture. Never regenerate a limb, erase a disability, or contradict a wound later unless its recoveryPly explicitly permits that change.
 - The ending must follow the actual result and termination.

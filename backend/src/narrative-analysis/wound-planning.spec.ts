@@ -1,62 +1,97 @@
-import type { GameLedger } from '../chess/models/game-ledger';
-import { selectRequiredWoundEvents } from './wound-planning';
+import type { FantasyPieceType, GameLedger } from '../chess/models/game-ledger';
+import {
+  deterministicWoundRoll,
+  selectRequiredWoundEvents,
+  woundProbability,
+} from './wound-planning';
 
-describe('selectRequiredWoundEvents', () => {
+describe('wound planning', () => {
   const ledger = {
-    survivors: ['w-q-d1', 'w-r-a1'],
+    metadata: {
+      date: '2026.07.28',
+      whitePlayer: 'Ada',
+      blackPlayer: 'Turing',
+    },
+    survivors: ['w-p-a2', 'w-q-d1'],
+    pieces: [
+      piece('w-p-a2', 'Mara'),
+      piece('w-q-d1', 'Lyra'),
+      piece('b-q-d8', 'Vesper'),
+      piece('b-p-a7', 'Nessa'),
+      piece('b-r-a8', 'Torren'),
+    ],
     events: [
-      capture(1, 'w-q-d1', 'b-p-a7', 'grunt'),
-      capture(2, 'w-q-d1', 'b-q-d8', 'queen'),
-      capture(3, 'w-r-a1', 'b-n-b8', 'knight-commander'),
-      capture(4, 'b-r-a8', 'w-p-a2', 'grunt'),
+      capture(1, 'w-p-a2', 'grunt', 'b-q-d8', 'queen'),
+      capture(2, 'w-q-d1', 'queen', 'b-p-a7', 'grunt'),
+      capture(3, 'b-r-a8', 'moving-fortress', 'w-p-a2', 'grunt'),
     ],
   } as GameLedger;
 
-  it('selects two important captures by different surviving attackers', () => {
-    expect(selectRequiredWoundEvents(ledger)).toEqual([
-      {
-        pieceId: 'w-q-d1',
-        inflictedAtPly: 2,
-        capturedPieceId: 'b-q-d8',
-        capturedPieceType: 'queen',
-      },
-      {
-        pieceId: 'w-r-a1',
-        inflictedAtPly: 3,
-        capturedPieceId: 'b-n-b8',
-        capturedPieceType: 'knight-commander',
-      },
-    ]);
+  it('uses the configured odds for combat-tier differences', () => {
+    expect(woundProbability('grunt', 'queen')).toBe(0.9);
+    expect(woundProbability('grunt', 'moving-fortress')).toBe(0.75);
+    expect(woundProbability('archwizard', 'moving-fortress')).toBe(0.6);
+    expect(woundProbability('queen', 'queen')).toBe(0.4);
+    expect(woundProbability('queen', 'moving-fortress')).toBe(0.2);
+    expect(woundProbability('queen', 'grunt')).toBe(0.08);
   });
 
-  it('never selects a capture made by an attacker who later dies', () => {
+  it('uses stable seeded rolls and never selects a captor who later dies', () => {
+    expect(selectRequiredWoundEvents(ledger)).toEqual(
+      selectRequiredWoundEvents(ledger),
+    );
     expect(
       selectRequiredWoundEvents(ledger).some(
         (event) => event.pieceId === 'b-r-a8',
       ),
     ).toBe(false);
+    expect(
+      deterministicWoundRoll(ledger, ledger.events[0]),
+    ).toBeGreaterThanOrEqual(0);
+    expect(deterministicWoundRoll(ledger, ledger.events[0])).toBeLessThan(1);
   });
 
-  it('returns the maximum available when fewer than two captures qualify', () => {
-    const shortLedger = {
-      ...ledger,
-      survivors: ['w-q-d1'],
-      events: [ledger.events[0]],
-    } as GameLedger;
+  it('returns exactly the successful seeded rolls without a minimum', () => {
+    const expected = ledger.events
+      .filter(
+        (event) =>
+          ledger.survivors.includes(event.pieceId) &&
+          deterministicWoundRoll(
+            ledger,
+            event,
+            ledger.pieces.find((piece) => piece.id === event.pieceId),
+            ledger.pieces.find((piece) => piece.id === event.capturedPieceId),
+          ) < woundProbability(event.pieceType, event.capturedPieceType!),
+      )
+      .map((event) => `${event.pieceId}:${event.ply}`);
 
-    expect(selectRequiredWoundEvents(shortLedger)).toHaveLength(1);
+    expect(
+      selectRequiredWoundEvents(ledger).map(
+        (event) => `${event.pieceId}:${event.inflictedAtPly}`,
+      ),
+    ).toEqual(expected);
   });
 });
+
+function piece(
+  id: string,
+  permanentName: string,
+): GameLedger['pieces'][number] {
+  return { id, permanentName } as GameLedger['pieces'][number];
+}
 
 function capture(
   ply: number,
   pieceId: string,
+  pieceType: FantasyPieceType,
   capturedPieceId: string,
-  capturedPieceType: GameLedger['events'][number]['capturedPieceType'],
+  capturedPieceType: FantasyPieceType,
 ): GameLedger['events'][number] {
   return {
     ply,
+    san: `capture-${ply}`,
     pieceId,
+    pieceType,
     capturedPieceId,
     capturedPieceType,
     isCapture: true,

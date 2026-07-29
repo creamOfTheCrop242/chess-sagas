@@ -2,6 +2,7 @@ import type {
   ChessEvent,
   FantasyPieceType,
   GameLedger,
+  PieceIdentity,
 } from '../chess/models/game-ledger';
 
 export interface RequiredWoundEvent {
@@ -11,21 +12,21 @@ export interface RequiredWoundEvent {
   capturedPieceType: FantasyPieceType;
 }
 
-const CAPTURE_IMPORTANCE: Record<FantasyPieceType, number> = {
-  king: 6,
-  queen: 5,
-  'moving-fortress': 4,
-  archwizard: 3,
-  'knight-commander': 3,
+const COMBAT_TIER: Record<FantasyPieceType, number> = {
+  king: 5,
+  queen: 4,
+  'moving-fortress': 3,
+  archwizard: 2,
+  'knight-commander': 2,
   grunt: 1,
 };
 
 export function selectRequiredWoundEvents(
   ledger: GameLedger,
-  minimum = 2,
 ): RequiredWoundEvent[] {
   const survivors = new Set(ledger.survivors);
-  const eligible = ledger.events
+  const pieces = new Map(ledger.pieces.map((piece) => [piece.id, piece]));
+  return ledger.events
     .filter(
       (
         event,
@@ -38,28 +39,14 @@ export function selectRequiredWoundEvents(
         Boolean(event.capturedPieceId) &&
         Boolean(event.capturedPieceType),
     )
-    .sort(
-      (left, right) =>
-        woundEventScore(right) - woundEventScore(left) || left.ply - right.ply,
-    );
-  const requiredCount = Math.min(minimum, eligible.length);
-  const selected: typeof eligible = [];
-  const selectedActors = new Set<string>();
-
-  for (const event of eligible) {
-    if (selected.length >= requiredCount) break;
-    if (selectedActors.has(event.pieceId)) continue;
-    selected.push(event);
-    selectedActors.add(event.pieceId);
-  }
-  for (const event of eligible) {
-    if (selected.length >= requiredCount) break;
-    if (selected.includes(event)) continue;
-    selected.push(event);
-  }
-
-  return selected
-    .sort((left, right) => left.ply - right.ply)
+    .filter((event) => {
+      const attacker = pieces.get(event.pieceId);
+      const victim = pieces.get(event.capturedPieceId);
+      return (
+        deterministicWoundRoll(ledger, event, attacker, victim) <
+        woundProbability(event.pieceType, event.capturedPieceType)
+      );
+    })
     .map((event) => ({
       pieceId: event.pieceId,
       inflictedAtPly: event.ply,
@@ -68,12 +55,40 @@ export function selectRequiredWoundEvents(
     }));
 }
 
-function woundEventScore(
-  event: ChessEvent & { capturedPieceType: FantasyPieceType },
+export function woundProbability(
+  attacker: FantasyPieceType,
+  victim: FantasyPieceType,
 ): number {
-  return (
-    CAPTURE_IMPORTANCE[event.capturedPieceType] * 10 +
-    (event.isCheck ? 4 : 0) +
-    (event.isCheckmate ? 6 : 0)
-  );
+  const tierDifference = COMBAT_TIER[victim] - COMBAT_TIER[attacker];
+  if (tierDifference >= 3) return 0.9;
+  if (tierDifference === 2) return 0.75;
+  if (tierDifference === 1) return 0.6;
+  if (tierDifference === 0) return 0.4;
+  if (tierDifference === -1) return 0.2;
+  return 0.08;
+}
+
+export function deterministicWoundRoll(
+  ledger: GameLedger,
+  event: ChessEvent,
+  attacker?: PieceIdentity,
+  victim?: PieceIdentity,
+): number {
+  const seed = [
+    ledger.metadata.date ?? '',
+    ledger.metadata.whitePlayer,
+    ledger.metadata.blackPlayer,
+    ledger.events.map((candidate) => candidate.san).join(' '),
+    event.ply,
+    event.pieceId,
+    attacker?.permanentName ?? '',
+    event.capturedPieceId ?? '',
+    victim?.permanentName ?? '',
+  ].join('|');
+  let hash = 2166136261;
+  for (let index = 0; index < seed.length; index += 1) {
+    hash ^= seed.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) / 4294967296;
 }

@@ -1,4 +1,4 @@
-export const SCENE_BREAKDOWN_PROMPT_VERSION = 'phase-6-v15';
+export const SCENE_BREAKDOWN_PROMPT_VERSION = 'phase-6-v16';
 export const SCENE_BREAKDOWN_INSTRUCTIONS = `Split the validated cohesive story into move-aligned playback scenes. Return structured JSON only.
 
 - Create exactly one playback scene for every ledger ply. Never group multiple plies into one scene.
@@ -37,6 +37,7 @@ export const SCENE_BREAKDOWN_INSTRUCTIONS = `Split the validated cohesive story 
 - Preserve all survivors, captors, winner, termination, names, wounds, and visual continuity.
 - Terminal exception: on checkmate, preserve the validated story's death of the defeated King from the mating assault or Royal Seal's destruction even though it is not a capture. On resignation, preserve the defeated King's surrender followed by suicide. Do not apply these fates to draws, timeouts, unknown terminations, or the winning King.
 - A Royal Seal powers its entire kingdom's magic. Preserve its destruction after checkmate or resignation and the defeated realm's gradual loss of wards, enchantments, healing, infrastructure, and stability as stored magic runs out. Draws, timeouts, and unknown endings leave both Seals intact.
+- If that defeated realm has surviving Moving Fortresses, preserve the epilogue's gradual failure of their magic-powered wheels and life-sustaining command cradles. Their named living pilots become entombed in immobile hulls unless survivors try to cut them free. Never make this instantaneous, apply it to the victorious realm, or invent the death of a surviving pilot.
 - visualPrompt and videoPrompt must describe only this scene and preserve established character appearances.
 - estimatedDurationSeconds should match narration/action density.
 - Include a distinct epilogue after the final scene that resolves surviving characters and kingdom consequences without inventing later moves, captures, promotions, battles, or deaths.`;

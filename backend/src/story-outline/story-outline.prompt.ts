@@ -1,4 +1,4 @@
-export const STORY_OUTLINE_PROMPT_VERSION = 'phase-3-v17';
+export const STORY_OUTLINE_PROMPT_VERSION = 'phase-3-v18';
 
 export const STORY_OUTLINE_INSTRUCTIONS = `Create a structured outline for one cohesive dark-fantasy story. Return planning JSON only; do not write story prose.
 
@@ -37,6 +37,7 @@ The complete ledger is factual source of truth. The narrative analysis supplies 
 - For resignation or surrender, outline the defeated King consciously yielding and then dying by suicide in a character-specific tragic scene. His death destroys or extinguishes the Seal he sustained. Include witness and kingdom reactions without romanticizing the act or providing instructional detail.
 - For resignation, require the epilogue to explicitly name the surrender, the defeated King's suicide, the Royal Seal's destruction, and the defeated kingdom's resulting magical, civic, and political decline.
 - Treat each Royal Seal as the source powering its kingdom's magic. Plan the defeated realm's gradual decline as stored magic runs out: wards fail, enchanted infrastructure decays, harvests and healing suffer, political order fractures, and survivors must adapt.
+- When a destroyed Seal leaves surviving Moving Fortresses in the defeated realm, require the epilogue to show their magic-powered wheels gradually seizing and their life-sustaining command cradles failing. Their living embedded pilots become entombed within the immobile armored hulls unless other survivors attempt the dangerous work of cutting them free. Do not make this happen instantly at the Seal's destruction.
 - Draws, timeouts, and unknown terminations must not automatically kill either King.
 - Queens must use both swordplay and magic in later prose.
 - Treat every Queen move as magically amplified superhuman motion: sudden acceleration, impossible speed, or a spell-driven dash that remains physically distinct from teleportation.

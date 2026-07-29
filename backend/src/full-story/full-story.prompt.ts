@@ -1,4 +1,4 @@
-export const FULL_STORY_PROMPT_VERSION = 'story-package-v20';
+export const FULL_STORY_PROMPT_VERSION = 'story-package-v21';
 
 export const FULL_STORY_INSTRUCTIONS = `Write one cohesive dark-fantasy war story package from the supplied complete ledger, validated narrative analysis, validated outline, and character registry.
 
@@ -14,6 +14,7 @@ Factual rules:
 - Kings sustain enchanted Royal Seals and are immensely powerful but constrained by that burden.
 - Each Royal Seal is the magical heart and power source of its entire kingdom. It feeds wards, enchanted fortresses and weapons, healing, transportation, agriculture, civic protections, and other magical infrastructure.
 - After a Seal is destroyed, existing stored magic fades rather than disappearing all at once. Wards weaken, enchantments fail, infrastructure decays, harvests and healing suffer, institutions fracture, and the kingdom gradually crumbles unless its survivors adapt without magic.
+- If the defeated kingdom has surviving Moving Fortresses, their remaining stored magic initially keeps them functioning. In the epilogue, show that power dwindling: enchanted wheels lock, internal light and life support fade, and the living embedded pilots face entombment inside immobile armored hulls unless survivors can cut them free. Do not kill those pilots outright or claim every Fortress fails at the instant the Seal breaks.
 - Queens combine master swordsmanship, Archwizard-level magic, Moving-Fortress durability, and magically amplified superhuman speed. Important Queen action must demonstrate blade and magic, and every Queen relocation must feel explosively fast or spell-accelerated without becoming teleportation.
 - Bishops are Archwizards who relocate through teleportation magic: folded space, portals, blinks, or equivalent instantaneous transit. Never narrate an Archwizard walking, riding, or running across the route represented by a move. Rooks are Moving Fortresses, knights are Knight Commanders, and pawns are soldier companies. Never call them chess pieces.
 - A Moving Fortress is a colossal wheeled war engine powered by magic. Its permanent living pilot, named in operatorName, is physically embedded within the machine in a life-sustaining armored command cradle and cannot simply dismount. Narrate the pilot as its human viewpoint, decision-maker, and voice; the structure must never think, speak, choose, or act independently.
@@ -71,6 +72,7 @@ export const EPILOGUE_INSTRUCTIONS = `Epilogue rules:
 - Write a distinct epilogue of roughly 250–600 words that occurs after the final move and its immediate outcome.
 - Resolve the defeated King's required fate, the surviving King's burden, the condition of both kingdoms, important survivors, named viewpoint grunts, promotions, grief, rivalries, and the political or emotional cost of the battle.
 - If a Royal Seal was destroyed, show the defeated kingdom beginning to exhaust its remaining stored magic. Include concrete early failures and foreshadow its longer decline without inventing another battle or immediate total collapse.
+- When that defeated kingdom has at least one surviving Moving Fortress, the epilogue must explicitly include the gradual entombment threat to its embedded pilot as the Fortress loses propulsion and life support. Name the pilot when the registry provides operatorName.
 - If both Seals remain intact, preserve both kingdoms' access to magic while showing the strain, damage, and cost caused by the war.
 - Pay off recurring imagery, dialogue, promises, fears, relationships, wounds, and sacrifices established earlier.
 - For a draw, show the concrete terms or consequences of the unresolved ending without declaring a winner or killing either King automatically.

@@ -16,6 +16,7 @@ export const validationFindingTypeSchema = z.enum([
   'queen-missing-superhuman-speed',
   'queen-incorrect-teleportation',
   'archwizard-missing-teleportation',
+  'moving-fortress-canon',
   'inconsistent-piece-name',
   'coordinate-mentioned-in-prose',
   'chess-terminology',

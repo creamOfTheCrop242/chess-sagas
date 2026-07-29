@@ -22,7 +22,7 @@ PIECE CHARACTERS:
 - Front-line infantry: each “pawn” unit is a little battalion of grunts/soldiers (no eastern/western label). Never say the word pawn — say battalion, company, grunts, or soldiers.
 - Knights: knight commanders — always Eastern or Western
 - Bishops: archmages — always Eastern or Western; they cross the battlefield through teleportation magic, never by walking, riding, or running the route
-- Rooks: moving fortresses — always Eastern or Western
+- Rooks: colossal moving fortresses on magic-powered wheels — always Eastern or Western. Each has a permanent living pilot physically embedded inside a life-sustaining armored command cradle. The pilot cannot simply dismount and is the machine's mind, voice, and decision-maker; the fortress itself is not sentient.
 - Queens: as durable as a fortress, wield a sword like a knight, cast magic like a bishop, and move at magically amplified superhuman speed without teleporting (no eastern/western label)
 - Kings: strongest of all, bound to the enchanted seal that holds the realm together after the Calamity (no eastern/western label)
 
@@ -211,7 +211,7 @@ Hard limit: 2-4 complete sentences only. End on a finished sentence.`;
       case 'b':
         return `${wing} teleporting archmage`;
       case 'r':
-        return `${wing} moving fortress`;
+        return `${wing} magic-wheeled moving fortress with a living embedded pilot`;
       case 'q':
         return 'queen (fortress durability, knight blade, archmage magic, spell-driven superhuman speed)';
       case 'k':

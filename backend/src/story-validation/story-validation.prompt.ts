@@ -1,4 +1,4 @@
-export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v3';
+export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v4';
 
 export const STORY_VALIDATION_INSTRUCTIONS = `Validate the supplied story against the complete deterministic chess ledger, narrative analysis, outline, and deterministic findings.
 
@@ -13,6 +13,7 @@ Report:
 - important Queen combat lacking either swordplay or magic
 - Queen movement portrayed without magically amplified superhuman speed, or incorrectly portrayed as teleportation
 - Archwizard movement portrayed as ordinary walking, riding, or running instead of teleportation
+- a Moving Fortress portrayed without magic-powered wheels, with a pilot who is not alive and physically embedded within it, or as a sentient machine acting independently of its pilot
 - outline setup/payoff or continuity violations
 
 Treat supplied deterministicFindings as authoritative errors that must be repaired. Do not duplicate them in the returned findings array. Use exact piece IDs and plies in new findings, but never add them to prose.

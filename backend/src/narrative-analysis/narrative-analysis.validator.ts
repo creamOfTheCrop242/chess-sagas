@@ -1,6 +1,7 @@
 import { BadGatewayException, Injectable } from '@nestjs/common';
 import type { GameLedger } from '../chess/models/game-ledger';
 import type { NarrativeAnalysis } from './models/narrative-analysis';
+import { selectRequiredWoundEvents } from './wound-planning';
 
 @Injectable()
 export class NarrativeAnalysisValidator {
@@ -90,6 +91,22 @@ export class NarrativeAnalysisValidator {
       ) {
         errors.push(
           `Wound recovery for ${wound.pieceId} must follow its infliction`,
+        );
+      }
+    }
+    const woundKeys = new Set(
+      (analysis.woundPlans ?? []).map(
+        (wound) => `${wound.pieceId}:${wound.inflictedAtPly}`,
+      ),
+    );
+    if (woundKeys.size !== (analysis.woundPlans ?? []).length) {
+      errors.push('Wound plans must not contain duplicate character/ply pairs');
+    }
+    for (const required of selectRequiredWoundEvents(ledger)) {
+      const key = `${required.pieceId}:${required.inflictedAtPly}`;
+      if (!woundKeys.has(key)) {
+        errors.push(
+          `Required survivor wound is missing at ply ${required.inflictedAtPly}`,
         );
       }
     }

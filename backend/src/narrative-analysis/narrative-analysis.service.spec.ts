@@ -8,6 +8,7 @@ import type { NarrativeAnalysisProvider } from './llm-provider';
 import type { NarrativeAnalysis } from './models/narrative-analysis';
 import { NarrativeAnalysisService } from './narrative-analysis.service';
 import { NarrativeAnalysisValidator } from './narrative-analysis.validator';
+import { selectRequiredWoundEvents } from './wound-planning';
 
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/unbound-method */
 
@@ -72,7 +73,10 @@ describe('NarrativeAnalysisService', () => {
     });
 
     expect(provider.analyze).toHaveBeenCalledTimes(1);
-    expect(provider.analyze).toHaveBeenCalledWith({ ledger });
+    expect(provider.analyze).toHaveBeenCalledWith({
+      ledger,
+      requiredWoundEvents: selectRequiredWoundEvents(ledger),
+    });
     expect(runCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
         gameId: 'game-1',
@@ -244,7 +248,13 @@ function makeAnalysis(ledger: GameLedger): NarrativeAnalysis {
         payoffDescription: 'She reaches and breaks its defense.',
       },
     ],
-    woundPlans: [],
+    woundPlans: selectRequiredWoundEvents(ledger).map((event) => ({
+      pieceId: event.pieceId,
+      inflictedAtPly: event.inflictedAtPly,
+      injury: 'A deep blade wound tears across her sword arm.',
+      lastingEffects: ['Pain weakens her grip for the rest of the battle.'],
+      recoveryPly: null,
+    })),
     endingPlan: {
       winner: 'north',
       termination: 'checkmate',

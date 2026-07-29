@@ -67,6 +67,29 @@ describe('PgnViewerComponent character inspection', () => {
     });
   });
 
+  it('hides cross-character names and piece IDs in malformed wound status data', () => {
+    component.wounds = [
+      {
+        pieceId: 'w-p-e2',
+        inflictedAtPly: 3,
+        injury: "Nessa's spell burns Mara while w-b-c1 collapses.",
+        lastingEffects: [
+          'Her left hand remains partially numb.',
+          'Nessa watches the scar worsen.',
+        ],
+        recoveryPly: null,
+      },
+    ];
+    component.currentPly = 3;
+    component.inspectPieceAt('d5');
+
+    expect(component.inspectedPieceStatus.detail).toBe(
+      'Injured during the capture at beat 3. · Her left hand remains partially numb.',
+    );
+    expect(component.inspectedPieceStatus.detail).not.toContain('Nessa');
+    expect(component.inspectedPieceStatus.detail).not.toContain('w-b-c1');
+  });
+
   it('shows a recovered wound as scarred and a captured character as dead', () => {
     component.wounds = [
       {

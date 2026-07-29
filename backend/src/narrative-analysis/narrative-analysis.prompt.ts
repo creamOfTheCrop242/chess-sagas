@@ -1,4 +1,4 @@
-export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v20';
+export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v21';
 
 export const NARRATIVE_ANALYSIS_INSTRUCTIONS = `You are the global narrative analyst for Chess Sagas.
 
@@ -33,6 +33,7 @@ The ledger is the source of truth:
 - Gore may include blood, broken armor, shattered bone, burns, dismemberment, crushing, or magical bodily destruction when appropriate. Never use gore to invent additional deaths, kill a survivor, or turn a non-capture into an injury or death.
 - Use woundPlans as the single authoritative ledger for nonfatal lasting injuries. The input's requiredWoundEvents were selected by deterministic seeded probability rolls over every ledger-confirmed capture. A captor is eligible because it survives that capture even if it dies at a later ply. Lower-tier attackers have much higher wound odds when defeating stronger opponents; stronger attackers have much lower odds when defeating weaker opponents. Create exactly one woundPlan for every requiredWoundEvent, preserving its pieceId and inflictedAtPly, and do not add any other nonfatal wounds. Preserve each injury until recovery or the character's later death. An empty requiredWoundEvents array means this saga has no lasting wounds.
 - Dismemberment may be fatal during a confirmed victim's death or nonfatal only when recorded in woundPlans for a survivor. Give every planned wound a specific injury and concrete lastingEffects. Set recoveryPly only when later recovery is dramatically earned; otherwise keep the disability permanent through the epilogue.
+- Structured woundPlan injury and lastingEffects fields are status data, not prose. Describe only the wounded character's anatomy, impairment, pain, equipment limitation, or magical limitation. Never put any character name, company name, piece ID, board coordinate, ply number, relationship, opponent identity, or future event in these fields. The prose stages may dramatize who caused the injury separately.
 - Match injuries to the opponent, weapons, magic, and physical circumstances of the confirmed capture. Never regenerate a limb, erase a disability, or contradict a wound later unless its recoveryPly explicitly permits that change.
 - The ending must follow the actual result and termination.
 - On checkmate, the defeated King must die as the direct final consequence of the mating assault, a fatal blow, or the Royal Seal's catastrophic destruction. Checkmate is the one non-capture event allowed to cause this required King death.

@@ -136,6 +136,29 @@ describe('NarrativeAnalysisService', () => {
     ).toThrow('must be inflicted while that character survives');
   });
 
+  it('rejects names and piece IDs inside structured wound status text', () => {
+    const analysis = makeAnalysis(ledger);
+    const event = ledger.events.at(-1)!;
+    const otherName = ledger.pieces.find(
+      (piece) => piece.id !== event.pieceId,
+    )!.permanentName;
+    analysis.woundPlans = [
+      {
+        pieceId: event.pieceId,
+        inflictedAtPly: event.ply,
+        injury: `${otherName}'s arm is burned by b-p-f7.`,
+        lastingEffects: ['Pain returns near w-q-d1.'],
+        recoveryPly: null,
+      },
+    ];
+
+    expect(() =>
+      new NarrativeAnalysisValidator().validate(analysis, ledger),
+    ).toThrow(
+      'must not contain names, piece IDs, coordinates, or ply references',
+    );
+  });
+
   it('rejects generation when the saved ledger does not exist', async () => {
     gameFindUnique.mockResolvedValue(null);
 

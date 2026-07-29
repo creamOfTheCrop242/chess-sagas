@@ -202,15 +202,18 @@ export class PgnViewerComponent implements OnDestroy {
     if (wound.recoveryPly !== null && this.currentPly >= wound.recoveryPly) {
       return {
         label: 'Scarred',
-        detail: `Recovered from: ${wound.injury}`,
+        detail: `Recovered from: ${this.safeWoundInjury(wound, piece)}`,
         tone: 'wounded',
       };
     }
-    const effects = wound.lastingEffects.join(' · ');
+    const injury = this.safeWoundInjury(wound, piece);
+    const effects = wound.lastingEffects
+      .filter((effect) => this.isSafeWoundStatusText(effect, piece))
+      .join(' · ');
     if (this.isMaimingInjury(wound.injury)) {
       return {
         label: 'Maimed',
-        detail: effects ? `${wound.injury} · ${effects}` : wound.injury,
+        detail: effects ? `${injury} · ${effects}` : injury,
         tone: 'maimed',
       };
     }
@@ -220,7 +223,7 @@ export class PgnViewerComponent implements OnDestroy {
       );
     return {
       label: gravelyWounded ? 'Gravely Wounded' : 'Wounded',
-      detail: effects ? `${wound.injury} · ${effects}` : wound.injury,
+      detail: effects ? `${injury} · ${effects}` : injury,
       tone: 'wounded',
     };
   }
@@ -500,6 +503,49 @@ export class PgnViewerComponent implements OnDestroy {
     return /\b(amput\w*|dismember\w*|sever\w*|missing|lost (?:an? |the )?(?:arm|hand|leg|foot)|torn off)\b/i.test(
       injury,
     );
+  }
+  private safeWoundInjury(wound: StoryWound, piece: PieceIdentity): string {
+    return this.isSafeWoundStatusText(wound.injury, piece)
+      ? wound.injury
+      : `Injured during the capture at beat ${wound.inflictedAtPly}.`;
+  }
+  private isSafeWoundStatusText(
+    text: string,
+    inspectedPiece: PieceIdentity,
+  ): boolean {
+    if (!this.game) return false;
+    if (/\b[wb]-[pnbrqk]-[a-h][1-8]\b|\bply\b|\b[a-h][1-8]\b/i.test(text)) {
+      return false;
+    }
+    const inspectedNames = new Set(
+      [
+        inspectedPiece.permanentName,
+        inspectedPiece.viewpointName,
+        inspectedPiece.operatorName,
+        inspectedPiece.companyName,
+      ]
+        .filter((name): name is string => Boolean(name))
+        .map((name) => name.toLowerCase()),
+    );
+    return !this.game.ledger.pieces
+      .flatMap((piece) => [
+        piece.permanentName,
+        piece.viewpointName,
+        piece.operatorName,
+        piece.companyName,
+      ])
+      .filter(
+        (name): name is string =>
+          typeof name === 'string' &&
+          name.length > 0 &&
+          !inspectedNames.has(name.toLowerCase()),
+      )
+      .some((name) => {
+        const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return new RegExp(`(?:^|[^A-Za-z])${escaped}(?:$|[^A-Za-z])`, 'i').test(
+          text,
+        );
+      });
   }
   private displayRole(role: string): string {
     return role

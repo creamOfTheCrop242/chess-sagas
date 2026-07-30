@@ -8,6 +8,7 @@ import type { NarrativeAnalysisProvider } from './llm-provider';
 import type { NarrativeAnalysis } from './models/narrative-analysis';
 import { NarrativeAnalysisService } from './narrative-analysis.service';
 import { NarrativeAnalysisValidator } from './narrative-analysis.validator';
+import { selectRequiredWoundEvents } from './wound-planning';
 
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/unbound-method */
 
@@ -72,7 +73,10 @@ describe('NarrativeAnalysisService', () => {
     });
 
     expect(provider.analyze).toHaveBeenCalledTimes(1);
-    expect(provider.analyze).toHaveBeenCalledWith({ ledger });
+    expect(provider.analyze).toHaveBeenCalledWith({
+      ledger,
+      requiredWoundEvents: selectRequiredWoundEvents(ledger),
+    });
     expect(runCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
         gameId: 'game-1',
@@ -115,7 +119,7 @@ describe('NarrativeAnalysisService', () => {
     expect(runUpdate).toHaveBeenCalledTimes(1);
   });
 
-  it('rejects a lasting wound that is not anchored to the survivor’s capture', () => {
+  it('rejects a lasting wound that is not anchored to the character’s capture', () => {
     const analysis = makeAnalysis(ledger);
     analysis.woundPlans = [
       {
@@ -129,7 +133,30 @@ describe('NarrativeAnalysisService', () => {
 
     expect(() =>
       new NarrativeAnalysisValidator().validate(analysis, ledger),
-    ).toThrow('must be inflicted while that survivor makes');
+    ).toThrow('must be inflicted while that character survives');
+  });
+
+  it('rejects names and piece IDs inside structured wound status text', () => {
+    const analysis = makeAnalysis(ledger);
+    const event = ledger.events.at(-1)!;
+    const otherName = ledger.pieces.find(
+      (piece) => piece.id !== event.pieceId,
+    )!.permanentName;
+    analysis.woundPlans = [
+      {
+        pieceId: event.pieceId,
+        inflictedAtPly: event.ply,
+        injury: `${otherName}'s arm is burned by b-p-f7.`,
+        lastingEffects: ['Pain returns near w-q-d1.'],
+        recoveryPly: null,
+      },
+    ];
+
+    expect(() =>
+      new NarrativeAnalysisValidator().validate(analysis, ledger),
+    ).toThrow(
+      'must not contain names, piece IDs, coordinates, or ply references',
+    );
   });
 
   it('rejects generation when the saved ledger does not exist', async () => {
@@ -244,7 +271,13 @@ function makeAnalysis(ledger: GameLedger): NarrativeAnalysis {
         payoffDescription: 'She reaches and breaks its defense.',
       },
     ],
-    woundPlans: [],
+    woundPlans: selectRequiredWoundEvents(ledger).map((event) => ({
+      pieceId: event.pieceId,
+      inflictedAtPly: event.inflictedAtPly,
+      injury: 'A deep blade wound tears across her sword arm.',
+      lastingEffects: ['Pain weakens her grip for the rest of the battle.'],
+      recoveryPly: null,
+    })),
     endingPlan: {
       winner: 'north',
       termination: 'checkmate',

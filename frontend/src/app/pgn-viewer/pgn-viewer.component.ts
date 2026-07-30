@@ -12,12 +12,19 @@ import {
   ChessEvent,
   SagaStage,
   SagaStageState,
+  StoryWound,
 } from './pgn.models';
 
 type FallenPiece = {
   victim: PieceIdentity;
   killer: PieceIdentity;
   ply: number;
+};
+
+type PieceStatus = {
+  label: string;
+  detail: string | null;
+  tone: 'healthy' | 'wounded' | 'maimed' | 'dead' | 'entombed';
 };
 
 @Component({
@@ -39,6 +46,7 @@ export class PgnViewerComponent implements OnDestroy {
   selectedPieceId: string | null = null;
   fallenRosterOpen = false;
   scenes: PlaybackScene[] = [];
+  wounds: StoryWound[] = [];
   epilogue = '';
   sagaGenerating = false;
   storyError: string | null = null;
@@ -73,6 +81,9 @@ export class PgnViewerComponent implements OnDestroy {
       this.currentPly > this.game.positions.length
       ? null
       : this.game.positions[this.currentPly - 1];
+  }
+  get currentBeatSquare(): string | null {
+    return this.currentMove?.to ?? null;
   }
   get currentMoveLabel(): string {
     if (this.isEpiloguePage) return 'Epilogue';
@@ -156,6 +167,69 @@ export class PgnViewerComponent implements OnDestroy {
         event.isCapture,
     ).length;
   }
+  get inspectedPieceStatus(): PieceStatus {
+    const piece = this.inspectedPiece;
+    if (!piece || !this.game) {
+      return { label: 'Unharmed', detail: null, tone: 'healthy' };
+    }
+    const capturedAtPly =
+      piece.capturedAtPly ??
+      this.game.ledger.events.find(
+        (event) => event.capturedPieceId === piece.id,
+      )?.ply;
+    if (capturedAtPly && capturedAtPly <= this.currentPly) {
+      return {
+        label: 'Dead',
+        detail: `Fell at beat ${capturedAtPly}.`,
+        tone: 'dead',
+      };
+    }
+    if (this.hasFortressEntombmentThreat(piece)) {
+      return {
+        label: 'Entombment Threat',
+        detail:
+          'The broken Seal’s fading magic threatens to lock the embedded pilot inside the Fortress.',
+        tone: 'entombed',
+      };
+    }
+    const wound = [...this.wounds]
+      .filter(
+        (candidate) =>
+          candidate.pieceId === piece.id &&
+          candidate.inflictedAtPly <= this.currentPly,
+      )
+      .sort((left, right) => right.inflictedAtPly - left.inflictedAtPly)[0];
+    if (!wound) {
+      return { label: 'Unharmed', detail: null, tone: 'healthy' };
+    }
+    if (wound.recoveryPly !== null && this.currentPly >= wound.recoveryPly) {
+      return {
+        label: 'Scarred',
+        detail: `Recovered from: ${this.safeWoundInjury(wound, piece)}`,
+        tone: 'wounded',
+      };
+    }
+    const injury = this.safeWoundInjury(wound, piece);
+    const effects = wound.lastingEffects
+      .filter((effect) => this.isSafeWoundStatusText(effect, piece))
+      .join(' · ');
+    if (this.isMaimingInjury(wound.injury)) {
+      return {
+        label: 'Maimed',
+        detail: effects ? `${injury} · ${effects}` : injury,
+        tone: 'maimed',
+      };
+    }
+    const gravelyWounded =
+      /\b(grave|critical|crippl|organ|spine|skull)\b/i.test(
+        `${wound.injury} ${effects}`,
+      );
+    return {
+      label: gravelyWounded ? 'Gravely Wounded' : 'Wounded',
+      detail: effects ? `${injury} · ${effects}` : injury,
+      tone: 'wounded',
+    };
+  }
   get lightKingdomFallen(): FallenPiece[] {
     return this.fallenPiecesFor('north');
   }
@@ -208,6 +282,7 @@ export class PgnViewerComponent implements OnDestroy {
         this.selectedPieceId = null;
         this.fallenRosterOpen = false;
         this.scenes = [];
+        this.wounds = [];
         this.epilogue = '';
         this.pipelineState = this.initialPipelineState();
         this.resetGenerationTimer();
@@ -233,6 +308,7 @@ export class PgnViewerComponent implements OnDestroy {
       .subscribe({
         next: (response) => {
           this.scenes = response.sceneBreakdown.data.scenes;
+          this.wounds = response.sceneBreakdown.data.wounds ?? [];
           this.epilogue = response.sceneBreakdown.data.epilogue ?? '';
           this.sagaGenerating = false;
           this.stopGenerationTimer();
@@ -308,7 +384,7 @@ export class PgnViewerComponent implements OnDestroy {
       queen:
         'Master swordfighter, Archwizard, and living fortress who moves at magically amplified superhuman speed.',
       archwizard:
-        'An Archwizard who folds space and teleports across the battlefield.',
+        'A master of elemental forces, wards, bindings, counterspells, illusions, divination, transmutation, and other high sorcery who uses teleportation to cross the battlefield.',
       'moving-fortress': `A colossal mobile stronghold controlled by ${
         piece.operatorName ?? 'a sworn pilot'
       }, a living soldier permanently embedded in its armored command cradle. Magic powers its enormous wheels while the pilot commands every movement and attack from within.`,
@@ -406,6 +482,73 @@ export class PgnViewerComponent implements OnDestroy {
         event.pieceId === piece.id &&
         event.isPromotion,
     );
+  }
+  private hasFortressEntombmentThreat(piece: PieceIdentity): boolean {
+    if (!this.isEpiloguePage || !piece.alive) return false;
+    const isFortress =
+      piece.fantasyType === 'moving-fortress' ||
+      this.currentPromotionFor(piece)?.promotionType === 'moving-fortress';
+    if (!isFortress) return false;
+    const result = String(
+      this.game?.ledger.metadata['result'] ??
+        this.game?.headers['Result'] ??
+        '',
+    );
+    const termination = String(
+      this.game?.ledger.metadata['termination'] ?? '',
+    ).toLowerCase();
+    const sealDestroyed = ['checkmate', 'resignation'].includes(termination);
+    const defeatedSide =
+      result === '1-0' ? 'south' : result === '0-1' ? 'north' : null;
+    return sealDestroyed && piece.side === defeatedSide;
+  }
+  private isMaimingInjury(injury: string): boolean {
+    return /\b(amput\w*|dismember\w*|sever\w*|missing|lost (?:an? |the )?(?:arm|hand|leg|foot)|torn off)\b/i.test(
+      injury,
+    );
+  }
+  private safeWoundInjury(wound: StoryWound, piece: PieceIdentity): string {
+    return this.isSafeWoundStatusText(wound.injury, piece)
+      ? wound.injury
+      : `Injured during the capture at beat ${wound.inflictedAtPly}.`;
+  }
+  private isSafeWoundStatusText(
+    text: string,
+    inspectedPiece: PieceIdentity,
+  ): boolean {
+    if (!this.game) return false;
+    if (/\b[wb]-[pnbrqk]-[a-h][1-8]\b|\bply\b|\b[a-h][1-8]\b/i.test(text)) {
+      return false;
+    }
+    const inspectedNames = new Set(
+      [
+        inspectedPiece.permanentName,
+        inspectedPiece.viewpointName,
+        inspectedPiece.operatorName,
+        inspectedPiece.companyName,
+      ]
+        .filter((name): name is string => Boolean(name))
+        .map((name) => name.toLowerCase()),
+    );
+    return !this.game.ledger.pieces
+      .flatMap((piece) => [
+        piece.permanentName,
+        piece.viewpointName,
+        piece.operatorName,
+        piece.companyName,
+      ])
+      .filter(
+        (name): name is string =>
+          typeof name === 'string' &&
+          name.length > 0 &&
+          !inspectedNames.has(name.toLowerCase()),
+      )
+      .some((name) => {
+        const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return new RegExp(`(?:^|[^A-Za-z])${escaped}(?:$|[^A-Za-z])`, 'i').test(
+          text,
+        );
+      });
   }
   private displayRole(role: string): string {
     return role

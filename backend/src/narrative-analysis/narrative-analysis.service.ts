@@ -10,6 +10,7 @@ import {
 import { narrativeAnalysisSchema } from './models/narrative-analysis';
 import { NARRATIVE_ANALYSIS_PROMPT_VERSION } from './narrative-analysis.prompt';
 import { NarrativeAnalysisValidator } from './narrative-analysis.validator';
+import { selectRequiredWoundEvents } from './wound-planning';
 
 @Injectable()
 export class NarrativeAnalysisService {
@@ -43,8 +44,9 @@ export class NarrativeAnalysisService {
       const ledger = normalizePawnViewpoints(
         game.ledger.data as unknown as GameLedger,
       );
+      const requiredWoundEvents = selectRequiredWoundEvents(ledger);
       const analysis = narrativeAnalysisSchema.parse(
-        await this.provider.analyze({ ledger }),
+        await this.provider.analyze({ ledger, requiredWoundEvents }),
       );
       this.validator.validate(analysis, ledger);
       const data = JSON.parse(

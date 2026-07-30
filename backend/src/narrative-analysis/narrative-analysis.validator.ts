@@ -1,6 +1,7 @@
 import { BadGatewayException, Injectable } from '@nestjs/common';
 import type { GameLedger } from '../chess/models/game-ledger';
 import type { NarrativeAnalysis } from './models/narrative-analysis';
+import { selectRequiredWoundEvents } from './wound-planning';
 
 @Injectable()
 export class NarrativeAnalysisValidator {
@@ -81,7 +82,7 @@ export class NarrativeAnalysisValidator {
       const event = ledger.events[wound.inflictedAtPly - 1];
       if (!event?.isCapture || event.pieceId !== wound.pieceId) {
         errors.push(
-          `Wound for ${wound.pieceId} must be inflicted while that survivor makes a ledger-confirmed capture`,
+          `Wound for ${wound.pieceId} must be inflicted while that character survives a ledger-confirmed capture`,
         );
       }
       if (
@@ -91,6 +92,38 @@ export class NarrativeAnalysisValidator {
         errors.push(
           `Wound recovery for ${wound.pieceId} must follow its infliction`,
         );
+      }
+      const woundText = [wound.injury, ...wound.lastingEffects].join(' ');
+      if (containsForbiddenWoundReference(woundText, ledger)) {
+        errors.push(
+          `Wound status for ${wound.pieceId} must not contain names, piece IDs, coordinates, or ply references`,
+        );
+      }
+    }
+    const woundKeys = new Set(
+      (analysis.woundPlans ?? []).map(
+        (wound) => `${wound.pieceId}:${wound.inflictedAtPly}`,
+      ),
+    );
+    if (woundKeys.size !== (analysis.woundPlans ?? []).length) {
+      errors.push('Wound plans must not contain duplicate character/ply pairs');
+    }
+    const requiredWoundKeys = new Set(
+      selectRequiredWoundEvents(ledger).map(
+        (required) => `${required.pieceId}:${required.inflictedAtPly}`,
+      ),
+    );
+    for (const required of selectRequiredWoundEvents(ledger)) {
+      const key = `${required.pieceId}:${required.inflictedAtPly}`;
+      if (!woundKeys.has(key)) {
+        errors.push(
+          `Required wound is missing at ply ${required.inflictedAtPly}`,
+        );
+      }
+    }
+    for (const key of woundKeys) {
+      if (!requiredWoundKeys.has(key)) {
+        errors.push(`Wound plan ${key} was not selected by the seeded roll`);
       }
     }
 
@@ -153,4 +186,27 @@ export class NarrativeAnalysisValidator {
       );
     }
   }
+}
+
+function containsForbiddenWoundReference(
+  text: string,
+  ledger: GameLedger,
+): boolean {
+  if (/\b[wb]-[pnbrqk]-[a-h][1-8]\b|\bply\b|\b[a-h][1-8]\b/i.test(text)) {
+    return true;
+  }
+  const names = ledger.pieces.flatMap((piece) => [
+    piece.permanentName,
+    piece.viewpointName,
+    piece.operatorName,
+    piece.companyName,
+  ]);
+  return names
+    .filter((name): name is string => Boolean(name?.trim()))
+    .some((name) => {
+      const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return new RegExp(`(?:^|[^A-Za-z])${escaped}(?:$|[^A-Za-z])`, 'i').test(
+        text,
+      );
+    });
 }

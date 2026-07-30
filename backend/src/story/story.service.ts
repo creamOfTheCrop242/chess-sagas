@@ -21,7 +21,7 @@ WORLD CANON (never contradict):
 PIECE CHARACTERS:
 - Front-line infantry: each “pawn” unit is a little battalion of grunts/soldiers (no eastern/western label). Never say the word pawn — say battalion, company, grunts, or soldiers.
 - Knights: knight commanders — always Eastern or Western
-- Bishops: archmages — always Eastern or Western; they cross the battlefield through teleportation magic, never by walking, riding, or running the route
+- Bishops: archmages — always Eastern or Western; teleportation is how they cross the battlefield, never by walking, riding, or running the route. It is only their movement discipline: they also wield broad high sorcery including elemental attacks, wards, bindings, counterspells, illusions, divination, and transmutation.
 - Rooks: colossal moving fortresses on magic-powered wheels — always Eastern or Western. Each has a permanent living pilot physically embedded inside a life-sustaining armored command cradle. The pilot cannot simply dismount and is the machine's mind, voice, and decision-maker; the fortress itself is not sentient.
 - Queens: as durable as a fortress, wield a sword like a knight, cast magic like a bishop, and move at magically amplified superhuman speed without teleporting (no eastern/western label)
 - Kings: strongest of all, bound to the enchanted seal that holds the realm together after the Calamity (no eastern/western label)
@@ -209,7 +209,7 @@ Hard limit: 2-4 complete sentences only. End on a finished sentence.`;
       case 'n':
         return `${wing} knight commander`;
       case 'b':
-        return `${wing} teleporting archmage`;
+        return `${wing} archmage (teleporting traveler and master of broad high sorcery)`;
       case 'r':
         return `${wing} magic-wheeled moving fortress with a living embedded pilot`;
       case 'q':

@@ -55,6 +55,33 @@ import type { Key, KeyedNode } from 'chessground/types';
         pointer-events: auto;
         cursor: pointer;
       }
+
+      :host ::ng-deep square.beat-active {
+        background: radial-gradient(
+          circle,
+          rgba(235, 205, 116, 0.2) 28%,
+          rgba(202, 157, 55, 0.68) 100%
+        ) !important;
+        box-shadow:
+          inset 0 0 0 4px rgba(255, 224, 132, 0.9),
+          inset 0 0 18px rgba(255, 205, 74, 0.7);
+        animation: beat-piece-glow 1.6s ease-in-out infinite;
+      }
+
+      @keyframes beat-piece-glow {
+        50% {
+          filter: brightness(1.25);
+          box-shadow:
+            inset 0 0 0 5px rgba(255, 235, 170, 1),
+            inset 0 0 24px rgba(255, 205, 74, 0.9);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        :host ::ng-deep square.beat-active {
+          animation: none;
+        }
+      }
     `,
   ],
 })
@@ -65,6 +92,7 @@ export class ChessboardComponent
 
   @Input() fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
   @Input() orientation: 'white' | 'black' = 'black';
+  @Input() activeSquare: string | null = null;
   @Output() pieceHovered = new EventEmitter<string | null>();
   @Output() pieceSelected = new EventEmitter<string>();
 
@@ -77,6 +105,10 @@ export class ChessboardComponent
       viewOnly: true,
       coordinates: true,
       drawable: { enabled: false },
+      highlight: {
+        lastMove: false,
+        custom: this.activeSquareClasses(),
+      },
       movable: { free: false },
       draggable: { enabled: false },
       animation: { enabled: true, duration: 160 },
@@ -92,6 +124,11 @@ export class ChessboardComponent
     if (changes['orientation'] && this.ground) {
       this.ground.set({ orientation: this.orientation });
       this.makePiecesFocusable();
+    }
+    if (changes['activeSquare'] && this.ground) {
+      this.ground.set({
+        highlight: { custom: this.activeSquareClasses() },
+      });
     }
   }
 
@@ -143,5 +180,11 @@ export class ChessboardComponent
         );
       }
     });
+  }
+
+  private activeSquareClasses(): Map<Key, string> {
+    return /^[a-h][1-8]$/.test(this.activeSquare ?? '')
+      ? new Map([[this.activeSquare as Key, 'beat-active']])
+      : new Map();
   }
 }

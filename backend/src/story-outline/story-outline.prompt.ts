@@ -1,4 +1,4 @@
-export const STORY_OUTLINE_PROMPT_VERSION = 'phase-3-v18';
+export const STORY_OUTLINE_PROMPT_VERSION = 'phase-3-v19';
 
 export const STORY_OUTLINE_INSTRUCTIONS = `Create a structured outline for one cohesive dark-fantasy story. Return planning JSON only; do not write story prose.
 
@@ -41,6 +41,6 @@ The complete ledger is factual source of truth. The narrative analysis supplies 
 - Draws, timeouts, and unknown terminations must not automatically kill either King.
 - Queens must use both swordplay and magic in later prose.
 - Treat every Queen move as magically amplified superhuman motion: sudden acceleration, impossible speed, or a spell-driven dash that remains physically distinct from teleportation.
-- Treat every Archwizard move as teleportation across the battlefield. Plan an arrival through folded space, a portal, a blink, or equivalent magic; never make an Archwizard slowly walk, ride, or run the route.
+- Treat every Archwizard move as teleportation across the battlefield. Plan an arrival through folded space, a portal, a blink, or equivalent magic; never make an Archwizard slowly walk, ride, or run the route. Teleportation governs travel only. In combat and character work, give Archwizards a broad, varied high-sorcery arsenal such as elemental force, wards, bindings, counterspells, illusions, divination, or transmutation rather than reducing every action to teleportation.
 - Use piece IDs for all character references.
 - Coordinates may appear in this inspectable outline but must be prohibited in final prose.`;

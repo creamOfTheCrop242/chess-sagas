@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { GameLedger } from '../chess/models/game-ledger';
+import type { GeneratedStoryPackage } from '../full-story/models/generated-story';
 import type { ValidationFinding } from './models/story-validation';
 
 @Injectable()
@@ -109,6 +110,233 @@ export class DeterministicStoryValidator {
     }
     return findings;
   }
+
+  validateCaptureAttribution(
+    scenes: Array<{ ply: number; fantasyNarration: string }>,
+    ledger: GameLedger,
+  ): ValidationFinding[] {
+    const findings: ValidationFinding[] = [];
+    const pieces = new Map(ledger.pieces.map((piece) => [piece.id, piece]));
+    const sceneByPly = new Map(scenes.map((scene) => [scene.ply, scene]));
+
+    for (const event of ledger.events) {
+      if (!event.isCapture || !event.capturedPieceId) continue;
+      const actor = pieces.get(event.pieceId);
+      const victim = pieces.get(event.capturedPieceId);
+      const scene = sceneByPly.get(event.ply);
+      if (!actor || !victim || !scene) continue;
+      const actorAliases = characterAliases(actor);
+      const victimAliases = characterAliases(victim);
+      const excerpt = reversedCaptureExcerpt(
+        scene.fantasyNarration,
+        victimAliases,
+        actorAliases,
+      );
+      if (!excerpt) continue;
+      findings.push({
+        type: 'wrong-captor',
+        severity: 'error',
+        message: `${victim.permanentName} is incorrectly given ${actor.permanentName}'s capture at ply ${event.ply}`,
+        ply: event.ply,
+        pieceId: event.pieceId,
+        excerpt,
+      });
+    }
+    return findings;
+  }
+
+  validateTimedWounds(
+    scenes: Array<{
+      ply: number;
+      fantasyNarration: string;
+      characters: string[];
+      woundsInflicted?: Array<{ pieceId: string; inflictedAtPly: number }>;
+    }>,
+    wounds: GeneratedStoryPackage['wounds'],
+    ledger: GameLedger,
+  ): ValidationFinding[] {
+    const findings: ValidationFinding[] = [];
+    const pieces = new Map(ledger.pieces.map((piece) => [piece.id, piece]));
+
+    for (const wound of wounds) {
+      const piece = pieces.get(wound.pieceId);
+      if (!piece) continue;
+      const woundText = [wound.injury, ...wound.lastingEffects].join(' ');
+      const aliases = [
+        piece.permanentName,
+        piece.viewpointName,
+        piece.operatorName,
+      ].filter(
+        (name, index, all): name is string =>
+          Boolean(name?.trim()) && all.indexOf(name) === index,
+      );
+
+      for (const scene of scenes) {
+        if (
+          scene.ply >= wound.inflictedAtPly ||
+          !scene.characters.includes(wound.pieceId) ||
+          !mentionsCharacter(scene.fantasyNarration, aliases)
+        ) {
+          continue;
+        }
+        const excerpt = matchingCharacterWoundExcerpt(
+          scene.fantasyNarration,
+          woundText,
+          aliases,
+        );
+        if (!excerpt) continue;
+        findings.push({
+          type: 'wound-continuity',
+          severity: 'error',
+          message: `${piece.permanentName}'s wound is inflicted at ply ${wound.inflictedAtPly} but appears prematurely at ply ${scene.ply}`,
+          ply: scene.ply,
+          pieceId: wound.pieceId,
+          excerpt,
+        });
+      }
+
+      const inflictionScene = scenes.find(
+        (scene) => scene.ply === wound.inflictedAtPly,
+      );
+      const hasExactMarker = inflictionScene?.woundsInflicted?.some(
+        (marker) =>
+          marker.pieceId === wound.pieceId &&
+          marker.inflictedAtPly === wound.inflictedAtPly,
+      );
+      if (!hasExactMarker) {
+        findings.push({
+          type: 'missing-wound',
+          severity: 'error',
+          message: `${piece.permanentName}'s wound marker is missing from its infliction scene at ply ${wound.inflictedAtPly}`,
+          ply: wound.inflictedAtPly,
+          pieceId: wound.pieceId,
+          excerpt: inflictionScene?.fantasyNarration.slice(0, 240) ?? null,
+        });
+      }
+    }
+
+    const expectedMarkers = new Set(
+      wounds.map((wound) => `${wound.pieceId}:${wound.inflictedAtPly}`),
+    );
+    for (const scene of scenes) {
+      const seenMarkers = new Set<string>();
+      for (const marker of scene.woundsInflicted ?? []) {
+        const key = `${marker.pieceId}:${marker.inflictedAtPly}`;
+        if (
+          seenMarkers.has(key) ||
+          !expectedMarkers.has(key) ||
+          marker.inflictedAtPly !== scene.ply
+        ) {
+          findings.push({
+            type: 'invented-wound',
+            severity: 'error',
+            message: `Scene at ply ${scene.ply} contains an invalid wound marker ${key}`,
+            ply: scene.ply,
+            pieceId: marker.pieceId,
+            excerpt: null,
+          });
+        }
+        seenMarkers.add(key);
+      }
+    }
+    return findings;
+  }
+}
+
+const ANATOMY_FAMILIES = [
+  ['abdomen', 'abdominal', 'belly', 'stomach', 'gut'],
+  ['arm', 'forearm', 'elbow'],
+  ['hand', 'palm', 'finger', 'wrist'],
+  ['leg', 'thigh', 'knee', 'shin', 'calf'],
+  ['foot', 'ankle', 'toe'],
+  ['eye', 'sight', 'vision'],
+  ['head', 'skull', 'temple', 'brow'],
+  ['chest', 'rib', 'lung', 'heart'],
+  ['shoulder', 'collarbone'],
+  ['back', 'spine', 'spinal'],
+  ['face', 'jaw', 'cheek'],
+] as const;
+
+const INJURY_FAMILIES = [
+  [
+    'wound',
+    'wounded',
+    'injury',
+    'injured',
+    'hurt',
+    'hurting',
+    'pain',
+    'painful',
+    'ache',
+    'aching',
+    'damaged',
+    'trauma',
+    'traumatized',
+    'sore',
+    'tender',
+    'swollen',
+    'swelling',
+    'bruise',
+    'bruised',
+  ],
+  ['puncture', 'punctured', 'pierced', 'impaled'],
+  ['burn', 'burned', 'burnt', 'scorch', 'scorched', 'charred'],
+  ['cut', 'gash', 'slashed', 'laceration'],
+  ['break', 'broken', 'fracture', 'fractured', 'shattered'],
+  ['sever', 'severed', 'missing', 'amputated', 'torn off'],
+  ['bleed', 'bleeding', 'blood'],
+  ['numb', 'numbness', 'paralyzed', 'paralysis'],
+  ['limp', 'limping', 'stagger', 'staggered'],
+  ['concussion', 'concussed'],
+] as const;
+
+function mentionsCharacter(narration: string, aliases: string[]): boolean {
+  return aliases.some((alias) =>
+    new RegExp(`\\b${escapeRegex(alias)}(?:['’]s)?\\b`, 'i').test(narration),
+  );
+}
+
+function matchingCharacterWoundExcerpt(
+  narration: string,
+  woundDescription: string,
+  aliases: string[],
+): string | undefined {
+  const anatomy = matchingFamilies(woundDescription, ANATOMY_FAMILIES);
+  const injury = [
+    INJURY_FAMILIES[0],
+    ...matchingFamilies(woundDescription, INJURY_FAMILIES).filter(
+      (family) => family !== INJURY_FAMILIES[0],
+    ),
+  ];
+  const sentences = narration.match(/[^.!?]+[.!?]?/g) ?? [narration];
+  const normalizedSentences = sentences.map((sentence) => sentence.trim());
+  return normalizedSentences.find((sentence, index) => {
+    const hasAnatomy =
+      anatomy.length === 0 ||
+      anatomy.some((family) => hasAny(sentence, family));
+    const hasInjury = injury.some((family) => hasAny(sentence, family));
+    if (!hasAnatomy || !hasInjury) return false;
+    if (mentionsCharacter(sentence, aliases)) return true;
+    const previousSentence = normalizedSentences[index - 1];
+    return (
+      Boolean(previousSentence) &&
+      mentionsCharacter(previousSentence, aliases) &&
+      /\b(?:he|she|his|her|they|their)\b/i.test(sentence)
+    );
+  });
+}
+
+function matchingFamilies(
+  text: string,
+  families: ReadonlyArray<readonly string[]>,
+): Array<readonly string[]> {
+  return families.filter((family) => hasAny(text, family));
+}
+
+function hasAny(text: string, terms: readonly string[]): boolean {
+  return terms.some((term) =>
+    new RegExp(`\\b${escapeRegex(term)}\\b`, 'i').test(text),
+  );
 }
 
 function prematureDeathExcerpt(
@@ -117,6 +345,11 @@ function prematureDeathExcerpt(
 ): string | undefined {
   const name = escapeRegex(characterName);
   const patterns = [
+    new RegExp(`\\b${name}(?:['’]s)?\\s+(?:last|final)\\s+breath\\b`, 'i'),
+    new RegExp(
+      `\\b(?:spear|sword|blade|arrow|bolt|axe|lance|shot|spell)\\b[^.!?]{0,100}\\b(?:through|into)\\s+${name}(?:['’]s)?\\s+(?:mouth|skull|head|throat|heart|chest|spine)\\b`,
+      'i',
+    ),
     new RegExp(
       `\\b(?:dead|slain|lifeless|deceased)\\s+${name}(?:['’]s)?\\b`,
       'i',
@@ -137,6 +370,41 @@ function prematureDeathExcerpt(
   return patterns
     .map((pattern) => narration.match(pattern)?.[0])
     .find((match): match is string => Boolean(match));
+}
+
+function characterAliases(piece: GameLedger['pieces'][number]): string[] {
+  return [piece.permanentName, piece.viewpointName, piece.operatorName].filter(
+    (name, index, all): name is string =>
+      Boolean(name?.trim()) && all.indexOf(name) === index,
+  );
+}
+
+function reversedCaptureExcerpt(
+  narration: string,
+  allegedKillerAliases: string[],
+  actualKillerAliases: string[],
+): string | undefined {
+  const decisiveVerb =
+    '(?:drove|thrust|plunged|buried|rammed|fired|shot|stabbed|impaled|pierced|beheaded|decapitated|crushed|burned|incinerated|blasted|slashed|struck|tore|ripped|split|smashed)';
+  const sentences = narration.match(/[^.!?]+[.!?]?/g) ?? [narration];
+  for (const sentence of sentences) {
+    for (const allegedKiller of allegedKillerAliases) {
+      for (const actualKiller of actualKillerAliases) {
+        const activeReversal = new RegExp(
+          `\\b${escapeRegex(allegedKiller)}\\b(?!['’]s)[^.!?]{0,180}\\b${decisiveVerb}\\b[^.!?]{0,180}\\b${escapeRegex(actualKiller)}(?:['’]s)?\\b`,
+          'i',
+        );
+        const passiveReversal = new RegExp(
+          `\\b${escapeRegex(actualKiller)}\\b[^.!?]{0,180}\\b(?:was|is)\\s+${decisiveVerb}\\b[^.!?]{0,180}\\bby\\s+${escapeRegex(allegedKiller)}\\b`,
+          'i',
+        );
+        if (activeReversal.test(sentence) || passiveReversal.test(sentence)) {
+          return sentence.trim();
+        }
+      }
+    }
+  }
+  return undefined;
 }
 
 function escapeRegex(value: string): string {

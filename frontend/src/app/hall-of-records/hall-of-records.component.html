@@ -1,0 +1,50 @@
+<main class="records-page">
+  <header class="records-hero">
+    <nav aria-label="Site navigation">
+      <a routerLink="/">← Chronicle</a>
+      <a routerLink="/lore">Piece Codex</a>
+      <a routerLink="/lore/calamity">The Calamity →</a>
+    </nav>
+    <p class="eyebrow">The Chronicler’s Archive</p>
+    <h1>Hall of Records</h1>
+    <p>
+      Every completed saga is preserved here. Reopen a fractured reality and
+      replay its final battle without forging the story again.
+    </p>
+  </header>
+
+  @if (loading) {
+    <p class="records-state">Unsealing the archive…</p>
+  } @else if (error) {
+    <p class="records-state records-error" role="alert">{{ error }}</p>
+  } @else if (!records.length) {
+    <section class="empty-records">
+      <h2>No sagas have been preserved</h2>
+      <p>Complete a saga and its final battle will appear in this hall.</p>
+      <a routerLink="/">Forge the first saga</a>
+    </section>
+  } @else {
+    <ol class="record-list">
+      @for (record of records; track record.id) {
+        <li>
+          <article>
+            <div class="record-number" aria-hidden="true">
+              {{ ($index + 1).toString().padStart(2, "0") }}
+            </div>
+            <div class="record-copy">
+              <p class="record-date">
+                Preserved
+                {{ record.completedAt | date: "longDate" }}
+              </p>
+              <h2>{{ record.title }}</h2>
+              <p class="record-result">
+                {{ record.whitePlayer }} vs {{ record.blackPlayer }}
+              </p>
+            </div>
+            <a [routerLink]="['/records', record.id]">Replay saga →</a>
+          </article>
+        </li>
+      }
+    </ol>
+  }
+</main>

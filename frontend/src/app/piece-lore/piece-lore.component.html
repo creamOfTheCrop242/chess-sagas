@@ -1,0 +1,56 @@
+<main class="codex-page">
+  <header class="codex-hero">
+    <nav class="codex-nav" aria-label="Lore navigation">
+      <a class="back-link" routerLink="/">← Chronicle</a>
+      <a class="back-link" routerLink="/lore/calamity">The Calamity →</a>
+    </nav>
+    <p class="eyebrow">The Chronicler’s Codex</p>
+    <h1>Lore of the Battlefield</h1>
+    <p class="introduction">
+      The armies may resemble a familiar game, but every figure upon this field
+      is alive, named, and bound to the magic of a kingdom.
+    </p>
+    <p class="calamity-note">
+      White serves the Light Kingdom in the north. Black serves the Dark Kingdom
+      in the south. Since the Calamity, east and west are reversed.
+    </p>
+  </header>
+
+  <section class="piece-grid" aria-label="Piece lore">
+    @for (piece of pieces; track piece.chessName) {
+      <article class="lore-card">
+        <div class="card-heading">
+          <span class="piece-sigil" aria-hidden="true">{{ piece.sigil }}</span>
+          <div>
+            <p class="chess-name">{{ piece.chessName }}</p>
+            <h2>{{ piece.sagaName }}</h2>
+          </div>
+        </div>
+
+        <p class="oath">{{ piece.oath }}</p>
+
+        <dl>
+          <div>
+            <dt>Across the field</dt>
+            <dd>{{ piece.movement }}</dd>
+          </div>
+          <div>
+            <dt>In war</dt>
+            <dd>{{ piece.warfare }}</dd>
+          </div>
+          <div>
+            <dt>At the end</dt>
+            <dd>{{ piece.fate }}</dd>
+          </div>
+        </dl>
+      </article>
+    }
+  </section>
+
+  <footer>
+    <a class="secondary-link" routerLink="/lore/calamity"
+      >Read the history of the Calamity</a
+    >
+    <a class="begin-link" routerLink="/">Begin a saga</a>
+  </footer>
+</main>

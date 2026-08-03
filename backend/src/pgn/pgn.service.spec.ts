@@ -192,6 +192,27 @@ describe('PgnService deterministic ledger', () => {
     expect(differentOperators).not.toEqual(repeatedOperators);
   });
 
+  it('reverses east and west for commanders, Archwizards, and Fortresses', () => {
+    const parsed = service.parse(
+      '[White "Ada"]\n[Black "Turing"]\n[Result "*"]\n\n1. e4 *',
+    );
+    const names = new Map(
+      parsed.ledger.pieces.map((piece) => [
+        piece.originalSquare,
+        piece.permanentName,
+      ]),
+    );
+
+    expect(names.get('a1')).toBe('Northeast Fortress');
+    expect(names.get('b1')).toBe('Northeast Knight Commander');
+    expect(names.get('c1')).toBe('Northeast Archwizard');
+    expect(names.get('f1')).toBe('Northwest Archwizard');
+    expect(names.get('g1')).toBe('Northwest Knight Commander');
+    expect(names.get('h1')).toBe('Northwest Fortress');
+    expect(names.get('a8')).toBe('Southeast Fortress');
+    expect(names.get('h8')).toBe('Southwest Fortress');
+  });
+
   it('marks checks and checkmate and derives termination', () => {
     const game = service.parse('[Result "0-1"]\n\n1. f3 e5 2. g4 Qh4# 0-1');
     const mate = game.ledger.events.at(-1)!;

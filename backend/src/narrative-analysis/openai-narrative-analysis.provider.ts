@@ -39,6 +39,8 @@ export class OpenAiNarrativeAnalysisProvider implements NarrativeAnalysisProvide
   async analyze({
     ledger,
     requiredWoundEvents,
+    battlefieldEnvironment,
+    surrenderContext,
   }: NarrativeAnalysisRequest): Promise<NarrativeAnalysis> {
     if (!this.client) {
       throw new ServiceUnavailableException('OPENAI_API_KEY is not configured');
@@ -51,7 +53,12 @@ export class OpenAiNarrativeAnalysisProvider implements NarrativeAnalysisProvide
         ...promptCacheOptions(this.model, 'chess-sagas:narrative-analysis'),
         reasoning: { effort: 'medium' },
         instructions: NARRATIVE_ANALYSIS_INSTRUCTIONS,
-        input: JSON.stringify({ completeLedger: ledger, requiredWoundEvents }),
+        input: JSON.stringify({
+          completeLedger: ledger,
+          requiredWoundEvents,
+          battlefieldEnvironment,
+          surrenderContext,
+        }),
         text: {
           format: zodTextFormat(narrativeAnalysisSchema, 'narrative_analysis'),
         },

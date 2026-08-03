@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { battlefieldEnvironmentSchema } from '../../narrative-analysis/models/narrative-analysis';
 
 const outlineSceneSchema = z.object({
   sceneNumber: z.number().int().positive(),
@@ -51,6 +52,7 @@ const woundBeatSchema = z.object({
 });
 
 export const storyOutlineSchema = z.object({
+  battlefieldEnvironment: battlefieldEnvironmentSchema,
   selectedTitle: z.string().min(1),
   theme: z.string().min(1),
   acts: z.array(outlineActSchema).min(1),

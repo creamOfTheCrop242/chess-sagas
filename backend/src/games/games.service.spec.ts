@@ -153,6 +153,115 @@ describe('GamesService', () => {
     );
   });
 
+  it('returns only completed saga records with their completion time', async () => {
+    gameFindMany.mockResolvedValue([
+      {
+        id: 'game-1',
+        whitePlayer: 'Ada',
+        blackPlayer: 'Turing',
+        result: '1-0',
+        createdAt: new Date('2026-07-01'),
+        updatedAt: new Date('2026-07-02'),
+        generationRuns: [
+          {
+            completedAt: new Date('2026-07-03'),
+            sceneBreakdown: { createdAt: new Date('2026-07-03') },
+            generatedStory: null,
+          },
+          {
+            completedAt: new Date('2026-07-02'),
+            sceneBreakdown: null,
+            generatedStory: { title: 'The Spear That Broke a Crown' },
+          },
+        ],
+      },
+    ]);
+
+    await expect(service.findRecords()).resolves.toEqual([
+      expect.objectContaining({
+        id: 'game-1',
+        title: 'The Spear That Broke a Crown',
+        completedAt: new Date('2026-07-03'),
+      }),
+    ]);
+    expect(gameFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          generationRuns: {
+            some: {
+              status: 'COMPLETED',
+              sceneBreakdown: { isNot: null },
+            },
+          },
+        },
+      }),
+    );
+  });
+
+  it('replaces spoiler and coordinate titles in the Hall of Records', async () => {
+    gameFindMany.mockResolvedValue([
+      {
+        id: 'game-spoiler',
+        whitePlayer: 'Ada',
+        blackPlayer: 'Turing',
+        result: '1-0',
+        createdAt: new Date('2026-07-01'),
+        updatedAt: new Date('2026-07-02'),
+        ledger: { data: null },
+        generationRuns: [
+          {
+            completedAt: new Date('2026-07-03'),
+            sceneBreakdown: { createdAt: new Date('2026-07-03') },
+            generatedStory: null,
+          },
+          {
+            completedAt: new Date('2026-07-02'),
+            sceneBreakdown: null,
+            generatedStory: { title: 'The Seal-Breaking Checkmate at H8' },
+          },
+        ],
+      },
+    ]);
+
+    const [record] = await service.findRecords();
+    expect(record.title).toMatch(/^The (Battle|Clash|War) /);
+    expect(record.title).not.toMatch(/checkmate|[a-h][1-8]/i);
+  });
+
+  it('returns the latest completed saga for replay', async () => {
+    gameFindUnique.mockResolvedValue({
+      id: 'game-1',
+      rawPgn: '1. e4 e5',
+      whitePlayer: 'Ada',
+      blackPlayer: 'Turing',
+      result: '1-0',
+      createdAt: new Date('2026-07-01'),
+      ledger: { data: { pieces: [{ operatorName: 'Ysabet' }] } },
+      generationRuns: [
+        {
+          completedAt: new Date('2026-07-03'),
+          sceneBreakdown: {
+            data: { scenes: [] },
+            createdAt: new Date('2026-07-03'),
+          },
+        },
+      ],
+    } as never);
+
+    await expect(service.findRecord('game-1')).resolves.toEqual(
+      expect.objectContaining({
+        id: 'game-1',
+        rawPgn: '1. e4 e5',
+        sceneBreakdown: expect.objectContaining({
+          data: { scenes: [] },
+        }),
+        ledger: {
+          data: { pieces: [{ operatorName: 'Ysabet' }] },
+        },
+      }),
+    );
+  });
+
   it('returns a saved game with its pipeline records', async () => {
     gameFindUnique.mockResolvedValue({ id: 'game-1', ledger: {} });
 

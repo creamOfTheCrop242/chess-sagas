@@ -11,6 +11,7 @@ import {
   normalizeStoryOutlineRequiredEvents,
   normalizeStoryOutlineSetupPayoffs,
   normalizeStoryOutlineStructure,
+  normalizeStoryOutlineWounds,
 } from './story-outline.service';
 
 describe('StoryOutlineValidator', () => {
@@ -153,6 +154,83 @@ describe('StoryOutlineValidator', () => {
     ).not.toThrow();
   });
 
+  it('derives wound continuity from later actions instead of model plies', () => {
+    const woundedAnalysis = structuredClone(analysis);
+    woundedAnalysis.woundPlans = [
+      {
+        pieceId: 'w-q-d1',
+        inflictedAtPly: 1,
+        injury: 'Her left hand is severed.',
+        lastingEffects: ['She can no longer wield a second weapon.'],
+        recoveryPly: null,
+      },
+    ];
+    const invalid = structuredClone(outline);
+    invalid.woundBeats = [
+      {
+        pieceId: 'w-q-d1',
+        inflictedAtPly: 1,
+        injury: 'A different wound.',
+        continuityPlies: [1, 99],
+        recoveryPly: null,
+      },
+    ];
+
+    const normalized = normalizeStoryOutlineWounds(
+      invalid,
+      ledger,
+      woundedAnalysis,
+    );
+
+    expect(normalized.woundBeats).toEqual([
+      {
+        pieceId: 'w-q-d1',
+        inflictedAtPly: 1,
+        injury: 'Her left hand is severed.',
+        continuityPlies: [2],
+        recoveryPly: null,
+      },
+    ]);
+    expect(() =>
+      new StoryOutlineValidator().validate(normalized, ledger, woundedAnalysis),
+    ).not.toThrow();
+  });
+
+  it('adds missing planned wounds and removes invented wounds', () => {
+    const woundedAnalysis = structuredClone(analysis);
+    woundedAnalysis.woundPlans = [
+      {
+        pieceId: 'w-q-d1',
+        inflictedAtPly: 2,
+        injury: 'Her left hand is severed.',
+        lastingEffects: ['She can no longer wield a second weapon.'],
+        recoveryPly: null,
+      },
+    ];
+    const invalid = structuredClone(outline);
+    invalid.woundBeats = [
+      {
+        pieceId: 'b-p-f7',
+        inflictedAtPly: 1,
+        injury: 'An invented injury.',
+        continuityPlies: [2],
+        recoveryPly: null,
+      },
+    ];
+
+    expect(
+      normalizeStoryOutlineWounds(invalid, ledger, woundedAnalysis).woundBeats,
+    ).toEqual([
+      {
+        pieceId: 'w-q-d1',
+        inflictedAtPly: 2,
+        injury: 'Her left hand is severed.',
+        continuityPlies: [],
+        recoveryPly: null,
+      },
+    ]);
+  });
+
   it('rejects an outline that drops a planned wound', () => {
     const woundedAnalysis = structuredClone(analysis);
     woundedAnalysis.woundPlans = [
@@ -192,6 +270,47 @@ describe('StoryOutlineValidator', () => {
     expect(() =>
       new StoryOutlineValidator().validate(normalized, ledger, analysis),
     ).not.toThrow();
+  });
+
+  it('rebuilds a mismatched act count from analysis boundaries', () => {
+    const twoActAnalysis = {
+      ...structuredClone(analysis),
+      acts: [
+        {
+          title: 'Approach',
+          startPly: 1,
+          endPly: 1,
+          purpose: 'Establish the attack.',
+        },
+        {
+          title: 'Fall',
+          startPly: 2,
+          endPly: 2,
+          purpose: 'Resolve the attack.',
+        },
+      ],
+    } as NarrativeAnalysis;
+    const normalized = normalizeStoryOutlineStructure(
+      structuredClone(outline),
+      twoActAnalysis,
+    );
+
+    expect(normalized.acts).toMatchObject([
+      {
+        actNumber: 1,
+        title: 'Approach',
+        startPly: 1,
+        endPly: 1,
+        scenes: [{ startPly: 1, endPly: 1 }],
+      },
+      {
+        actNumber: 2,
+        title: 'Fall',
+        startPly: 2,
+        endPly: 2,
+        scenes: [{ startPly: 2, endPly: 2 }],
+      },
+    ]);
   });
 
   it('rejects an outline that omits an analyzed relationship', () => {

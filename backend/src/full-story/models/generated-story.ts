@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { DEFEATED_KING_FATES } from '../../chess/models/story-ending';
+import { battlefieldEnvironmentSchema } from '../../narrative-analysis/models/narrative-analysis';
 
 export const generatedStorySchema = z.object({
   title: z.string().min(1),
@@ -16,13 +18,13 @@ export const storyWoundSchema = z.object({
 });
 
 export const generatedStoryPackageSchema = z.object({
+  battlefieldEnvironment: battlefieldEnvironmentSchema,
   title: z.string().min(1),
-  epilogue: z.string().min(150),
-  defeatedKingFate: z.enum([
-    'killed-after-checkmate',
-    'suicide-after-surrender',
-    'survives',
-  ]),
+  epilogue: z.string().min(120),
+  laterEpilogueHeading: z.string().min(1).max(80),
+  laterEpilogue: z.string().min(80),
+  defeatedKingDeathDescription: z.string().min(1).max(280).nullable(),
+  defeatedKingFate: z.enum(DEFEATED_KING_FATES),
   defeatedSealFate: z.enum(['destroyed', 'intact']),
   wounds: z.array(storyWoundSchema).default([]),
   scenes: z
@@ -32,6 +34,14 @@ export const generatedStoryPackageSchema = z.object({
         fantasyNarration: z.string().min(1),
         characters: z.array(z.string().min(1)),
         locations: z.array(z.string().min(1)),
+        woundsInflicted: z
+          .array(
+            z.object({
+              pieceId: z.string().min(1),
+              inflictedAtPly: z.number().int().positive(),
+            }),
+          )
+          .default([]),
       }),
     )
     .min(1),

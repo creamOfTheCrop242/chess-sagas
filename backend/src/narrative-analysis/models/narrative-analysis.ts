@@ -1,4 +1,23 @@
 import { z } from 'zod';
+import { DEFEATED_KING_FATES } from '../../chess/models/story-ending';
+import { SURRENDER_JUDGMENTS } from '../../chess/surrender-context';
+export const battlefieldEnvironmentSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  description: z.string().min(1),
+});
+
+export const surrenderContextSchema = z
+  .object({
+    judgment: z.enum(SURRENDER_JUDGMENTS),
+    materialBalance: z.number(),
+    legalMoveCount: z.number().int().nonnegative(),
+    inCheck: z.boolean(),
+    safeFromImmediateMateMoveCount: z.number().int().nonnegative(),
+    allowedFates: z.array(z.enum(DEFEATED_KING_FATES)).min(1),
+    rationale: z.string().min(1),
+  })
+  .nullable();
 
 export const GAME_SHAPES = [
   'rapid-assault',
@@ -92,11 +111,13 @@ const endingPlanSchema = z.object({
   ]),
   surrenderAttempt: z.boolean(),
   kingdomConsequence: z.string().min(1),
-  defeatedKingFate: z.string().min(1),
+  defeatedKingFate: z.enum(DEFEATED_KING_FATES),
   finalImage: z.string().min(1),
 });
 
 export const narrativeAnalysisSchema = z.object({
+  battlefieldEnvironment: battlefieldEnvironmentSchema,
+  surrenderContext: surrenderContextSchema,
   titleConcepts: z.array(z.string().min(1)).min(1),
   dominantThemes: z.array(z.string().min(1)).min(1),
   gameShape: z.enum(GAME_SHAPES),

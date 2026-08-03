@@ -42,7 +42,7 @@ export class SceneBreakdownService {
       this.prisma.generationRun.findFirst({
         where: { gameId, currentStage: 'STORY', status: 'COMPLETED' },
         orderBy: { createdAt: 'desc' },
-        include: { generatedStory: true },
+        include: { generatedStory: true, sceneBreakdown: true },
       }),
     ]);
     if (!outlineRun?.storyOutline)
@@ -64,15 +64,32 @@ export class SceneBreakdownService {
       const ledger = normalizePawnViewpoints(
         game.ledger.data as unknown as GameLedger,
       );
-      const breakdown = sceneBreakdownSchema.parse(
-        await this.provider.generate({
-          ledger,
-          outline: storyOutlineSchema.parse(outlineRun.storyOutline.data),
-          validatedStoryMarkdown:
-            validationRun.storyValidation.repairedStoryMarkdown ||
-            storyRun.generatedStory.storyMarkdown,
-        }),
+      if (!storyRun.sceneBreakdown) {
+        throw new NotFoundException('Structured story ending state required');
+      }
+      const storyBreakdown = sceneBreakdownSchema.parse(
+        storyRun.sceneBreakdown.data,
       );
+      const generatedBreakdown = await this.provider.generate({
+        ledger,
+        outline: storyOutlineSchema.parse(outlineRun.storyOutline.data),
+        validatedStoryMarkdown:
+          validationRun.storyValidation.repairedStoryMarkdown ||
+          storyRun.generatedStory.storyMarkdown,
+        endingState: {
+          defeatedKingFate: storyBreakdown.defeatedKingFate,
+          defeatedSealFate: storyBreakdown.defeatedSealFate,
+          defeatedKingDeathDescription:
+            storyBreakdown.defeatedKingDeathDescription,
+        },
+      });
+      const breakdown = sceneBreakdownSchema.parse({
+        ...generatedBreakdown,
+        defeatedKingFate: storyBreakdown.defeatedKingFate,
+        defeatedSealFate: storyBreakdown.defeatedSealFate,
+        defeatedKingDeathDescription:
+          storyBreakdown.defeatedKingDeathDescription,
+      });
       this.validator.validate(breakdown, ledger);
       const data = JSON.parse(
         JSON.stringify(breakdown),

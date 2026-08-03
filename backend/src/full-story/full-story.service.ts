@@ -1,6 +1,11 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import type { GameLedger } from '../chess/models/game-ledger';
+import {
+  isSurrenderKingFate,
+  kingDiesFromFate,
+  sealFateForKingFate,
+} from '../chess/models/story-ending';
 import { normalizePawnViewpoints } from '../chess/piece-identity.service';
 import { PrismaService } from '../database/prisma.service';
 import { narrativeAnalysisSchema } from '../narrative-analysis/models/narrative-analysis';
@@ -33,7 +38,7 @@ export class FullStoryService {
     private readonly deterministic: DeterministicStoryValidator,
   ) {}
 
-  async generate(gameId: string) {
+  async generate(gameId: string, validationFeedback?: string) {
     const game = await this.prisma.game.findUnique({
       where: { id: gameId },
       select: { id: true, ledger: { select: { data: true } } },
@@ -97,18 +102,41 @@ export class FullStoryService {
           narrativeAnalysis,
           outline,
           characterRegistry: ledger.pieces,
+          validationFeedback: validationFeedback?.trim().slice(0, 4_000),
         }),
       );
-      const expectedKingFate = expectedDefeatedKingFate(
-        ledger.metadata.termination,
-      );
-      if (storyPackage.defeatedKingFate !== expectedKingFate) {
+      if (
+        JSON.stringify(storyPackage.battlefieldEnvironment) !==
+          JSON.stringify(narrativeAnalysis.battlefieldEnvironment) ||
+        JSON.stringify(storyPackage.battlefieldEnvironment) !==
+          JSON.stringify(outline.battlefieldEnvironment)
+      ) {
+        throw new Error(
+          'Story package battlefield environment must match analysis and outline',
+        );
+      }
+      if (
+        !isAllowedDefeatedKingFate(
+          ledger.metadata.termination,
+          storyPackage.defeatedKingFate,
+        ) ||
+        storyPackage.defeatedKingFate !==
+          narrativeAnalysis.endingPlan.defeatedKingFate
+      ) {
         throw new Error(
           `Story package has incorrect defeated King fate for ${ledger.metadata.termination}`,
         );
       }
-      const expectedSealFate = expectedDefeatedSealFate(
-        ledger.metadata.termination,
+      if (
+        kingDiesFromFate(storyPackage.defeatedKingFate) !==
+        (storyPackage.defeatedKingDeathDescription !== null)
+      ) {
+        throw new Error(
+          'Story package has incorrect defeated King death description',
+        );
+      }
+      const expectedSealFate = sealFateForKingFate(
+        storyPackage.defeatedKingFate,
       );
       if (storyPackage.defeatedSealFate !== expectedSealFate) {
         throw new Error(
@@ -194,6 +222,21 @@ export class FullStoryService {
         })),
         ledger,
       );
+      const captureAttributionFindings =
+        this.deterministic.validateCaptureAttribution(
+          scenes.map((scene) => ({
+            ply: scene.startPly,
+            fantasyNarration: scene.fantasyNarration,
+          })),
+          ledger,
+        );
+      if (captureAttributionFindings.length > 0) {
+        throw new Error(
+          `Generated story package contains capture attribution errors: ${captureAttributionFindings
+            .map((finding) => finding.message)
+            .join('; ')}`,
+        );
+      }
       if (timedFateFindings.length > 0) {
         throw new Error(
           `Generated story package contains premature character deaths: ${timedFateFindings
@@ -201,13 +244,50 @@ export class FullStoryService {
             .join('; ')}`,
         );
       }
+      const timedWoundFindings = this.deterministic.validateTimedWounds(
+        scenes.map((scene, index) => ({
+          ply: scene.startPly,
+          fantasyNarration: scene.fantasyNarration,
+          characters: scene.characters,
+          woundsInflicted: storyPackage.scenes[index]?.woundsInflicted ?? [],
+        })),
+        storyPackage.wounds,
+        ledger,
+      );
+      if (timedWoundFindings.length > 0) {
+        throw new Error(
+          `Generated story package contains wound timeline errors: ${timedWoundFindings
+            .map((finding) => finding.message)
+            .join('; ')}`,
+        );
+      }
       const epilogue = this.cleanReaderFacingProse(storyPackage.epilogue, [
         ...pieceIds,
       ]);
+      const laterEpilogueHeading = this.cleanReaderFacingProse(
+        storyPackage.laterEpilogueHeading,
+        [...pieceIds],
+      );
+      const laterEpilogue = this.cleanReaderFacingProse(
+        storyPackage.laterEpilogue,
+        [...pieceIds],
+      );
+      const defeatedKingDeathDescription =
+        storyPackage.defeatedKingDeathDescription === null
+          ? null
+          : this.cleanReaderFacingProse(
+              storyPackage.defeatedKingDeathDescription,
+              [...pieceIds],
+            );
       const breakdown: SceneBreakdown = {
         scenes,
         wounds: storyPackage.wounds,
         epilogue,
+        laterEpilogueHeading,
+        laterEpilogue,
+        defeatedKingDeathDescription,
+        defeatedKingFate: storyPackage.defeatedKingFate,
+        defeatedSealFate: storyPackage.defeatedSealFate,
       };
       this.sceneValidator.validate(breakdown, ledger);
       const story: GeneratedStoryDraft = {
@@ -218,6 +298,8 @@ export class FullStoryService {
             this.cleanReaderFacingProse(act.title, [...pieceIds]),
           ),
           epilogue,
+          laterEpilogueHeading,
+          laterEpilogue,
         ),
       };
       this.validator.validate(story, ledger, outline);
@@ -337,6 +419,8 @@ export function assembleStoryMarkdown(
   scenes: SceneBreakdown['scenes'],
   actTitles: string[],
   epilogue?: string,
+  laterEpilogueHeading?: string,
+  laterEpilogue?: string,
 ): string {
   const sections: string[] = [];
   let currentAct = 0;
@@ -352,23 +436,22 @@ export function assembleStoryMarkdown(
     sections.push(scene.fantasyNarration);
   });
   if (epilogue) {
-    sections.push('## Epilogue', epilogue);
+    sections.push('## Immediate Aftermath', epilogue);
+  }
+  if (laterEpilogue) {
+    sections.push(
+      `## ${laterEpilogueHeading || 'The Later Chronicle'}`,
+      laterEpilogue,
+    );
   }
   return sections.join('\n\n');
 }
 
-export function expectedDefeatedKingFate(
+export function isAllowedDefeatedKingFate(
   termination: GameLedger['metadata']['termination'],
-): GeneratedStoryPackage['defeatedKingFate'] {
-  if (termination === 'checkmate') return 'killed-after-checkmate';
-  if (termination === 'resignation') return 'suicide-after-surrender';
-  return 'survives';
-}
-
-export function expectedDefeatedSealFate(
-  termination: GameLedger['metadata']['termination'],
-): GeneratedStoryPackage['defeatedSealFate'] {
-  return termination === 'checkmate' || termination === 'resignation'
-    ? 'destroyed'
-    : 'intact';
+  fate: GeneratedStoryPackage['defeatedKingFate'],
+): boolean {
+  if (termination === 'checkmate') return fate === 'killed-after-checkmate';
+  if (termination === 'resignation') return isSurrenderKingFate(fate);
+  return fate === 'survives';
 }

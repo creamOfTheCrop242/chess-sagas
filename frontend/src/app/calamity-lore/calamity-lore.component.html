@@ -1,0 +1,44 @@
+<main class="history-page">
+  <header class="history-hero">
+    <nav class="history-nav" aria-label="Lore navigation">
+      <a routerLink="/">← Chronicle</a>
+      <a routerLink="/lore">Piece Codex →</a>
+    </nav>
+    <p class="eyebrow">The First Chronicle</p>
+    <h1>The Calamity</h1>
+    <p class="introduction">
+      The world did not begin with two kingdoms at war. It was broken into that
+      shape—and held together by two Kings who made themselves the price of its
+      survival.
+    </p>
+  </header>
+
+  <section class="history-line" aria-label="History of the Calamity">
+    @for (chapter of chapters; track chapter.marker) {
+      <article class="history-chapter">
+        <div class="chapter-marker" aria-hidden="true">
+          {{ chapter.marker }}
+        </div>
+        <div class="chapter-copy">
+          <h2>{{ chapter.title }}</h2>
+          @for (paragraph of chapter.paragraphs; track paragraph) {
+            <p>{{ paragraph }}</p>
+          }
+        </div>
+      </article>
+    }
+  </section>
+
+  <aside class="present-day">
+    <p class="eyebrow">The chronicle continues</p>
+    <h2>Every game decides another fate</h2>
+    <p>
+      Read about the beings who fight these wars, or bring forth a battle record
+      and witness its saga.
+    </p>
+    <div class="ending-links">
+      <a class="secondary-link" routerLink="/lore">Explore the piece codex</a>
+      <a class="primary-link" routerLink="/">Begin a saga</a>
+    </div>
+  </aside>
+</main>

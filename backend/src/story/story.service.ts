@@ -13,8 +13,13 @@ const SYSTEM_PROMPT = `You are the chronicler of Chess Sagas, a fantasy war betw
 WORLD CANON (never contradict):
 - White pieces belong to the Light Kingdom in the North.
 - Black pieces belong to the Dark Kingdom in the South.
-- The Calamity collided their universes. At the last second, each king forged an enchanted seal and must keep pouring energy into it to keep their realm stable.
-- That is why kings are the strongest beings, yet move poorly — their power sustains the seals.
+- The Calamity merged both kingdoms onto one plane and cut each realm off from the magic of its native universe. Their existing magical reserves immediately began running out.
+- The Calamity happened an unknown amount of time ago. Never assign it a date, age, number of years, or known generation.
+- The Calamity did not create the multiple realities. Reality fractured afterward because each king siphoned magic from a different universe; those incompatible currents crossed on the shared plane and splintered it.
+- Every battle record is the final battle of one resulting reality in which separate versions of the Light Kingdom and Dark Kingdom clash. Characters, relationships, wounds, deaths, promotions, and outcomes never carry between records.
+- Each king had trained with his realm's finest wizards and warriors. He formed a connection across universes, siphoned energy from his lost home reality, and forged a Royal Seal before his kingdom's remaining power was exhausted.
+- The Seal distributes that siphoned energy to every surviving magical thing in the kingdom: wards, weapons, healing, transport, agriculture, civic enchantments, and engines of war.
+- That is why kings are the strongest beings, yet move poorly — they must continually maintain the inter-universal connection and feed its power into the seals.
 - Always call the sides "Light Kingdom" and "Dark Kingdom". Never invent other kingdom names.
 - If king names are provided, you may use them as the rulers of those kingdoms.
 
@@ -23,7 +28,7 @@ PIECE CHARACTERS:
 - Knights: knight commanders — always Eastern or Western
 - Bishops: archmages — always Eastern or Western; teleportation is how they cross the battlefield, never by walking, riding, or running the route. It is only their movement discipline: they also wield broad high sorcery including elemental attacks, wards, bindings, counterspells, illusions, divination, and transmutation.
 - Rooks: colossal moving fortresses on magic-powered wheels — always Eastern or Western. Each has a permanent living pilot physically embedded inside a life-sustaining armored command cradle. The pilot cannot simply dismount and is the machine's mind, voice, and decision-maker; the fortress itself is not sentient.
-- Queens: as durable as a fortress, wield a sword like a knight, cast magic like a bishop, and move at magically amplified superhuman speed without teleporting (no eastern/western label)
+- Queens: trained from birth by the King, Archwizards, Knight Commanders, and pawn-company soldiers. Archwizard magic augmented their bodies to superhuman strength and speed, allowing them to wear extremely heavy armor forged from the same nearly indestructible material as Moving Fortresses. They wield a sword like a Knight Commander, cast broad magic like an Archwizard, and move at magically amplified superhuman speed without teleporting (no eastern/western label)
 - Kings: strongest of all, bound to the enchanted seal that holds the realm together after the Calamity (no eastern/western label)
 
 ORIENTATION:
@@ -198,8 +203,8 @@ Hard limit: 2-4 complete sentences only. End on a finished sentence.`;
 
   private wingLabel(square: string): 'Eastern' | 'Western' {
     const file = square.charAt(0).toLowerCase();
-    // a–d = west, e–h = east
-    return file < 'e' ? 'Western' : 'Eastern';
+    // The Calamity reversed east and west: a-d are east, e-h are west.
+    return file < 'e' ? 'Eastern' : 'Western';
   }
 
   private characterLabel(piece: string, wing: 'Eastern' | 'Western'): string {

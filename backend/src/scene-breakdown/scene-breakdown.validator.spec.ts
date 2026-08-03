@@ -34,7 +34,12 @@ describe('SceneBreakdownValidator', () => {
       continuityNotes: ['No one dies.'],
     };
     const breakdown = {
-      epilogue: null,
+      epilogue: 'The companies made camp beneath a silent sky.',
+      laterEpilogueHeading: 'One Winter Later',
+      laterEpilogue: 'Grass covered the road where their banners had passed.',
+      defeatedKingDeathDescription: null,
+      defeatedKingFate: 'survives',
+      defeatedSealFate: 'intact',
       scenes: [
         {
           ...base,
@@ -72,7 +77,12 @@ describe('SceneBreakdownValidator', () => {
       ],
     } as GameLedger;
     const breakdown = {
-      epilogue: null,
+      epilogue: 'The companies made camp beneath a silent sky.',
+      laterEpilogueHeading: 'One Winter Later',
+      laterEpilogue: 'Grass covered the road where their banners had passed.',
+      defeatedKingDeathDescription: null,
+      defeatedKingFate: 'survives',
+      defeatedSealFate: 'intact',
       scenes: [
         {
           id: 'grouped',

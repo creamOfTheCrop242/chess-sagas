@@ -10,6 +10,7 @@ export interface FullStoryRequest {
   narrativeAnalysis: NarrativeAnalysis;
   outline: StoryOutline;
   characterRegistry: PieceIdentity[];
+  validationFeedback?: string;
 }
 
 export interface FullStoryProvider {

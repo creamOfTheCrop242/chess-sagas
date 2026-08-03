@@ -13,6 +13,8 @@ import {
   throwError,
 } from 'rxjs';
 import {
+  ArchivedRecord,
+  ArchiveRecordSummary,
   NarrateRequest,
   NarrateResponse,
   ParsedPgn,
@@ -68,6 +70,18 @@ export class PgnApiService {
     );
   }
 
+  getRecords(): Observable<ArchiveRecordSummary[]> {
+    return this.http.get<ArchiveRecordSummary[]>(
+      'http://localhost:3000/games/records',
+    );
+  }
+
+  getRecord(gameId: string): Observable<ArchivedRecord> {
+    return this.http.get<ArchivedRecord>(
+      `http://localhost:3000/games/records/${gameId}`,
+    );
+  }
+
   private ensureStage<T = unknown>(
     url: string,
     stage: SagaStage,
@@ -79,10 +93,13 @@ export class PgnApiService {
       catchError((error: unknown) => {
         if (error instanceof HttpErrorResponse && error.status === 404) {
           onProgress(stage, 'generating');
-          return this.http.post<T>(url, {}).pipe(
-            this.retryFailedStage<T>(),
-            tap(() => onProgress(stage, 'completed')),
-          );
+          const generation =
+            stage === 'story'
+              ? this.generateStoryWithTargetedRetry<T>(url, () =>
+                  onProgress(stage, 'retrying'),
+                )
+              : this.http.post<T>(url, {}).pipe(this.retryFailedStage<T>());
+          return generation.pipe(tap(() => onProgress(stage, 'completed')));
         }
         return throwError(() => error);
       }),
@@ -137,5 +154,32 @@ export class PgnApiService {
         return throwError(() => error);
       },
     });
+  }
+
+  private generateStoryWithTargetedRetry<T>(
+    url: string,
+    onRetry: () => void,
+  ): Observable<T> {
+    return this.http.post<T>(url, {}).pipe(
+      catchError((error: unknown) => {
+        if (
+          error instanceof HttpErrorResponse &&
+          (error.status === 0 || error.status >= 500)
+        ) {
+          onRetry();
+          return this.http.post<T>(url, {
+            validationFeedback: this.generationErrorMessage(error),
+          });
+        }
+        return throwError(() => error);
+      }),
+    );
+  }
+
+  private generationErrorMessage(error: HttpErrorResponse): string {
+    const message = error.error?.message;
+    if (Array.isArray(message)) return message.join('; ').slice(0, 4_000);
+    if (typeof message === 'string') return message.slice(0, 4_000);
+    return (error.message || 'Story package failed validation').slice(0, 4_000);
   }
 }

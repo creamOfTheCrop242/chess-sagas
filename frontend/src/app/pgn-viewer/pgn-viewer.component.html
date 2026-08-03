@@ -3,9 +3,18 @@
     <p class="brand">Chess Sagas</p>
     <h1>Chronicles of the Calamity</h1>
     <p class="lede">
-      Paste a battle record. Step through each clash as the Light Kingdom of the
-      north and the Dark Kingdom of the south pour power into their seals.
+      Each battle record opens the final battle of a different reality where the
+      Light Kingdom of the north and the Dark Kingdom of the south have clashed.
+      Inscribe one and witness its fate.
     </p>
+    <nav class="lore-links" aria-label="Lore">
+      <a class="lore-link" routerLink="/guide">How sagas work</a>
+      <a class="lore-link" routerLink="/records">Hall of Records</a>
+      <a class="lore-link" routerLink="/lore">The piece codex</a>
+      <a class="lore-link" routerLink="/lore/calamity"
+        >History of the Calamity</a
+      >
+    </nav>
     <div class="realm-band" aria-hidden="true">
       <span class="realm north">Light · North</span>
       <span class="seal"></span>
@@ -13,32 +22,43 @@
     </div>
   </header>
 
-  <section class="input-panel">
-    <label for="pgn">Battle record (PGN)</label>
-    <textarea
-      id="pgn"
-      rows="10"
-      [(ngModel)]="pgnText"
-      placeholder="Inscribe the moves of the war here…"
-      [disabled]="loading"
-    ></textarea>
-    <div class="actions">
-      <button
-        type="button"
-        class="primary"
-        (click)="submit()"
-        [disabled]="loading || !pgnText.trim()"
-      >
-        {{ loading ? "Unsealing the record…" : "Begin the saga" }}
-      </button>
-    </div>
-    @if (error) {
-      <p class="error" role="alert">{{ error }}</p>
-    }
-  </section>
+  @if (recordReplay && error) {
+    <p class="error" role="alert">{{ error }}</p>
+  }
+
+  @if (!recordReplay) {
+    <section class="input-panel">
+      <label for="pgn">Battle record (PGN)</label>
+      <textarea
+        id="pgn"
+        rows="10"
+        [(ngModel)]="pgnText"
+        placeholder="Inscribe the moves of the war here…"
+        [disabled]="loading"
+      ></textarea>
+      <div class="actions">
+        <button
+          type="button"
+          class="primary"
+          (click)="submit()"
+          [disabled]="loading || !pgnText.trim()"
+        >
+          {{ loading ? "Unsealing the record…" : "Begin the saga" }}
+        </button>
+      </div>
+      @if (error) {
+        <p class="error" role="alert">{{ error }}</p>
+      }
+    </section>
+  }
 
   @if (game) {
     <section class="viewer">
+      @if (recordReplay) {
+        <a class="record-return" routerLink="/records"
+          >← Return to the Hall of Records</a
+        >
+      }
       <h2>{{ gameTitle }}</h2>
       @if (game.headers["Event"] && game.headers["Event"] !== "?") {
         <p class="event">{{ game.headers["Event"] }}</p>
@@ -127,6 +147,38 @@
                       <small>{{ inspectedPieceStatus.detail }}</small>
                     }
                   </div>
+                  @if (inspectedPieceWoundHistory.length) {
+                    <section class="wound-history" aria-label="Injury history">
+                      <h4>Injury history</h4>
+                      <ol>
+                        @for (
+                          wound of inspectedPieceWoundHistory;
+                          track wound.inflictedAtPly
+                        ) {
+                          <li
+                            [class.wound-recovered]="
+                              wound.state === 'recovered'
+                            "
+                          >
+                            <div>
+                              <strong>{{ wound.injury }}</strong>
+                              <span>
+                                {{
+                                  wound.state === "recovered"
+                                    ? "Healed at beat " + wound.recoveryPly
+                                    : "Sustained at beat " +
+                                      wound.inflictedAtPly
+                                }}
+                              </span>
+                            </div>
+                            @if (wound.effects.length) {
+                              <small>{{ wound.effects.join(" · ") }}</small>
+                            }
+                          </li>
+                        }
+                      </ol>
+                    </section>
+                  }
                   @if (!selectedPieceId) {
                     <p class="piece-card-hint">Click or press Enter to pin</p>
                   }
@@ -139,7 +191,7 @@
             <p class="move-label">{{ currentMoveLabel }}</p>
             <p class="ply-meta">
               @if (isEpiloguePage) {
-                Final chronicle
+                {{ isAftermathPage ? "Aftermath" : "Later chronicle" }}
               } @else {
                 Beat {{ currentPly }} of {{ game.positions.length }}
               }
@@ -166,84 +218,104 @@
             </div>
           </div>
 
-          <div class="generation-panel">
-            <div class="actions">
-              <button
-                type="button"
-                class="primary"
-                (click)="generateSaga()"
-                [disabled]="sagaGenerating || !gameId"
-              >
-                {{
-                  sagaGenerating
-                    ? "Forging the complete saga…"
-                    : scenes.length
-                      ? "Refresh story beats"
-                      : "Forge cohesive saga"
-                }}
-              </button>
-              <button
-                type="button"
-                (click)="toggleFallenRoster()"
-                [attr.aria-expanded]="fallenRosterOpen"
-                aria-controls="fallen-roster"
-              >
-                Hall of the Fallen
-              </button>
-            </div>
-            @if (sagaGenerating) {
-              <p class="story-status">
-                The chronicler is analyzing, outlining, writing, validating, and
-                aligning the saga…
-              </p>
-            }
-
-            @if (pipelineVisible) {
-              <section class="pipeline-progress" aria-live="polite">
-                <div class="pipeline-heading">
-                  <h3>Saga pipeline</h3>
-                  <div class="pipeline-summary">
-                    <span
-                      >{{ completedPipelineSteps }} of
-                      {{ pipelineSteps.length }}</span
-                    >
-                    <time
-                      class="generation-timer"
-                      [attr.datetime]="'PT' + generationElapsedSeconds + 'S'"
-                    >
-                      {{ sagaGenerating ? "Elapsed" : "Finished in" }}
-                      {{ formattedGenerationTime }}
-                    </time>
-                  </div>
-                </div>
-                <ol>
-                  @for (step of pipelineSteps; track step.id) {
-                    <li [class]="'pipeline-' + pipelineState[step.id]">
-                      <span class="pipeline-icon" aria-hidden="true">
-                        {{ pipelineIcon(pipelineState[step.id]) }}
-                      </span>
-                      <span class="pipeline-label">{{ step.label }}</span>
-                      <span class="pipeline-state">
-                        {{ pipelineStatus(pipelineState[step.id]) }}
-                      </span>
-                    </li>
+          @if (!recordReplay) {
+            <div class="generation-panel">
+              <div class="actions">
+                <button
+                  type="button"
+                  class="primary"
+                  (click)="generateSaga()"
+                  [disabled]="sagaGenerating || !gameId"
+                >
+                  {{
+                    sagaGenerating
+                      ? "Forging the complete saga…"
+                      : storyError
+                        ? "Retry saga generation"
+                        : scenes.length
+                          ? "Refresh story beats"
+                          : "Forge cohesive saga"
+                  }}
+                </button>
+                <button
+                  type="button"
+                  (click)="toggleFallenRoster()"
+                  [attr.aria-expanded]="fallenRosterOpen"
+                  aria-controls="fallen-roster"
+                >
+                  Hall of the Fallen
+                </button>
+              </div>
+              @if (sagaGenerating) {
+                <p class="story-status">
+                  @if (storyRetrying) {
+                    The first story draft failed continuity validation. The
+                    chronicler is correcting the cited errors and retrying once
+                    automatically…
+                  } @else {
+                    The chronicler is analyzing, outlining, writing, validating,
+                    and aligning the saga…
                   }
-                </ol>
-              </section>
-            }
-          </div>
+                </p>
+              }
+
+              @if (pipelineVisible) {
+                <section class="pipeline-progress" aria-live="polite">
+                  <div class="pipeline-heading">
+                    <h3>Saga pipeline</h3>
+                    <div class="pipeline-summary">
+                      <span
+                        >{{ completedPipelineSteps }} of
+                        {{ pipelineSteps.length }}</span
+                      >
+                      <time
+                        class="generation-timer"
+                        [attr.datetime]="'PT' + generationElapsedSeconds + 'S'"
+                      >
+                        {{ sagaGenerating ? "Elapsed" : "Finished in" }}
+                        {{ formattedGenerationTime }}
+                      </time>
+                    </div>
+                  </div>
+                  <ol>
+                    @for (step of pipelineSteps; track step.id) {
+                      <li [class]="'pipeline-' + pipelineState[step.id]">
+                        <span class="pipeline-icon" aria-hidden="true">
+                          {{ pipelineIcon(pipelineState[step.id]) }}
+                        </span>
+                        <span class="pipeline-label">{{ step.label }}</span>
+                        <span class="pipeline-state">
+                          {{ pipelineStatus(pipelineState[step.id]) }}
+                        </span>
+                      </li>
+                    }
+                  </ol>
+                </section>
+              }
+            </div>
+          }
         </div>
 
         <aside class="story-panel" aria-live="polite">
           <h3>The chronicler’s ink</h3>
           @if (storyError) {
             <p class="error" role="alert">{{ storyError }}</p>
-          } @else if (isEpiloguePage) {
+          } @else if (isAftermathPage) {
             <p class="ply-meta">Aftermath</p>
             <div class="epilogue-page">
-              <h4>Epilogue</h4>
+              <h4>Immediate Aftermath</h4>
               <div class="epilogue-prose">
                 @for (paragraph of epilogueParagraphs; track $index) {
+                  <p class="story-text">{{ paragraph }}</p>
+                }
+              </div>
+            </div>
+          } @else if (isLaterChroniclePage) {
+            <p class="ply-meta">Later Chronicles</p>
+            <div class="epilogue-page later-chronicle-page">
+              <h4>{{ laterEpilogueHeading || "The Later Chronicle" }}</h4>
+              <div class="epilogue-prose">
+                @for (paragraph of laterEpilogueParagraphs; track $index) {
                   <p class="story-text">{{ paragraph }}</p>
                 }
               </div>

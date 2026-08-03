@@ -16,6 +16,16 @@ export class GamesController {
     return this.games.findAll();
   }
 
+  @Get('records')
+  findRecords() {
+    return this.games.findRecords();
+  }
+
+  @Get('records/:id')
+  findRecord(@Param('id') id: string) {
+    return this.games.findRecord(id);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.games.findOne(id);

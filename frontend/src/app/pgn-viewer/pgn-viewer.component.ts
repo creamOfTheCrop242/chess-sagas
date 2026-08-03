@@ -1,7 +1,14 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, HostListener, OnDestroy } from '@angular/core';
+import {
+  Component,
+  HostListener,
+  OnDestroy,
+  OnInit,
+  Optional,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { forkJoin } from 'rxjs';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { forkJoin, of, switchMap } from 'rxjs';
 import { ChessboardComponent } from './chessboard.component';
 import { PgnApiService } from './pgn-api.service';
 import {
@@ -27,14 +34,22 @@ type PieceStatus = {
   tone: 'healthy' | 'wounded' | 'maimed' | 'dead' | 'entombed';
 };
 
+type WoundHistoryEntry = {
+  inflictedAtPly: number;
+  injury: string;
+  effects: string[];
+  state: 'active' | 'recovered';
+  recoveryPly: number | null;
+};
+
 @Component({
   selector: 'app-pgn-viewer',
   standalone: true,
-  imports: [FormsModule, ChessboardComponent],
+  imports: [FormsModule, RouterLink, ChessboardComponent],
   templateUrl: './pgn-viewer.component.html',
   styleUrl: './pgn-viewer.component.css',
 })
-export class PgnViewerComponent implements OnDestroy {
+export class PgnViewerComponent implements OnInit, OnDestroy {
   pgnText = '';
   loading = false;
   error: string | null = null;
@@ -48,8 +63,14 @@ export class PgnViewerComponent implements OnDestroy {
   scenes: PlaybackScene[] = [];
   wounds: StoryWound[] = [];
   epilogue = '';
+  laterEpilogueHeading = '';
+  laterEpilogue = '';
+  defeatedKingDeathDescription = '';
+  defeatedKingFate = '';
+  defeatedSealFate: 'destroyed' | 'intact' | '' = '';
   sagaGenerating = false;
   storyError: string | null = null;
+  recordReplay = false;
   generationElapsedSeconds = 0;
   private generationStartedAt: number | null = null;
   private generationTimer: ReturnType<typeof setInterval> | null = null;
@@ -63,7 +84,15 @@ export class PgnViewerComponent implements OnDestroy {
   pipelineState: Record<SagaStage, SagaStageState> =
     this.initialPipelineState();
 
-  constructor(private readonly pgnApi: PgnApiService) {}
+  constructor(
+    private readonly pgnApi: PgnApiService,
+    @Optional() private readonly route?: ActivatedRoute,
+  ) {}
+
+  ngOnInit(): void {
+    const recordId = this.route?.snapshot.paramMap.get('id');
+    if (recordId) this.loadArchivedRecord(recordId);
+  }
 
   get currentFen(): string {
     if (!this.game)
@@ -86,7 +115,8 @@ export class PgnViewerComponent implements OnDestroy {
     return this.currentMove?.to ?? null;
   }
   get currentMoveLabel(): string {
-    if (this.isEpiloguePage) return 'Epilogue';
+    if (this.isAftermathPage) return 'Immediate Aftermath';
+    if (this.isLaterChroniclePage) return 'Later Chronicles';
     const move = this.currentMove;
     if (!move) return 'Start position';
     const number = Math.ceil(move.ply / 2);
@@ -106,11 +136,19 @@ export class PgnViewerComponent implements OnDestroy {
     return !!this.game && this.currentPly < this.finalPlaybackPly;
   }
   get isEpiloguePage(): boolean {
+    return this.isAftermathPage || this.isLaterChroniclePage;
+  }
+  get isAftermathPage(): boolean {
     return (
       !!this.game &&
       Boolean(this.epilogue) &&
       this.currentPly === this.game.positions.length + 1
     );
+  }
+  get isLaterChroniclePage(): boolean {
+    if (!this.game || !this.laterEpilogue) return false;
+    const offset = this.epilogue ? 2 : 1;
+    return this.currentPly === this.game.positions.length + offset;
   }
   get currentScene(): PlaybackScene | null {
     if (
@@ -128,12 +166,19 @@ export class PgnViewerComponent implements OnDestroy {
   }
   get currentStory(): string {
     if (this.currentPly === 0) return this.introStory();
-    if (this.isEpiloguePage) return this.epilogue;
+    if (this.isAftermathPage) return this.epilogue;
+    if (this.isLaterChroniclePage) return this.laterEpilogue;
     return this.currentScene?.fantasyNarration ?? '';
   }
   get epilogueParagraphs(): string[] {
-    if (!this.epilogue.trim()) return [];
-    return this.epilogue
+    return this.storyParagraphs(this.epilogue);
+  }
+  get laterEpilogueParagraphs(): string[] {
+    return this.storyParagraphs(this.laterEpilogue);
+  }
+  private storyParagraphs(story: string): string[] {
+    if (!story.trim()) return [];
+    return story
       .split(/\n\s*\n/)
       .flatMap((paragraph) => {
         const sentences =
@@ -172,6 +217,28 @@ export class PgnViewerComponent implements OnDestroy {
     if (!piece || !this.game) {
       return { label: 'Unharmed', detail: null, tone: 'healthy' };
     }
+    const checkmateDeathPly = this.checkmateDeathPlyFor(piece);
+    if (checkmateDeathPly !== null && this.currentPly >= checkmateDeathPly) {
+      return {
+        label: 'Dead',
+        detail:
+          this.defeatedKingDeathDescription ||
+          `Fell with the Royal Seal at beat ${checkmateDeathPly}.`,
+        tone: 'dead',
+      };
+    }
+    if (
+      this.isEpiloguePage &&
+      piece.chessType === 'k' &&
+      this.isDefeatedPiece(piece) &&
+      this.defeatedKingDeathDescription
+    ) {
+      return {
+        label: 'Dead',
+        detail: this.defeatedKingDeathDescription,
+        tone: 'dead',
+      };
+    }
     const capturedAtPly =
       piece.capturedAtPly ??
       this.game.ledger.events.find(
@@ -192,43 +259,76 @@ export class PgnViewerComponent implements OnDestroy {
         tone: 'entombed',
       };
     }
-    const wound = [...this.wounds]
-      .filter(
-        (candidate) =>
-          candidate.pieceId === piece.id &&
-          candidate.inflictedAtPly <= this.currentPly,
-      )
-      .sort((left, right) => right.inflictedAtPly - left.inflictedAtPly)[0];
-    if (!wound) {
+    const visibleWounds = this.visibleWoundsFor(piece);
+    if (!visibleWounds.length) {
       return { label: 'Unharmed', detail: null, tone: 'healthy' };
     }
-    if (wound.recoveryPly !== null && this.currentPly >= wound.recoveryPly) {
+    const activeWounds = visibleWounds.filter(
+      (wound) =>
+        wound.recoveryPly === null || this.currentPly < wound.recoveryPly,
+    );
+    const recoveredCount = visibleWounds.length - activeWounds.length;
+    if (!activeWounds.length) {
       return {
         label: 'Scarred',
-        detail: `Recovered from: ${this.safeWoundInjury(wound, piece)}`,
+        detail: `${recoveredCount} healed ${
+          recoveredCount === 1 ? 'wound' : 'wounds'
+        }; scars remain.`,
         tone: 'wounded',
       };
     }
-    const injury = this.safeWoundInjury(wound, piece);
-    const effects = wound.lastingEffects
+    const latestWound = activeWounds[activeWounds.length - 1];
+    const injury = this.safeWoundInjury(latestWound, piece);
+    const effects = latestWound.lastingEffects
       .filter((effect) => this.isSafeWoundStatusText(effect, piece))
       .join(' · ');
-    if (this.isMaimingInjury(wound.injury)) {
+    const summary =
+      activeWounds.length === 1 && recoveredCount === 0
+        ? effects
+          ? `${injury} · ${effects}`
+          : injury
+        : `${activeWounds.length} active ${
+            activeWounds.length === 1 ? 'injury' : 'injuries'
+          }${
+            recoveredCount
+              ? ` · ${recoveredCount} healed ${
+                  recoveredCount === 1 ? 'scar' : 'scars'
+                }`
+              : ''
+          }`;
+    if (activeWounds.some((wound) => this.isMaimingInjury(wound.injury))) {
       return {
         label: 'Maimed',
-        detail: effects ? `${injury} · ${effects}` : injury,
+        detail: summary,
         tone: 'maimed',
       };
     }
-    const gravelyWounded =
-      /\b(grave|critical|crippl|organ|spine|skull)\b/i.test(
-        `${wound.injury} ${effects}`,
-      );
+    const gravelyWounded = activeWounds.some((wound) =>
+      this.isGraveInjury(`${wound.injury} ${wound.lastingEffects.join(' ')}`),
+    );
     return {
       label: gravelyWounded ? 'Gravely Wounded' : 'Wounded',
-      detail: effects ? `${injury} · ${effects}` : injury,
+      detail: summary,
       tone: 'wounded',
     };
+  }
+  get inspectedPieceWoundHistory(): WoundHistoryEntry[] {
+    const piece = this.inspectedPiece;
+    if (!piece) return [];
+    return this.visibleWoundsFor(piece)
+      .map((wound) => ({
+        inflictedAtPly: wound.inflictedAtPly,
+        injury: this.safeWoundInjury(wound, piece),
+        effects: wound.lastingEffects.filter((effect) =>
+          this.isSafeWoundStatusText(effect, piece),
+        ),
+        state:
+          wound.recoveryPly !== null && this.currentPly >= wound.recoveryPly
+            ? ('recovered' as const)
+            : ('active' as const),
+        recoveryPly: wound.recoveryPly,
+      }))
+      .reverse();
   }
   get lightKingdomFallen(): FallenPiece[] {
     return this.fallenPiecesFor('north');
@@ -246,6 +346,9 @@ export class PgnViewerComponent implements OnDestroy {
       ['completed', 'reused'].includes(this.pipelineState[step.id]),
     ).length;
   }
+  get storyRetrying(): boolean {
+    return this.pipelineState.story === 'retrying';
+  }
   get formattedGenerationTime(): string {
     const hours = Math.floor(this.generationElapsedSeconds / 3600);
     const minutes = Math.floor((this.generationElapsedSeconds % 3600) / 60);
@@ -259,11 +362,14 @@ export class PgnViewerComponent implements OnDestroy {
     if (state === 'completed') return '✓';
     if (state === 'reused') return '↻';
     if (state === 'failed') return '!';
-    if (state === 'checking' || state === 'generating') return '●';
+    if (state === 'checking' || state === 'generating' || state === 'retrying')
+      return '●';
     return '○';
   }
   pipelineStatus(state: SagaStageState): string {
-    return state === 'reused' ? 'reused' : state;
+    if (state === 'reused') return 'reused';
+    if (state === 'retrying') return 'correcting and retrying';
+    return state;
   }
 
   submit(): void {
@@ -275,7 +381,7 @@ export class PgnViewerComponent implements OnDestroy {
       saved: this.pgnApi.createGame(this.pgnText),
     }).subscribe({
       next: ({ parsed, saved }) => {
-        this.game = parsed;
+        this.game = { ...parsed, ledger: saved.ledger.data };
         this.gameId = saved.id;
         this.currentPly = 0;
         this.hoveredPieceId = null;
@@ -284,6 +390,11 @@ export class PgnViewerComponent implements OnDestroy {
         this.scenes = [];
         this.wounds = [];
         this.epilogue = '';
+        this.laterEpilogueHeading = '';
+        this.laterEpilogue = '';
+        this.defeatedKingDeathDescription = '';
+        this.defeatedKingFate = '';
+        this.defeatedSealFate = '';
         this.pipelineState = this.initialPipelineState();
         this.resetGenerationTimer();
         this.loading = false;
@@ -293,6 +404,45 @@ export class PgnViewerComponent implements OnDestroy {
         this.error = this.extractError(error, 'Failed to prepare game');
       },
     });
+  }
+
+  private loadArchivedRecord(recordId: string): void {
+    this.recordReplay = true;
+    this.loading = true;
+    this.error = null;
+    this.pgnApi
+      .getRecord(recordId)
+      .pipe(
+        switchMap((record) =>
+          forkJoin({
+            record: of(record),
+            parsed: this.pgnApi.parse(record.rawPgn),
+          }),
+        ),
+      )
+      .subscribe({
+        next: ({ record, parsed }) => {
+          const playback = record.sceneBreakdown.data;
+          this.pgnText = record.rawPgn;
+          this.game = { ...parsed, ledger: record.ledger.data };
+          this.gameId = record.id;
+          this.currentPly = 0;
+          this.scenes = playback.scenes;
+          this.wounds = playback.wounds ?? [];
+          this.epilogue = playback.epilogue ?? '';
+          this.laterEpilogueHeading = playback.laterEpilogueHeading ?? '';
+          this.laterEpilogue = playback.laterEpilogue ?? '';
+          this.defeatedKingDeathDescription =
+            playback.defeatedKingDeathDescription ?? '';
+          this.defeatedKingFate = playback.defeatedKingFate ?? '';
+          this.defeatedSealFate = playback.defeatedSealFate ?? '';
+          this.loading = false;
+        },
+        error: (error: unknown) => {
+          this.loading = false;
+          this.error = this.extractError(error, 'Failed to open this record');
+        },
+      });
   }
 
   generateSaga(): void {
@@ -310,13 +460,25 @@ export class PgnViewerComponent implements OnDestroy {
           this.scenes = response.sceneBreakdown.data.scenes;
           this.wounds = response.sceneBreakdown.data.wounds ?? [];
           this.epilogue = response.sceneBreakdown.data.epilogue ?? '';
+          this.laterEpilogueHeading =
+            response.sceneBreakdown.data.laterEpilogueHeading ?? '';
+          this.laterEpilogue = response.sceneBreakdown.data.laterEpilogue ?? '';
+          this.defeatedKingDeathDescription =
+            response.sceneBreakdown.data.defeatedKingDeathDescription ?? '';
+          this.defeatedKingFate =
+            response.sceneBreakdown.data.defeatedKingFate ?? '';
+          this.defeatedSealFate =
+            response.sceneBreakdown.data.defeatedSealFate ?? '';
           this.sagaGenerating = false;
           this.stopGenerationTimer();
         },
         error: (error: unknown) => {
           this.sagaGenerating = false;
           this.stopGenerationTimer();
-          this.storyError = this.extractError(error, 'Failed to generate saga');
+          this.storyError = `Saga generation could not finish. Select “Retry saga generation” to try again. ${this.extractError(
+            error,
+            'The story could not pass validation.',
+          )}`;
         },
       });
   }
@@ -380,14 +542,14 @@ export class PgnViewerComponent implements OnDestroy {
         : `Once the ${role.toLowerCase()} of ${company}, now transformed without surrendering their former identity.`;
     }
     const descriptions: Record<string, string> = {
-      king: 'Bearer of the Royal Seal and living source of the kingdom’s magic.',
+      king: 'A supreme warrior-sorcerer who reaches across universes and channels the lost homeland’s magic into the Royal Seal.',
       queen:
-        'Master swordfighter, Archwizard, and living fortress who moves at magically amplified superhuman speed.',
+        'Trained from birth by the King, Archwizards, Knight Commanders, and soldier companies. Her magically augmented body can wear nearly indestructible Moving-Fortress armor while fighting with superhuman strength and speed.',
       archwizard:
         'A master of elemental forces, wards, bindings, counterspells, illusions, divination, transmutation, and other high sorcery who uses teleportation to cross the battlefield.',
       'moving-fortress': `A colossal mobile stronghold controlled by ${
         piece.operatorName ?? 'a sworn pilot'
-      }, a living soldier permanently embedded in its armored command cradle. Magic powers its enormous wheels while the pilot commands every movement and attack from within.`,
+      }, a soldier wounded beyond healing whose body was permanently placed in its armored command cradle. The pilot cannot live without the machine’s magic life-supporting core and commands its enormous wheels and magic-round weapons from within.`,
       'knight-commander':
         'An elite commander who strikes across the battlefield by unexpected paths.',
     };
@@ -418,11 +580,15 @@ export class PgnViewerComponent implements OnDestroy {
   }
 
   private introStory(): string {
-    return 'After the Calamity, the Light Kingdom of the north and the Dark Kingdom of the south collided. Each king now pours his strength into a Royal Seal while their armies decide which realm will endure.';
+    return 'This battle record reveals the final battle of one fractured reality. An unknown age after the Calamity merged the Light Kingdom and Dark Kingdom onto one plane, each King fed his Royal Seal by siphoning magic from a different universe. The incompatible currents splintered reality itself, leaving this version of their armies to decide which realm will endure.';
   }
   private get finalPlaybackPly(): number {
     if (!this.game) return 0;
-    return this.game.positions.length + (this.epilogue ? 1 : 0);
+    return (
+      this.game.positions.length +
+      (this.epilogue ? 1 : 0) +
+      (this.laterEpilogue ? 1 : 0)
+    );
   }
   private fallenPiecesFor(side: 'north' | 'south'): FallenPiece[] {
     if (!this.game) return [];
@@ -494,18 +660,52 @@ export class PgnViewerComponent implements OnDestroy {
         this.game?.headers['Result'] ??
         '',
     );
-    const termination = String(
-      this.game?.ledger.metadata['termination'] ?? '',
-    ).toLowerCase();
-    const sealDestroyed = ['checkmate', 'resignation'].includes(termination);
+    const sealDestroyed = this.defeatedSealFate
+      ? this.defeatedSealFate === 'destroyed'
+      : this.game?.ledger.metadata['termination'] === 'checkmate';
     const defeatedSide =
       result === '1-0' ? 'south' : result === '0-1' ? 'north' : null;
     return sealDestroyed && piece.side === defeatedSide;
+  }
+  private isDefeatedPiece(piece: PieceIdentity): boolean {
+    const result = String(
+      this.game?.ledger.metadata['result'] ??
+        this.game?.headers['Result'] ??
+        '',
+    );
+    return (
+      (result === '1-0' && piece.side === 'south') ||
+      (result === '0-1' && piece.side === 'north')
+    );
+  }
+  private checkmateDeathPlyFor(piece: PieceIdentity): number | null {
+    if (!this.game || piece.chessType !== 'k') return null;
+    const checkmateEvent = this.game.ledger.events.find(
+      (event) => event.isCheckmate,
+    );
+    if (!checkmateEvent) return null;
+    const result = String(
+      this.game.ledger.metadata['result'] ?? this.game.headers['Result'] ?? '',
+    );
+    const defeatedSide =
+      result === '1-0' ? 'south' : result === '0-1' ? 'north' : null;
+    return piece.side === defeatedSide ? checkmateEvent.ply : null;
   }
   private isMaimingInjury(injury: string): boolean {
     return /\b(amput\w*|dismember\w*|sever\w*|missing|lost (?:an? |the )?(?:arm|hand|leg|foot)|torn off)\b/i.test(
       injury,
     );
+  }
+  private isGraveInjury(injury: string): boolean {
+    return /\b(grave|critical|crippl|organ|spine|skull)\b/i.test(injury);
+  }
+  private visibleWoundsFor(piece: PieceIdentity): StoryWound[] {
+    return this.wounds
+      .filter(
+        (wound) =>
+          wound.pieceId === piece.id && wound.inflictedAtPly <= this.currentPly,
+      )
+      .sort((left, right) => left.inflictedAtPly - right.inflictedAtPly);
   }
   private safeWoundInjury(wound: StoryWound, piece: PieceIdentity): string {
     return this.isSafeWoundStatusText(wound.injury, piece)

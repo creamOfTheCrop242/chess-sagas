@@ -10,5 +10,9 @@ export interface SceneBreakdownProvider {
     ledger: GameLedger;
     outline: StoryOutline;
     validatedStoryMarkdown: string;
+    endingState: Pick<
+      SceneBreakdown,
+      'defeatedKingFate' | 'defeatedSealFate' | 'defeatedKingDeathDescription'
+    >;
   }): Promise<SceneBreakdown>;
 }

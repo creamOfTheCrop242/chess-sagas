@@ -124,7 +124,10 @@ export type NarrateResponse = {
   story: string;
 };
 
-export type SavedGame = { id: string };
+export type SavedGame = {
+  id: string;
+  ledger: { data: GameLedger };
+};
 
 export type PlaybackScene = {
   id: string;
@@ -160,12 +163,53 @@ export type SceneBreakdownResponse = {
       scenes: PlaybackScene[];
       wounds?: StoryWound[];
       epilogue?: string | null;
+      laterEpilogueHeading?: string | null;
+      laterEpilogue?: string | null;
+      defeatedKingDeathDescription?: string | null;
+      defeatedKingFate?:
+        | 'killed-after-checkmate'
+        | 'breaks-seal-and-accepts-captivity'
+        | 'abandons-seal-and-flees'
+        | 'refuses-seal-destruction-and-is-imprisoned'
+        | 'shatters-seal-in-defiance'
+        | 'spends-seal-to-save-subjects'
+        | 'executed-after-rejected-surrender'
+        | 'survives';
+      defeatedSealFate?: 'destroyed' | 'intact';
     };
   };
+};
+
+export type ArchiveRecordSummary = {
+  id: string;
+  title: string;
+  whitePlayer: string;
+  blackPlayer: string;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string;
+};
+
+export type ArchivedRecord = {
+  id: string;
+  rawPgn: string;
+  whitePlayer: string;
+  blackPlayer: string;
+  result: string;
+  createdAt: string;
+  completedAt: string;
+  ledger: { data: GameLedger };
+  sceneBreakdown: SceneBreakdownResponse['sceneBreakdown'];
 };
 
 export type SagaStage =
   'analysis' | 'outline' | 'story' | 'validation' | 'scenes';
 
 export type SagaStageState =
-  'pending' | 'checking' | 'reused' | 'generating' | 'completed' | 'failed';
+  | 'pending'
+  | 'checking'
+  | 'reused'
+  | 'generating'
+  | 'retrying'
+  | 'completed'
+  | 'failed';

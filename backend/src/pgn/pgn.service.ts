@@ -168,7 +168,7 @@ export class PgnService {
           distance: dist,
         };
         if (piece === 'n' || piece === 'b' || piece === 'r') {
-          enemy.wing = f < 4 ? 'Western' : 'Eastern';
+          enemy.wing = f < 4 ? 'Eastern' : 'Western';
         }
         enemies.push(enemy);
       }
@@ -216,7 +216,7 @@ export class PgnService {
         color: squarePiece.color,
       };
       if (enemyPiece === 'n' || enemyPiece === 'b' || enemyPiece === 'r') {
-        enemy.wing = file < 4 ? 'Western' : 'Eastern';
+        enemy.wing = file < 4 ? 'Eastern' : 'Western';
       }
       targets.push(enemy);
     }

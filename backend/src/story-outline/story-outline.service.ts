@@ -89,6 +89,11 @@ export class StoryOutlineService {
           candidate,
           narrativeAnalysis,
         );
+        candidate = normalizeStoryOutlineWounds(
+          candidate,
+          ledger,
+          narrativeAnalysis,
+        );
         try {
           this.validator.validate(candidate, ledger, narrativeAnalysis);
           outline = candidate;
@@ -219,18 +224,30 @@ export function normalizeStoryOutlineStructure(
   outline: StoryOutline,
   analysis: NarrativeAnalysis,
 ): StoryOutline {
-  if (outline.acts.length !== analysis.acts.length) return outline;
+  const sourceActs = outline.acts;
+  const sourceScenes = sourceActs.flatMap((act) => act.scenes);
   return {
     ...outline,
-    acts: outline.acts.map((act, actIndex) => {
-      const plannedAct = analysis.acts[actIndex];
+    acts: analysis.acts.map((plannedAct, actIndex) => {
+      const sourceAct = sourceActs[actIndex] ?? sourceActs.at(-1)!;
       const actLength = plannedAct.endPly - plannedAct.startPly + 1;
-      const scenes = collapseExcessScenes(act.scenes, actLength);
+      const overlappingScenes = sourceScenes.filter(
+        (scene) =>
+          scene.endPly >= plannedAct.startPly &&
+          scene.startPly <= plannedAct.endPly,
+      );
+      const scenes = collapseExcessScenes(
+        overlappingScenes.length ? overlappingScenes : sourceAct.scenes,
+        actLength,
+      );
       let nextPly = plannedAct.startPly;
       return {
-        ...act,
+        ...sourceAct,
+        actNumber: actIndex + 1,
+        title: plannedAct.title,
         startPly: plannedAct.startPly,
         endPly: plannedAct.endPly,
+        purpose: plannedAct.purpose,
         scenes: scenes.map((scene, sceneIndex) => {
           const remainingScenes = scenes.length - sceneIndex - 1;
           const endPly =
@@ -244,6 +261,72 @@ export function normalizeStoryOutlineStructure(
           nextPly = endPly + 1;
           return normalized;
         }),
+      };
+    }),
+  };
+}
+
+export function normalizeStoryOutlineWounds(
+  outline: StoryOutline,
+  ledger: GameLedger,
+  analysis: NarrativeAnalysis,
+): StoryOutline {
+  const finalPly = ledger.events.length;
+  const relationshipPliesByPiece = new Map<string, Set<number>>();
+  const plannedRelationships = new Map(
+    (analysis.relationshipPlans ?? []).map((relationship) => [
+      relationship.id,
+      relationship,
+    ]),
+  );
+
+  for (const beat of outline.relationshipBeats) {
+    const relationship = plannedRelationships.get(beat.relationshipId);
+    if (!relationship) continue;
+    for (const pieceId of relationship.characterIds) {
+      const plies = relationshipPliesByPiece.get(pieceId) ?? new Set<number>();
+      beat.beatPlies.forEach((ply) => plies.add(ply));
+      relationshipPliesByPiece.set(pieceId, plies);
+    }
+  }
+
+  return {
+    ...outline,
+    woundBeats: (analysis.woundPlans ?? []).map((wound) => {
+      const continuityEnd = wound.recoveryPly ?? finalPly;
+      const continuityPlies = new Set<number>();
+
+      for (const event of ledger.events) {
+        if (
+          event.ply > wound.inflictedAtPly &&
+          event.ply <= continuityEnd &&
+          (event.pieceId === wound.pieceId ||
+            event.capturedPieceId === wound.pieceId)
+        ) {
+          continuityPlies.add(event.ply);
+        }
+      }
+      for (const ply of relationshipPliesByPiece.get(wound.pieceId) ?? []) {
+        if (ply > wound.inflictedAtPly && ply <= continuityEnd) {
+          continuityPlies.add(ply);
+        }
+      }
+      if (
+        wound.recoveryPly !== null &&
+        wound.recoveryPly > wound.inflictedAtPly &&
+        wound.recoveryPly <= finalPly
+      ) {
+        continuityPlies.add(wound.recoveryPly);
+      }
+
+      return {
+        pieceId: wound.pieceId,
+        inflictedAtPly: wound.inflictedAtPly,
+        injury: wound.injury,
+        continuityPlies: [...continuityPlies].sort(
+          (left, right) => left - right,
+        ),
+        recoveryPly: wound.recoveryPly,
       };
     }),
   };

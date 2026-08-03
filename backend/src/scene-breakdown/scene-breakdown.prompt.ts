@@ -1,16 +1,20 @@
-export const SCENE_BREAKDOWN_PROMPT_VERSION = 'phase-6-v17';
+export const SCENE_BREAKDOWN_PROMPT_VERSION = 'phase-6-v24';
 export const SCENE_BREAKDOWN_INSTRUCTIONS = `Split the validated cohesive story into move-aligned playback scenes. Return structured JSON only.
 
 - Create exactly one playback scene for every ledger ply. Never group multiple plies into one scene.
+- Treat outline.battlefieldEnvironment as the fixed setting. Preserve its geography, weather, landmarks, hazards, visibility, travel constraints, and accumulated damage in every fantasyNarration, location, visualPrompt, and videoPrompt. Do not relocate the battle into a generic or contradictory environment.
+- Keep this final battle within its own self-contained fractured reality. The Calamity merged the kingdoms but did not create the realities; incompatible magic siphoned by the two Kings from different universes fractured the shared plane afterward. Never date the Calamity or introduce continuity or events from another saga.
 - Every scene must have startPly equal to endPly and cover exactly one move.
 - Cover every ledger ply exactly once with chronological, contiguous scenes.
 - involvedMoves must contain exactly the one SAN string for that scene's ply.
 - Treat the scenes as consecutive paragraphs of one story, not independent move summaries. Reading fantasyNarration in ply order must feel like a single cohesive saga.
 - A Moving Fortress is a colossal wheeled war engine powered by magic. Its permanent living pilot in operatorName is physically embedded within a life-sustaining armored command cradle and cannot simply dismount. Preserve that pilot as its viewpoint and voice; never give the structure independent thoughts, speech, or decisions.
 - Archwizards use teleportation to relocate between battlefield positions, but possess broad high sorcery beyond teleportation. Preserve varied combat and utility magic—wards, elemental forces, bindings, counterspells, illusions, divination, transmutation, or established equivalents—and never rewrite every spell as a portal or blink.
+- Preserve the Queen as a lifelong trained and magically augmented superhuman wearing extraordinarily heavy armor made from the same nearly indestructible material as Moving Fortresses. Her movement is explosive physical speed, not teleportation.
 - Give each fantasyNarration enough substance to carry character, place, and consequence: usually 2–4 sentences and roughly 30–80 words. Vary sentence length and pacing naturally.
 - Preserve the validated story's central setting, atmosphere, named characters, relationships, motives, wounds, fears, rivalries, recurring imagery, and emotional arcs. Do not replace named characters with generic labels when the story established a name.
 - Copy the validated story's package-level wounds ledger exactly. Do not invent, omit, relocate, heal, or intensify an injury. From inflictedAtPly through recoveryPly, or through the epilogue when recoveryPly is null, preserve each survivor's missing limbs, scars, pain, limitations, equipment, and altered behavior.
+- When a character has multiple wounds, preserve their cumulative effects together. At a minor wound's recoveryPly retain its scar or residual effect, and preserve the explicit treatment or magical intervention established by the validated story.
 - Nonfatal dismemberment is permitted only when present in that wounds ledger. Fatal dismemberment may occur only as part of a ledger-confirmed death.
 - A pawn is a full soldier company, but every company has one named viewpoint grunt in the character registry. Describe the company's action through that same grunt's perspective, dialogue, relationships, and senses.
 - Preserve the grunt's viewpointRole. Do not make every followed grunt a captain or let a non-captain issue company-level orders. Show scouts, medics, spearmen, standard-bearers, junior officers, and captains acting from their actual responsibilities and access to information.
@@ -36,9 +40,10 @@ export const SCENE_BREAKDOWN_INSTRUCTIONS = `Split the validated cohesive story 
 - deaths must exactly list capturedPieceId values within the scene.
 - promotions must exactly list promoting pieceId values within the scene.
 - Preserve all survivors, captors, winner, termination, names, wounds, and visual continuity.
-- Terminal exception: on checkmate, preserve the validated story's death of the defeated King from the mating assault or Royal Seal's destruction even though it is not a capture. On resignation, preserve the defeated King's surrender followed by suicide. Do not apply these fates to draws, timeouts, unknown terminations, or the winning King.
-- A Royal Seal powers its entire kingdom's magic. Preserve its destruction after checkmate or resignation and the defeated realm's gradual loss of wards, enchantments, healing, infrastructure, and stability as stored magic runs out. Draws, timeouts, and unknown endings leave both Seals intact.
+- Terminal exception: on checkmate, preserve the validated story's death of the defeated King from the mating assault or Royal Seal's destruction even though it is not a capture. On resignation, preserve the validated surrender outcome exactly; only executed-after-rejected-surrender kills the King. Do not apply these fates to draws, timeouts, unknown terminations, or the winning King.
+- Preserve defeatedKingDeathDescription exactly when the validated King dies, and set it to null when he survives.
+- Each King siphons magic through a connection to his kingdom's lost home universe and feeds it into the Royal Seal, which distributes that power to the realm's surviving enchantments. Preserve the validated Seal fate. A destroyed or exhausted Seal causes gradual magical decline; refusal leaves the Seal intact under contested control. Draws, timeouts, and unknown endings leave both Seals intact.
 - If that defeated realm has surviving Moving Fortresses, preserve the epilogue's gradual failure of their magic-powered wheels and life-sustaining command cradles. Their named living pilots become entombed in immobile hulls unless survivors try to cut them free. Never make this instantaneous, apply it to the victorious realm, or invent the death of a surviving pilot.
 - visualPrompt and videoPrompt must describe only this scene and preserve established character appearances.
 - estimatedDurationSeconds should match narration/action density.
-- Include a distinct epilogue after the final scene that resolves surviving characters and kingdom consequences without inventing later moves, captures, promotions, battles, or deaths.`;
+- Split the ending into epilogue for the immediate aftermath and laterEpilogue for the validated story's later time jump. Preserve its varied laterEpilogueHeading and viewpoint. Resolve consequences without inventing later moves, captures, promotions, battles, or deaths.`;

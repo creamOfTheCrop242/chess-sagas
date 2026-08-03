@@ -4,6 +4,7 @@ import type { Prisma } from '@prisma/client';
 import type { GameLedger } from '../chess/models/game-ledger';
 import { PrismaService } from '../database/prisma.service';
 import { PgnService } from '../pgn/pgn.service';
+import { archiveBattleTitle } from '../story-outline/story-title';
 
 export const GAME_LEDGER_SCHEMA_VERSION = 5;
 
@@ -87,6 +88,106 @@ export class GamesService {
         updatedAt: true,
       },
     });
+  }
+
+  async findRecords() {
+    const games = await this.prisma.game.findMany({
+      where: {
+        generationRuns: {
+          some: {
+            status: 'COMPLETED',
+            sceneBreakdown: { isNot: null },
+          },
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+      select: {
+        id: true,
+        whitePlayer: true,
+        blackPlayer: true,
+        result: true,
+        createdAt: true,
+        updatedAt: true,
+        ledger: { select: { data: true } },
+        generationRuns: {
+          where: {
+            status: 'COMPLETED',
+            OR: [
+              { sceneBreakdown: { isNot: null } },
+              { generatedStory: { isNot: null } },
+            ],
+          },
+          orderBy: { completedAt: 'desc' },
+          select: {
+            completedAt: true,
+            sceneBreakdown: { select: { createdAt: true } },
+            generatedStory: { select: { title: true } },
+          },
+        },
+      },
+    });
+    return games.map(({ generationRuns, result: _result, ledger, ...game }) => {
+      const sceneRun = generationRuns.find((run) => run.sceneBreakdown);
+      const storyRun = generationRuns.find((run) => run.generatedStory);
+      return {
+        ...game,
+        title: archiveBattleTitle(
+          storyRun?.generatedStory?.title,
+          ledger?.data as unknown as GameLedger,
+          game.id,
+        ),
+        completedAt:
+          sceneRun?.completedAt ??
+          sceneRun?.sceneBreakdown?.createdAt ??
+          game.updatedAt,
+      };
+    });
+  }
+
+  async findRecord(id: string) {
+    const game = await this.prisma.game.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        rawPgn: true,
+        whitePlayer: true,
+        blackPlayer: true,
+        result: true,
+        createdAt: true,
+        ledger: { select: { data: true } },
+        generationRuns: {
+          where: {
+            status: 'COMPLETED',
+            sceneBreakdown: { isNot: null },
+          },
+          orderBy: { completedAt: 'desc' },
+          take: 1,
+          select: {
+            completedAt: true,
+            sceneBreakdown: {
+              select: {
+                data: true,
+                createdAt: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!game) {
+      throw new NotFoundException(`Game ${id} was not found`);
+    }
+    const latest = game.generationRuns[0];
+    if (!latest?.sceneBreakdown) {
+      throw new NotFoundException(`Game ${id} has no completed saga`);
+    }
+    const { generationRuns: _generationRuns, ...record } = game;
+    return {
+      ...record,
+      completedAt:
+        latest.completedAt ?? latest.sceneBreakdown.createdAt ?? game.createdAt,
+      sceneBreakdown: latest.sceneBreakdown,
+    };
   }
 
   async findOne(id: string) {

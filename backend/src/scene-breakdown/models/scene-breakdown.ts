@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { storyWoundSchema } from '../../full-story/models/generated-story';
+import { DEFEATED_KING_FATES } from '../../chess/models/story-ending';
 
 export const storySceneSchema = z.object({
   id: z.string().min(1),
@@ -24,6 +25,11 @@ export const sceneBreakdownSchema = z.object({
   scenes: z.array(storySceneSchema).min(1),
   wounds: z.array(storyWoundSchema).default([]),
   epilogue: z.string().min(1).nullable(),
+  laterEpilogueHeading: z.string().min(1).max(80).nullable(),
+  laterEpilogue: z.string().min(1).nullable(),
+  defeatedKingDeathDescription: z.string().min(1).max(280).nullable(),
+  defeatedKingFate: z.enum(DEFEATED_KING_FATES),
+  defeatedSealFate: z.enum(['destroyed', 'intact']),
 });
 
 export type SceneBreakdown = z.infer<typeof sceneBreakdownSchema>;

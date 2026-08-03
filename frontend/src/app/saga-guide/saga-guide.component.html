@@ -1,0 +1,53 @@
+<main class="guide-page">
+  <header class="guide-hero">
+    <nav aria-label="Site navigation">
+      <a routerLink="/">← Chronicle</a>
+      <a routerLink="/records">Hall of Records</a>
+      <a routerLink="/lore">Piece Codex →</a>
+    </nav>
+    <p class="eyebrow">Before the record is unsealed</p>
+    <h1>How Sagas Work</h1>
+    <p class="introduction">
+      Chess Sagas turns a complete game into a dark-fantasy chronicle. Here is
+      what the Chronicler preserves, what may change, and what kind of story
+      awaits beyond the board.
+    </p>
+    <p class="content-note">
+      Stories may contain character death, battlefield violence, lasting
+      injuries, dismemberment, rejected surrender, execution, and the collapse
+      of a kingdom.
+    </p>
+  </header>
+
+  <section class="feature-grid" aria-label="Saga features">
+    @for (feature of features; track feature.number) {
+      <article class="feature-card">
+        <div class="feature-heading">
+          <span aria-hidden="true">{{ feature.number }}</span>
+          <div>
+            <h2>{{ feature.title }}</h2>
+            <p>{{ feature.summary }}</p>
+          </div>
+        </div>
+        <ul>
+          @for (detail of feature.details; track detail) {
+            <li>{{ detail }}</li>
+          }
+        </ul>
+      </article>
+    }
+  </section>
+
+  <section class="promise">
+    <p class="eyebrow">The Chronicler’s promise</p>
+    <h2>The game is fact. The saga is interpretation.</h2>
+    <p>
+      The telling may surprise you, but it cannot rewrite who moved, who
+      captured whom, who survived, or how the battle ended.
+    </p>
+    <div class="actions">
+      <a class="secondary" routerLink="/lore">Explore the lore</a>
+      <a class="primary" routerLink="/">Begin a saga</a>
+    </div>
+  </section>
+</main>

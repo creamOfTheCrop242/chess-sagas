@@ -1,7 +1,14 @@
 import { BadGatewayException, Injectable } from '@nestjs/common';
 import type { GameLedger } from '../chess/models/game-ledger';
+import { isSurrenderKingFate } from '../chess/models/story-ending';
 import type { NarrativeAnalysis } from './models/narrative-analysis';
 import { selectRequiredWoundEvents } from './wound-planning';
+import { isSpoilerFreeBattleTitle } from '../story-outline/story-title';
+import { selectBattlefieldEnvironment } from '../chess/battlefield-environment';
+import {
+  allowedSurrenderFates,
+  classifySurrender,
+} from '../chess/surrender-context';
 
 @Injectable()
 export class NarrativeAnalysisValidator {
@@ -10,6 +17,29 @@ export class NarrativeAnalysisValidator {
     const pieceIds = new Set(ledger.pieces.map((piece) => piece.id));
     const validPly = (ply: number) => ply >= 1 && ply <= finalPly;
     const errors: string[] = [];
+    const expectedEnvironment = selectBattlefieldEnvironment(ledger);
+    if (
+      analysis.battlefieldEnvironment.id !== expectedEnvironment.id ||
+      analysis.battlefieldEnvironment.name !== expectedEnvironment.name ||
+      analysis.battlefieldEnvironment.description !==
+        expectedEnvironment.description
+    ) {
+      errors.push('Battlefield environment must match the seeded selection');
+    }
+    const expectedSurrenderContext = classifySurrender(ledger);
+    if (
+      JSON.stringify(analysis.surrenderContext) !==
+      JSON.stringify(expectedSurrenderContext)
+    ) {
+      errors.push('Surrender context must match the final board position');
+    }
+    if (
+      analysis.titleConcepts.some((title) => !isSpoilerFreeBattleTitle(title))
+    ) {
+      errors.push(
+        'Title concepts must be spoiler-free battle names without outcomes or board squares',
+      );
+    }
 
     const referencedPieceIds = [
       ...analysis.characterImportance.map((item) => item.pieceId),
@@ -91,6 +121,14 @@ export class NarrativeAnalysisValidator {
       ) {
         errors.push(
           `Wound recovery for ${wound.pieceId} must follow its infliction`,
+        );
+      }
+      if (
+        wound.recoveryPly !== null &&
+        isPermanentWound([wound.injury, ...wound.lastingEffects].join(' '))
+      ) {
+        errors.push(
+          `Permanent wound for ${wound.pieceId} cannot recover during the final battle`,
         );
       }
       const woundText = [wound.injury, ...wound.lastingEffects].join(' ');
@@ -177,6 +215,38 @@ export class NarrativeAnalysisValidator {
     if (analysis.endingPlan.termination !== ledger.metadata.termination) {
       errors.push(`Ending termination must be ${ledger.metadata.termination}`);
     }
+    const endingFate = analysis.endingPlan.defeatedKingFate;
+    if (
+      ledger.metadata.termination === 'checkmate' &&
+      endingFate !== 'killed-after-checkmate'
+    ) {
+      errors.push('Checkmate must kill the defeated King');
+    } else if (
+      ledger.metadata.termination === 'resignation' &&
+      !isSurrenderKingFate(endingFate)
+    ) {
+      errors.push('Resignation must use a supported surrender outcome');
+    } else if (
+      expectedSurrenderContext &&
+      !allowedSurrenderFates(expectedSurrenderContext.judgment).includes(
+        endingFate,
+      )
+    ) {
+      errors.push(
+        `Surrender outcome must fit a ${expectedSurrenderContext.judgment} surrender`,
+      );
+    } else if (
+      !['checkmate', 'resignation'].includes(ledger.metadata.termination) &&
+      endingFate !== 'survives'
+    ) {
+      errors.push('This termination must leave the defeated King alive');
+    }
+    if (
+      analysis.endingPlan.surrenderAttempt !==
+      (ledger.metadata.termination === 'resignation')
+    ) {
+      errors.push('Surrender attempt must match resignation termination');
+    }
 
     if (errors.length > 0) {
       throw new BadGatewayException(
@@ -186,6 +256,12 @@ export class NarrativeAnalysisValidator {
       );
     }
   }
+}
+
+function isPermanentWound(text: string): boolean {
+  return /\b(amput\w*|dismember\w*|sever\w*|missing|torn off|lost (?:an? |the )?(?:arm|hand|leg|foot)|grave|critical|crippl\w*|organ|spine|spinal|skull)\b/i.test(
+    text,
+  );
 }
 
 function containsForbiddenWoundReference(

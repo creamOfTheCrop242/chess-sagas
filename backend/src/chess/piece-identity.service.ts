@@ -215,7 +215,8 @@ export class PieceIdentityService {
     const kingdom = side === 'north' ? 'Northern' : 'Southern';
     if (type === 'k') return `${kingdom} King`;
     if (type === 'q') return `${kingdom} Queen`;
-    const compass = `${side === 'north' ? 'North' : 'South'}${square[0] < 'e' ? 'west' : 'east'}`;
+    // The Calamity reversed east and west: a-d are eastern, e-h are western.
+    const compass = `${side === 'north' ? 'North' : 'South'}${square[0] < 'e' ? 'east' : 'west'}`;
     const title =
       type === 'r'
         ? 'Fortress'

@@ -1,6 +1,7 @@
 import { PgnApiService } from './pgn-api.service';
 import { PgnViewerComponent } from './pgn-viewer.component';
 import type { ParsedPgn } from './pgn.models';
+import { of } from 'rxjs';
 
 describe('PgnViewerComponent character inspection', () => {
   let component: PgnViewerComponent;
@@ -126,6 +127,87 @@ describe('PgnViewerComponent character inspection', () => {
     });
   });
 
+  it('marks the defeated King dead when the checkmate beat is reached', () => {
+    component.game!.headers['Result'] = '1-0';
+    component.game!.ledger.metadata['result'] = '1-0';
+    component.game!.ledger.metadata['termination'] = 'checkmate';
+    component.game!.ledger.pieces.push({
+      id: 'b-k-e8',
+      chessColor: 'b',
+      side: 'south',
+      originalSquare: 'e8',
+      chessType: 'k',
+      currentChessType: 'k',
+      fantasyType: 'king',
+      permanentName: 'Southern King',
+      alive: true,
+    });
+    component.game!.ledger.events[2].isCheckmate = true;
+    component.selectedPieceId = 'b-k-e8';
+
+    component.currentPly = 2;
+    expect(component.inspectedPieceStatus.label).toBe('Unharmed');
+
+    component.currentPly = 3;
+    component.defeatedKingDeathDescription =
+      'The Queen’s spell shattered his heart as the Royal Seal collapsed.';
+    expect(component.inspectedPieceStatus).toEqual({
+      label: 'Dead',
+      detail:
+        'The Queen’s spell shattered his heart as the Royal Seal collapsed.',
+      tone: 'dead',
+    });
+  });
+
+  it('accumulates active wounds while retaining recovered scars', () => {
+    component.wounds = [
+      {
+        pieceId: 'w-p-e2',
+        inflictedAtPly: 1,
+        injury: 'Her shoulder is cut.',
+        lastingEffects: ['A pale scar crosses the joint.'],
+        recoveryPly: 3,
+      },
+      {
+        pieceId: 'w-p-e2',
+        inflictedAtPly: 3,
+        injury: 'Her ribs are broken.',
+        lastingEffects: ['Breathing remains painful.'],
+        recoveryPly: null,
+      },
+      {
+        pieceId: 'w-p-e2',
+        inflictedAtPly: 4,
+        injury: 'Her left hand is severed.',
+        lastingEffects: ['She must fight one-handed.'],
+        recoveryPly: null,
+      },
+    ];
+    component.currentPly = 4;
+    component.inspectPieceAt('d6');
+
+    expect(component.inspectedPieceStatus).toEqual({
+      label: 'Maimed',
+      detail: '2 active injuries · 1 healed scar',
+      tone: 'maimed',
+    });
+    expect(component.inspectedPieceWoundHistory).toEqual([
+      jasmine.objectContaining({
+        inflictedAtPly: 4,
+        state: 'active',
+      }),
+      jasmine.objectContaining({
+        inflictedAtPly: 3,
+        state: 'active',
+      }),
+      jasmine.objectContaining({
+        inflictedAtPly: 1,
+        state: 'recovered',
+        recoveryPly: 3,
+      }),
+    ]);
+  });
+
   it('shows the defeated realm’s surviving Fortress entombment threat', () => {
     component.game!.ledger.metadata['result'] = '0-1';
     component.game!.ledger.metadata['termination'] = 'checkmate';
@@ -191,27 +273,96 @@ describe('PgnViewerComponent character inspection', () => {
   it('presents the epilogue as a final playback page', () => {
     component.epilogue =
       'The surviving kingdoms counted the cost. The banners lowered. The healers crossed the field. Dawn found them still working. No herald named it peace.';
+    component.laterEpilogueHeading = 'Nine Winters Later';
+    component.laterEpilogue =
+      'A traveler crossed the nameless field. Beneath the mud, a dying ward answered his lantern.';
     component.currentPly = game.positions.length;
 
     expect(component.canGoForward).toBeTrue();
 
     component.forward();
 
+    expect(component.isAftermathPage).toBeTrue();
     expect(component.isEpiloguePage).toBeTrue();
-    expect(component.currentMoveLabel).toBe('Epilogue');
+    expect(component.currentMoveLabel).toBe('Immediate Aftermath');
     expect(component.currentStory).toBe(component.epilogue);
     expect(component.epilogueParagraphs).toEqual([
       'The surviving kingdoms counted the cost. The banners lowered.',
       'The healers crossed the field. Dawn found them still working.',
       'No herald named it peace.',
     ]);
+    expect(component.laterEpilogueParagraphs).toEqual([
+      'A traveler crossed the nameless field. Beneath the mud, a dying ward answered his lantern.',
+    ]);
     expect(component.currentFen).toBe(game.ledger.finalFen);
+    expect(component.canGoForward).toBeTrue();
+
+    component.forward();
+
+    expect(component.isAftermathPage).toBeFalse();
+    expect(component.isLaterChroniclePage).toBeTrue();
+    expect(component.currentMoveLabel).toBe('Later Chronicles');
+    expect(component.currentStory).toBe(component.laterEpilogue);
     expect(component.canGoForward).toBeFalse();
+
+    component.back();
+
+    expect(component.isAftermathPage).toBeTrue();
+    expect(component.isLaterChroniclePage).toBeFalse();
 
     component.back();
 
     expect(component.currentPly).toBe(game.positions.length);
     expect(component.isEpiloguePage).toBeFalse();
+  });
+
+  it('uses saved identities instead of transient parse identities', () => {
+    const parsed = structuredClone(game);
+    parsed.ledger.pieces[0].permanentName = 'Transient Mara';
+    const savedLedger = structuredClone(game.ledger);
+    savedLedger.pieces[0].permanentName = 'Saved Mara';
+    const api = {
+      parse: () => of(parsed),
+      createGame: () => of({ id: 'saved-game', ledger: { data: savedLedger } }),
+    } as unknown as PgnApiService;
+    const submitted = new PgnViewerComponent(api);
+    submitted.pgnText = '1. e4 d5 2. exd5';
+
+    submitted.submit();
+
+    expect(submitted.gameId).toBe('saved-game');
+    expect(submitted.game?.ledger.pieces[0].permanentName).toBe('Saved Mara');
+  });
+
+  it('uses the archived saved ledger when replaying a Hall record', () => {
+    const parsed = structuredClone(game);
+    parsed.ledger.pieces[0].permanentName = 'Transient Mara';
+    const savedLedger = structuredClone(game.ledger);
+    savedLedger.pieces[0].permanentName = 'Archived Mara';
+    const api = {
+      getRecord: () =>
+        of({
+          id: 'record-1',
+          rawPgn: '1. e4 d5 2. exd5',
+          whitePlayer: 'Ada',
+          blackPlayer: 'Turing',
+          result: '1-0',
+          createdAt: '2026-08-01',
+          completedAt: '2026-08-01',
+          ledger: { data: savedLedger },
+          sceneBreakdown: { data: { scenes: [] } },
+        }),
+      parse: () => of(parsed),
+    } as unknown as PgnApiService;
+    const route = {
+      snapshot: { paramMap: { get: () => 'record-1' } },
+    } as never;
+    const replay = new PgnViewerComponent(api, route);
+
+    replay.ngOnInit();
+
+    expect(replay.recordReplay).toBeTrue();
+    expect(replay.game?.ledger.pieces[0].permanentName).toBe('Archived Mara');
   });
 });
 

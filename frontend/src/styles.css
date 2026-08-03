@@ -89,6 +89,22 @@ app-root {
   min-height: 100vh;
 }
 
+app-pgn-viewer .record-return {
+  display: inline-block;
+  margin-bottom: 0.7rem;
+  color: var(--ink-muted);
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+app-pgn-viewer .record-return:hover,
+app-pgn-viewer .record-return:focus-visible {
+  color: var(--gold-bright);
+}
+
 @media (orientation: landscape) and (max-height: 600px) {
   app-pgn-viewer .game-layout.game-layout {
     grid-template-columns: repeat(2, minmax(0, 1fr));

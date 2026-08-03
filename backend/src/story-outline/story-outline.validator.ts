@@ -2,6 +2,7 @@ import { BadGatewayException, Injectable } from '@nestjs/common';
 import type { GameLedger } from '../chess/models/game-ledger';
 import type { NarrativeAnalysis } from '../narrative-analysis/models/narrative-analysis';
 import type { StoryOutline } from './models/story-outline';
+import { isSpoilerFreeBattleTitle } from './story-title';
 
 @Injectable()
 export class StoryOutlineValidator {
@@ -15,6 +16,17 @@ export class StoryOutlineValidator {
     const errors: string[] = [];
     let nextPly = 1;
     const representedEvents = new Set<number>();
+    if (!isSpoilerFreeBattleTitle(outline.selectedTitle)) {
+      errors.push(
+        'Selected title must be a spoiler-free battle name without outcomes or board squares',
+      );
+    }
+    if (
+      JSON.stringify(outline.battlefieldEnvironment) !==
+      JSON.stringify(analysis.battlefieldEnvironment)
+    ) {
+      errors.push('Outline battlefield environment must match analysis');
+    }
 
     if (outline.acts.length !== analysis.acts.length) {
       errors.push('Outline acts must match the narrative analysis');

@@ -5,9 +5,12 @@ import type { SceneBreakdown } from '../scene-breakdown/models/scene-breakdown';
 import type { GeneratedStoryDraft } from './models/generated-story';
 import {
   assembleStoryMarkdown,
-  expectedDefeatedKingFate,
-  expectedDefeatedSealFate,
+  isAllowedDefeatedKingFate,
 } from './full-story.service';
+import {
+  kingDiesFromFate,
+  sealFateForKingFate,
+} from '../chess/models/story-ending';
 import { FullStoryValidator } from './full-story.validator';
 
 describe('FullStoryValidator', () => {
@@ -15,10 +18,10 @@ describe('FullStoryValidator', () => {
     pieces: [{ id: 'w-q-d1' }, { id: 'b-p-f7' }],
   } as GameLedger;
   const outline = {
-    selectedTitle: 'The Seven-Stroke Sealfall',
+    selectedTitle: 'The Battle Under the Hollow Sky',
   } as StoryOutline;
   const story: GeneratedStoryDraft = {
-    title: 'The Seven-Stroke Sealfall',
+    title: 'The Battle Under the Hollow Sky',
     storyMarkdown: `## Act I — The Mirrored Challenge
 
 The northern company advanced beneath pale banners while a southern host answered across the scarred plain. Neither formation drew blood; their measured steps only widened the road behind them.
@@ -107,7 +110,7 @@ The Southern King poured his strength into the Royal Seal, but every remaining r
     expect(markdown).not.toMatch(/\b[a-h][1-8]\b/i);
   });
 
-  it('appends a distinct epilogue after the final scene', () => {
+  it('appends immediate and later aftermaths after the final scene', () => {
     const scenes = [
       {
         actNumber: 1,
@@ -118,30 +121,48 @@ The Southern King poured his strength into the Royal Seal, but every remaining r
       scenes,
       ['The Last Assault'],
       'At dawn, the survivors carried their dead home.',
+      'Seven Years Later',
+      'A traveler found pale magic beneath the old road.',
     );
 
     expect(markdown).toContain(
-      'The final banner fell into the rain.\n\n## Epilogue\n\nAt dawn',
+      'The final banner fell into the rain.\n\n## Immediate Aftermath\n\nAt dawn',
+    );
+    expect(markdown).toContain(
+      '## Seven Years Later\n\nA traveler found pale magic',
     );
   });
 
-  it('maps termination to the required defeated King fate', () => {
-    expect(expectedDefeatedKingFate('checkmate')).toBe(
-      'killed-after-checkmate',
-    );
-    expect(expectedDefeatedKingFate('resignation')).toBe(
-      'suicide-after-surrender',
-    );
-    expect(expectedDefeatedKingFate('draw')).toBe('survives');
-    expect(expectedDefeatedKingFate('timeout')).toBe('survives');
-    expect(expectedDefeatedKingFate('unknown')).toBe('survives');
+  it('allows only termination-appropriate defeated King fates', () => {
+    expect(
+      isAllowedDefeatedKingFate('checkmate', 'killed-after-checkmate'),
+    ).toBe(true);
+    expect(
+      isAllowedDefeatedKingFate(
+        'resignation',
+        'breaks-seal-and-accepts-captivity',
+      ),
+    ).toBe(true);
+    expect(
+      isAllowedDefeatedKingFate(
+        'resignation',
+        'executed-after-rejected-surrender',
+      ),
+    ).toBe(true);
+    expect(isAllowedDefeatedKingFate('draw', 'survives')).toBe(true);
+    expect(
+      isAllowedDefeatedKingFate('draw', 'killed-after-checkmate'),
+    ).toBe(false);
   });
 
-  it('destroys the defeated Seal only for checkmate or resignation', () => {
-    expect(expectedDefeatedSealFate('checkmate')).toBe('destroyed');
-    expect(expectedDefeatedSealFate('resignation')).toBe('destroyed');
-    expect(expectedDefeatedSealFate('draw')).toBe('intact');
-    expect(expectedDefeatedSealFate('timeout')).toBe('intact');
-    expect(expectedDefeatedSealFate('unknown')).toBe('intact');
+  it('maps each surrender outcome to coherent King and Seal states', () => {
+    expect(sealFateForKingFate('breaks-seal-and-accepts-captivity')).toBe(
+      'destroyed',
+    );
+    expect(
+      sealFateForKingFate('refuses-seal-destruction-and-is-imprisoned'),
+    ).toBe('intact');
+    expect(kingDiesFromFate('executed-after-rejected-surrender')).toBe(true);
+    expect(kingDiesFromFate('abandons-seal-and-flees')).toBe(false);
   });
 });

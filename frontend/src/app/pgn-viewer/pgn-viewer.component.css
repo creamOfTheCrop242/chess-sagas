@@ -50,6 +50,42 @@ h1 {
   font-size: 1.05rem;
 }
 
+.lore-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.7rem;
+  margin-top: 1.15rem;
+}
+
+.lore-link {
+  display: inline-block;
+  padding: 0.65rem 1rem;
+  border: 1px solid rgba(196, 168, 98, 0.55);
+  color: var(--gold-bright);
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.15s ease;
+}
+
+.lore-link:hover,
+.lore-link:focus-visible {
+  border-color: var(--gold-bright);
+  color: #fff8e8;
+  transform: translateY(-1px);
+}
+
+.lore-link:focus-visible {
+  outline: 1px solid var(--gold);
+  outline-offset: 3px;
+}
+
 .realm-band {
   display: flex;
   align-items: center;
@@ -377,6 +413,56 @@ button.flip-board {
 
 .piece-status-entombed > strong {
   color: var(--gold-bright);
+}
+
+.wound-history {
+  padding-top: 0.55rem;
+  border-top: 1px solid rgba(196, 168, 98, 0.25);
+}
+
+.wound-history h4 {
+  margin: 0 0 0.45rem;
+  color: var(--ink-muted);
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+}
+
+.wound-history ol {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wound-history li {
+  padding-left: 0.55rem;
+  border-left: 2px solid #d78376;
+}
+
+.wound-history li > div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+}
+
+.wound-history strong {
+  color: var(--ink);
+  font-size: 0.7rem;
+}
+
+.wound-history span,
+.wound-history small {
+  color: var(--ink-dim);
+  font-size: 0.62rem;
+}
+
+.wound-history small {
+  display: block;
+}
+
+.wound-history .wound-recovered {
+  border-left-color: var(--seal);
 }
 
 .piece-card-hint {

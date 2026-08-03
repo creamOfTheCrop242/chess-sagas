@@ -9,6 +9,8 @@ import type { NarrativeAnalysis } from './models/narrative-analysis';
 import { NarrativeAnalysisService } from './narrative-analysis.service';
 import { NarrativeAnalysisValidator } from './narrative-analysis.validator';
 import { selectRequiredWoundEvents } from './wound-planning';
+import { selectBattlefieldEnvironment } from '../chess/battlefield-environment';
+import { classifySurrender } from '../chess/surrender-context';
 
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/unbound-method */
 
@@ -76,6 +78,8 @@ describe('NarrativeAnalysisService', () => {
     expect(provider.analyze).toHaveBeenCalledWith({
       ledger,
       requiredWoundEvents: selectRequiredWoundEvents(ledger),
+      battlefieldEnvironment: selectBattlefieldEnvironment(ledger),
+      surrenderContext: classifySurrender(ledger),
     });
     expect(runCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -196,6 +200,8 @@ function makeAnalysis(ledger: GameLedger): NarrativeAnalysis {
     (piece) => piece.chessColor === 'w' && piece.chessType === 'b',
   )!.id;
   return {
+    battlefieldEnvironment: selectBattlefieldEnvironment(ledger),
+    surrenderContext: classifySurrender(ledger),
     titleConcepts: ['The Broken Seal'],
     dominantThemes: ['ambition', 'collapse'],
     gameShape: 'rapid-assault',
@@ -283,7 +289,7 @@ function makeAnalysis(ledger: GameLedger): NarrativeAnalysis {
       termination: 'checkmate',
       surrenderAttempt: false,
       kingdomConsequence: 'The southern realm fractures.',
-      defeatedKingFate: 'The king falls with his seal.',
+      defeatedKingFate: 'killed-after-checkmate',
       finalImage: 'Dark towers folding into a red horizon.',
     },
     continuityConstraints: ['The captured soldier cannot return after ply 7.'],

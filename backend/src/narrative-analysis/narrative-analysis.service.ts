@@ -11,6 +11,8 @@ import { narrativeAnalysisSchema } from './models/narrative-analysis';
 import { NARRATIVE_ANALYSIS_PROMPT_VERSION } from './narrative-analysis.prompt';
 import { NarrativeAnalysisValidator } from './narrative-analysis.validator';
 import { selectRequiredWoundEvents } from './wound-planning';
+import { selectBattlefieldEnvironment } from '../chess/battlefield-environment';
+import { classifySurrender } from '../chess/surrender-context';
 
 @Injectable()
 export class NarrativeAnalysisService {
@@ -45,8 +47,15 @@ export class NarrativeAnalysisService {
         game.ledger.data as unknown as GameLedger,
       );
       const requiredWoundEvents = selectRequiredWoundEvents(ledger);
+      const battlefieldEnvironment = selectBattlefieldEnvironment(ledger);
+      const surrenderContext = classifySurrender(ledger);
       const analysis = narrativeAnalysisSchema.parse(
-        await this.provider.analyze({ ledger, requiredWoundEvents }),
+        await this.provider.analyze({
+          ledger,
+          requiredWoundEvents,
+          battlefieldEnvironment,
+          surrenderContext,
+        }),
       );
       this.validator.validate(analysis, ledger);
       const data = JSON.parse(

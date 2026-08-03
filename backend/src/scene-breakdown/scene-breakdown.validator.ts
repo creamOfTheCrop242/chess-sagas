@@ -1,5 +1,10 @@
 import { BadGatewayException, Injectable } from '@nestjs/common';
 import type { GameLedger } from '../chess/models/game-ledger';
+import {
+  isSurrenderKingFate,
+  kingDiesFromFate,
+  sealFateForKingFate,
+} from '../chess/models/story-ending';
 import type { SceneBreakdown } from './models/scene-breakdown';
 
 @Injectable()
@@ -10,6 +15,45 @@ export class SceneBreakdownValidator {
     let nextPly = 1;
     let currentAct = 0;
     let expectedSceneNumber = 0;
+    const hasKingDeath = Boolean(
+      breakdown.defeatedKingDeathDescription?.trim(),
+    );
+    const termination = ledger.metadata?.termination;
+    if (
+      (termination === 'checkmate' &&
+        breakdown.defeatedKingFate !== 'killed-after-checkmate') ||
+      (termination === 'resignation' &&
+        !isSurrenderKingFate(breakdown.defeatedKingFate)) ||
+      (!['checkmate', 'resignation'].includes(termination) &&
+        breakdown.defeatedKingFate !== 'survives')
+    ) {
+      errors.push('Defeated King fate must match the game termination');
+    }
+    if (kingDiesFromFate(breakdown.defeatedKingFate) !== hasKingDeath) {
+      errors.push('Defeated King death description must match his fate');
+    }
+    if (
+      breakdown.defeatedSealFate !==
+      sealFateForKingFate(breakdown.defeatedKingFate)
+    ) {
+      errors.push('Defeated Royal Seal fate must match the King outcome');
+    }
+    if (
+      (termination === 'checkmate' && !hasKingDeath) ||
+      (!['checkmate', 'resignation'].includes(termination) && hasKingDeath)
+    ) {
+      errors.push(
+        'Defeated King death description must match the game termination',
+      );
+    }
+    if (!breakdown.epilogue?.trim() || !breakdown.laterEpilogue?.trim()) {
+      errors.push(
+        'Scene breakdown must include immediate and later aftermaths',
+      );
+    }
+    if (!breakdown.laterEpilogueHeading?.trim()) {
+      errors.push('Later aftermath must have a heading');
+    }
     if (breakdown.scenes.length !== ledger.events.length) {
       errors.push('Scene breakdown must contain exactly one scene per ply');
     }

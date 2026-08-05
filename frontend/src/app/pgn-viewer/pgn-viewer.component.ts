@@ -201,7 +201,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
   }
   get inspectedPiece(): PieceIdentity | null {
     if (!this.game) return null;
-    const pieceId = this.hoveredPieceId ?? this.selectedPieceId;
+    const pieceId = this.selectedPieceId ?? this.hoveredPieceId;
     return (
       this.game.ledger.pieces.find((piece) => piece.id === pieceId) ?? null
     );
@@ -557,10 +557,12 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
   selectPieceAt(square: string): void {
     const pieceId = this.piecesBySquare.get(square);
     if (!pieceId) return;
-    this.selectedPieceId = this.selectedPieceId === pieceId ? null : pieceId;
+    this.hoveredPieceId = null;
+    this.selectedPieceId = pieceId;
   }
   clearSelectedPiece(): void {
     this.selectedPieceId = null;
+    this.hoveredPieceId = null;
   }
   toggleFallenRoster(): void {
     this.fallenRosterOpen = !this.fallenRosterOpen;

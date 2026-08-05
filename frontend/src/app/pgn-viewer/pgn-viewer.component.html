@@ -221,22 +221,22 @@
           @if (!recordReplay) {
             <div class="generation-panel">
               <div class="actions">
-                <button
-                  type="button"
-                  class="primary"
-                  (click)="generateSaga()"
-                  [disabled]="sagaGenerating || !gameId"
-                >
-                  {{
-                    sagaGenerating
-                      ? "Forging the complete saga…"
-                      : storyError
-                        ? "Retry saga generation"
-                        : scenes.length
-                          ? "Refresh story beats"
+                @if (!scenes.length || storyError || sagaGenerating) {
+                  <button
+                    type="button"
+                    class="primary"
+                    (click)="generateSaga()"
+                    [disabled]="sagaGenerating || !gameId"
+                  >
+                    {{
+                      sagaGenerating
+                        ? "Forging the complete saga…"
+                        : storyError
+                          ? "Retry saga generation"
                           : "Forge cohesive saga"
-                  }}
-                </button>
+                    }}
+                  </button>
+                }
                 <button
                   type="button"
                   (click)="toggleFallenRoster()"

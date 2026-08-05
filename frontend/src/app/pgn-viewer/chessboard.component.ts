@@ -20,7 +20,10 @@ import type { Key, KeyedNode } from 'chessground/types';
   template: `<div
     #board
     class="board"
+    (pointerdown)="beginTouchSelection($event)"
     (pointermove)="inspectPointerTarget($event)"
+    (pointerup)="finishTouchSelection($event)"
+    (pointercancel)="cancelTouchSelection()"
     (pointerleave)="pieceHovered.emit(null)"
     (click)="selectPointerTarget($event)"
     (focusin)="inspectFocusTarget($event)"
@@ -54,6 +57,8 @@ import type { Key, KeyedNode } from 'chessground/types';
       :host ::ng-deep piece {
         pointer-events: auto;
         cursor: pointer;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
       }
 
       :host ::ng-deep square.beat-active {
@@ -97,6 +102,12 @@ export class ChessboardComponent
   @Output() pieceSelected = new EventEmitter<string>();
 
   private ground: Api | null = null;
+  private touchSelection: {
+    pointerId: number;
+    square: Key;
+    x: number;
+    y: number;
+  } | null = null;
 
   ngAfterViewInit(): void {
     this.ground = Chessground(this.boardEl.nativeElement, {
@@ -138,8 +149,47 @@ export class ChessboardComponent
   }
 
   inspectPointerTarget(event: PointerEvent): void {
+    // A finger moving during a tap or scroll is not a hover. Treating it as
+    // one leaves stale inspection state that can override the tapped piece.
+    if (event.pointerType === 'touch') return;
     const square = this.pieceSquare(event.target);
     this.pieceHovered.emit(square);
+  }
+
+  beginTouchSelection(event: PointerEvent): void {
+    if (event.pointerType !== 'touch') return;
+    const square = this.pieceSquare(event.target);
+    this.touchSelection = square
+      ? {
+          pointerId: event.pointerId,
+          square,
+          x: event.clientX,
+          y: event.clientY,
+        }
+      : null;
+  }
+
+  finishTouchSelection(event: PointerEvent): void {
+    const candidate = this.touchSelection;
+    this.touchSelection = null;
+    if (
+      event.pointerType !== 'touch' ||
+      !candidate ||
+      candidate.pointerId !== event.pointerId
+    ) {
+      return;
+    }
+    const movement = Math.hypot(
+      event.clientX - candidate.x,
+      event.clientY - candidate.y,
+    );
+    if (movement <= 10 && this.pieceSquare(event.target) === candidate.square) {
+      this.pieceSelected.emit(candidate.square);
+    }
+  }
+
+  cancelTouchSelection(): void {
+    this.touchSelection = null;
   }
 
   selectPointerTarget(event: MouseEvent): void {

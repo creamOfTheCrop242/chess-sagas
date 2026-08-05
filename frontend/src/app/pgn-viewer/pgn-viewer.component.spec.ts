@@ -19,6 +19,35 @@ describe('PgnViewerComponent character inspection', () => {
     expect(component.boardOrientation).toBe('white');
   });
 
+  it('keeps a tapped piece pinned instead of letting stale hover override it', () => {
+    component.currentPly = 2;
+    component.inspectPieceAt('d5');
+    expect(component.hoveredPieceId).toBe('b-p-d7');
+
+    component.selectPieceAt('e4');
+
+    expect(component.hoveredPieceId).toBeNull();
+    expect(component.selectedPieceId).toBe('w-p-e2');
+    expect(component.inspectedPiece?.id).toBe('w-p-e2');
+
+    component.inspectPieceAt('d5');
+    expect(component.inspectedPiece?.id).toBe('w-p-e2');
+  });
+
+  it('keeps repeated taps open and lets the close action fully dismiss the card', () => {
+    component.currentPly = 1;
+
+    component.selectPieceAt('e4');
+    component.selectPieceAt('e4');
+    expect(component.selectedPieceId).toBe('w-p-e2');
+
+    component.hoveredPieceId = 'b-p-d7';
+    component.clearSelectedPiece();
+    expect(component.selectedPieceId).toBeNull();
+    expect(component.hoveredPieceId).toBeNull();
+    expect(component.inspectedPiece).toBeNull();
+  });
+
   it('highlights only the acting piece on a move beat', () => {
     expect(component.currentBeatSquare).toBeNull();
 

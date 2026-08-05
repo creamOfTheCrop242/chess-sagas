@@ -162,3 +162,31 @@ h1 {
     grid-column: 2;
   }
 }
+
+@media (max-width: 430px) {
+  .records-hero {
+    padding: 1rem 0.85rem;
+  }
+
+  h1 {
+    font-size: 2.15rem;
+  }
+
+  .record-list article {
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
+    padding: 1rem;
+  }
+
+  .record-number {
+    font-size: 1rem;
+  }
+
+  .record-list article > a {
+    grid-column: 1;
+    min-height: 2.75rem;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(196, 168, 98, 0.45);
+  }
+}

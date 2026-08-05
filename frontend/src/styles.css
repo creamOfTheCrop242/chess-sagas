@@ -105,11 +105,63 @@ app-pgn-viewer .record-return:focus-visible {
   color: var(--gold-bright);
 }
 
+@media (max-width: 620px) {
+  body {
+    background-attachment: scroll;
+  }
+}
+
 @media (orientation: landscape) and (max-height: 600px) {
+  app-pgn-viewer .page {
+    max-width: none;
+    padding: 0.5rem max(0.5rem, env(safe-area-inset-right)) 1rem
+      max(0.5rem, env(safe-area-inset-left));
+  }
+
+  app-pgn-viewer .hero {
+    margin-bottom: 0.65rem;
+  }
+
+  app-pgn-viewer .brand {
+    font-size: 1.35rem;
+  }
+
+  app-pgn-viewer .hero h1,
+  app-pgn-viewer .hero .lede,
+  app-pgn-viewer .hero .realm-band {
+    display: none;
+  }
+
+  app-pgn-viewer .lore-links {
+    gap: 0.35rem;
+    margin-top: 0.45rem;
+  }
+
+  app-pgn-viewer .lore-link {
+    min-height: 2.25rem;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.62rem;
+  }
+
+  app-pgn-viewer .viewer {
+    padding: 0.65rem;
+  }
+
+  app-pgn-viewer .viewer::before {
+    inset: 4px;
+  }
+
+  app-pgn-viewer .viewer > h2,
+  app-pgn-viewer .viewer > .event,
+  app-pgn-viewer .record-return {
+    margin-bottom: 0.35rem;
+  }
+
   app-pgn-viewer .game-layout.game-layout {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 1fr);
     align-items: start;
     gap: 0.85rem;
+    margin-top: 0.5rem;
   }
 
   app-pgn-viewer .game-column {
@@ -125,17 +177,22 @@ app-pgn-viewer .record-return:focus-visible {
 
   app-pgn-viewer .board-toolbar.board-toolbar,
   app-pgn-viewer .board-stage.board-stage {
-    max-width: min(480px, calc(100dvh - 7rem));
+    width: 100%;
+    max-width: min(480px, calc(100dvh - 4.5rem));
   }
 
   app-pgn-viewer .board-toolbar.board-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-    text-align: center;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 0.35rem;
+    font-size: 0.65rem;
   }
 
   app-pgn-viewer button.flip-board {
-    width: 100%;
+    width: auto;
+    min-height: 2.25rem;
+    padding: 0.35rem 0.55rem;
+    white-space: nowrap;
   }
 
   app-pgn-viewer .story-panel.story-panel {
@@ -145,6 +202,13 @@ app-pgn-viewer .record-return:focus-visible {
     max-height: none;
     margin-top: 0;
     overflow: visible;
+    padding: 0.9rem;
+  }
+
+  app-pgn-viewer .story-text,
+  app-pgn-viewer .story-status {
+    font-size: 0.95rem;
+    line-height: 1.5;
   }
 
   app-pgn-viewer .playback-controls.playback-controls {
@@ -157,5 +221,15 @@ app-pgn-viewer .record-return:focus-visible {
     position: relative;
     grid-column: 2;
     grid-row: 3;
+  }
+
+  app-pgn-viewer .generation-panel .actions {
+    margin-top: 0;
+  }
+
+  app-pgn-viewer .piece-card-pinned {
+    inset: 0.5rem 0.5rem 0.5rem auto;
+    width: min(22rem, 48vw);
+    max-height: calc(100dvh - 1rem);
   }
 }

@@ -31,8 +31,9 @@ import {
 @Injectable({ providedIn: 'root' })
 export class PgnApiService {
   private readonly recentGenerationKey = 'chess-sagas:active-game-id';
-  private readonly parseUrl = 'http://localhost:3000/pgn/parse';
-  private readonly narrateUrl = 'http://localhost:3000/story/narrate';
+  private readonly apiBase = '/api';
+  private readonly parseUrl = `${this.apiBase}/pgn/parse`;
+  private readonly narrateUrl = `${this.apiBase}/story/narrate`;
   private readonly activeGenerations = new Map<
     string,
     Observable<SceneBreakdownResponse>
@@ -57,13 +58,11 @@ export class PgnApiService {
   }
 
   createGame(pgn: string): Observable<SavedGame> {
-    return this.http.post<SavedGame>('http://localhost:3000/games', { pgn });
+    return this.http.post<SavedGame>(`${this.apiBase}/games`, { pgn });
   }
 
   getGame(gameId: string): Observable<SavedGameRecord> {
-    return this.http.get<SavedGameRecord>(
-      `http://localhost:3000/games/${gameId}`,
-    );
+    return this.http.get<SavedGameRecord>(`${this.apiBase}/games/${gameId}`);
   }
 
   recentGenerationGameId(): string | null {
@@ -87,7 +86,7 @@ export class PgnApiService {
     const active = this.activeGenerations.get(gameId);
     if (active) return active;
 
-    const base = `http://localhost:3000/games/${gameId}`;
+    const base = `${this.apiBase}/games/${gameId}`;
     this.notifyAllStages(gameId, 'checking');
     let storyResponse: SceneBreakdownResponse | null = null;
     const generation = this.http
@@ -149,19 +148,17 @@ export class PgnApiService {
 
   getScenes(gameId: string): Observable<SceneBreakdownResponse> {
     return this.http.get<SceneBreakdownResponse>(
-      `http://localhost:3000/games/${gameId}/scenes`,
+      `${this.apiBase}/games/${gameId}/scenes`,
     );
   }
 
   getRecords(): Observable<ArchiveRecordSummary[]> {
-    return this.http.get<ArchiveRecordSummary[]>(
-      'http://localhost:3000/games/records',
-    );
+    return this.http.get<ArchiveRecordSummary[]>(`${this.apiBase}/games/records`);
   }
 
   getRecord(gameId: string): Observable<ArchivedRecord> {
     return this.http.get<ArchivedRecord>(
-      `http://localhost:3000/games/records/${gameId}`,
+      `${this.apiBase}/games/records/${gameId}`,
     );
   }
 

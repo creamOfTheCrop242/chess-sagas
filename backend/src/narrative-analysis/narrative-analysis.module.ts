@@ -15,5 +15,6 @@ import { OpenAiNarrativeAnalysisProvider } from './openai-narrative-analysis.pro
       useClass: OpenAiNarrativeAnalysisProvider,
     },
   ],
+  exports: [NarrativeAnalysisService],
 })
 export class NarrativeAnalysisModule {}

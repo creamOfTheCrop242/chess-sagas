@@ -15,5 +15,6 @@ import { StoryOutlineValidator } from './story-outline.validator';
       useClass: OpenAiStoryOutlineProvider,
     },
   ],
+  exports: [StoryOutlineService],
 })
 export class StoryOutlineModule {}

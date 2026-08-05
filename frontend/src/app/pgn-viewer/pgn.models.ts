@@ -221,3 +221,10 @@ export type SagaStageState =
   | 'failed';
 
 export type PipelineStatus = Record<SagaStage, boolean>;
+
+export interface SagaGenerationStatus {
+  state: 'idle' | 'queued' | 'running' | 'completed' | 'failed';
+  currentStage: SagaStage;
+  error: string | null;
+  stages: PipelineStatus;
+}

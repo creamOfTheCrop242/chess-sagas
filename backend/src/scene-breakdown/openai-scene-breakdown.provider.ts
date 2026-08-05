@@ -12,6 +12,7 @@ import {
   logOpenAiGeneration,
   logOpenAiGenerationFailure,
   promptCacheOptions,
+  serializeRequestWithoutTelemetry,
 } from '../openai/openai-generation';
 import {
   sceneBreakdownSchema,
@@ -36,13 +37,18 @@ export class OpenAiSceneBreakdownProvider implements SceneBreakdownProvider {
     if (!this.client)
       throw new ServiceUnavailableException('OPENAI_API_KEY is not configured');
     const startedAt = Date.now();
+    const serializedInput = serializeRequestWithoutTelemetry(input);
+    const callTelemetry = {
+      ...input.telemetry,
+      payloadBytes: Buffer.byteLength(serializedInput, 'utf8'),
+    };
     try {
       const response = await this.client.responses.parse({
         model: this.model,
         ...promptCacheOptions(this.model, 'chess-sagas:scene-breakdown'),
         reasoning: { effort: 'medium' },
         instructions: SCENE_BREAKDOWN_INSTRUCTIONS,
-        input: JSON.stringify(input),
+        input: serializedInput,
         max_output_tokens: 16000,
         text: {
           verbosity: 'high',
@@ -58,6 +64,7 @@ export class OpenAiSceneBreakdownProvider implements SceneBreakdownProvider {
         this.model,
         startedAt,
         response,
+        callTelemetry,
       );
       return breakdown;
     } catch (error) {
@@ -67,6 +74,7 @@ export class OpenAiSceneBreakdownProvider implements SceneBreakdownProvider {
         this.model,
         startedAt,
         error,
+        callTelemetry,
       );
       if (
         error instanceof ServiceUnavailableException ||

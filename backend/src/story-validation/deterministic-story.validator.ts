@@ -136,7 +136,7 @@ export class DeterministicStoryValidator {
       findings.push({
         type: 'wrong-captor',
         severity: 'error',
-        message: `${victim.permanentName} is incorrectly given ${actor.permanentName}'s capture at ply ${event.ply}`,
+        message: `${actor.permanentName} must kill ${victim.permanentName} at ply ${event.ply}, but the prose reverses the captor and victim`,
         ply: event.ply,
         pieceId: event.pieceId,
         excerpt,
@@ -170,6 +170,9 @@ export class DeterministicStoryValidator {
         (name, index, all): name is string =>
           Boolean(name?.trim()) && all.indexOf(name) === index,
       );
+      const otherCharacterAliases = ledger.pieces
+        .filter((candidate) => candidate.id !== piece.id)
+        .flatMap((candidate) => characterAliases(candidate));
 
       for (const scene of scenes) {
         if (
@@ -183,11 +186,12 @@ export class DeterministicStoryValidator {
           scene.fantasyNarration,
           woundText,
           aliases,
+          otherCharacterAliases,
         );
         if (!excerpt) continue;
         findings.push({
           type: 'wound-continuity',
-          severity: 'error',
+          severity: 'warning',
           message: `${piece.permanentName}'s wound is inflicted at ply ${wound.inflictedAtPly} but appears prematurely at ply ${scene.ply}`,
           ply: scene.ply,
           pieceId: wound.pieceId,
@@ -255,6 +259,10 @@ const ANATOMY_FAMILIES = [
   ['shoulder', 'collarbone'],
   ['back', 'spine', 'spinal'],
   ['face', 'jaw', 'cheek'],
+  ['wheel', 'wheels', 'wheel housing', 'axle', 'tread', 'treads'],
+  ['ward plate', 'ward plates', 'armor plate', 'armor plates', 'hull'],
+  ['maintenance channel', 'maintenance channels'],
+  ['command cradle', 'cradle', 'restraint', 'restraints'],
 ] as const;
 
 const INJURY_FAMILIES = [
@@ -300,6 +308,7 @@ function matchingCharacterWoundExcerpt(
   narration: string,
   woundDescription: string,
   aliases: string[],
+  otherCharacterAliases: string[],
 ): string | undefined {
   const anatomy = matchingFamilies(woundDescription, ANATOMY_FAMILIES);
   const injury = [
@@ -316,14 +325,55 @@ function matchingCharacterWoundExcerpt(
       anatomy.some((family) => hasAny(sentence, family));
     const hasInjury = injury.some((family) => hasAny(sentence, family));
     if (!hasAnatomy || !hasInjury) return false;
-    if (mentionsCharacter(sentence, aliases)) return true;
+    if (mentionsCharacter(sentence, aliases)) {
+      if (!mentionsCharacter(sentence, otherCharacterAliases)) return true;
+      return nearestWoundMentionBelongsTo(
+        sentence,
+        aliases,
+        otherCharacterAliases,
+        [...anatomy, ...injury].flat(),
+      );
+    }
     const previousSentence = normalizedSentences[index - 1];
     return (
       Boolean(previousSentence) &&
       mentionsCharacter(previousSentence, aliases) &&
+      !mentionsCharacter(sentence, otherCharacterAliases) &&
       /\b(?:he|she|his|her|they|their)\b/i.test(sentence)
     );
   });
+}
+
+function nearestWoundMentionBelongsTo(
+  sentence: string,
+  targetAliases: string[],
+  otherAliases: string[],
+  woundTerms: readonly string[],
+): boolean {
+  const woundPositions = matchPositions(sentence, woundTerms);
+  if (woundPositions.length === 0) return false;
+  const targetDistance = nearestDistance(
+    matchPositions(sentence, targetAliases),
+    woundPositions,
+  );
+  const otherDistance = nearestDistance(
+    matchPositions(sentence, otherAliases),
+    woundPositions,
+  );
+  return targetDistance < otherDistance;
+}
+
+function matchPositions(text: string, terms: readonly string[]): number[] {
+  return terms.flatMap((term) =>
+    [...text.matchAll(new RegExp(`\\b${escapeRegex(term)}\\b`, 'gi'))].map(
+      (match) => match.index,
+    ),
+  );
+}
+
+function nearestDistance(left: number[], right: number[]): number {
+  if (left.length === 0 || right.length === 0) return Number.POSITIVE_INFINITY;
+  return Math.min(...left.flatMap((a) => right.map((b) => Math.abs(a - b))));
 }
 
 function matchingFamilies(
@@ -384,22 +434,45 @@ function reversedCaptureExcerpt(
   allegedKillerAliases: string[],
   actualKillerAliases: string[],
 ): string | undefined {
-  const decisiveVerb =
-    '(?:drove|thrust|plunged|buried|rammed|fired|shot|stabbed|impaled|pierced|beheaded|decapitated|crushed|burned|incinerated|blasted|slashed|struck|tore|ripped|split|smashed)';
-  const sentences = narration.match(/[^.!?]+[.!?]?/g) ?? [narration];
-  for (const sentence of sentences) {
+  const explicitDeathVerb =
+    '(?:killed|slew|murdered|beheaded|decapitated|incinerated)';
+  const explicitPassiveDeathVerb =
+    '(?:killed|slew|murdered|beheaded|decapitated|incinerated|crushed)';
+  const fatalAttackVerb =
+    '(?:drove|thrust|plunged|buried|stabbed|impaled|pierced|crushed|tore|ripped|smashed)';
+  const fatalTarget =
+    '(?:heart|skull|brain|mouth|throat|neck|spine|chest|head)';
+  const weaponSubject =
+    '(?:blade|sword|spear|lance|axe|arrow|bolt|shot|gun|guns|cannon|cannons|ram|magic|spell|fire|flames|fortress|company|soldiers)';
+  const clauses = narration.match(/[^.!?;]+[.!?;]?/g) ?? [narration];
+  for (const clause of clauses) {
     for (const allegedKiller of allegedKillerAliases) {
       for (const actualKiller of actualKillerAliases) {
-        const activeReversal = new RegExp(
-          `\\b${escapeRegex(allegedKiller)}\\b(?!['’]s)[^.!?]{0,180}\\b${decisiveVerb}\\b[^.!?]{0,180}\\b${escapeRegex(actualKiller)}(?:['’]s)?\\b`,
+        const alleged = escapeRegex(allegedKiller);
+        const actual = escapeRegex(actualKiller);
+        const explicitActiveReversal = new RegExp(
+          `\\b${alleged}\\b(?!['’]s)(?:(?!\\b${actual}\\b)[^.!?;]){0,120}\\b${explicitDeathVerb}\\b(?!\\s+by\\b)[^.!?;]{0,100}\\b${actual}(?:['’]s)?\\b`,
           'i',
         );
         const passiveReversal = new RegExp(
-          `\\b${escapeRegex(actualKiller)}\\b[^.!?]{0,180}\\b(?:was|is)\\s+${decisiveVerb}\\b[^.!?]{0,180}\\bby\\s+${escapeRegex(allegedKiller)}\\b`,
+          `\\b${actual}\\b[^.!?;]{0,100}\\b(?:was|is|had\\s+been)\\s+${explicitPassiveDeathVerb}\\b[^.!?;]{0,80}\\bby\\s+${alleged}\\b`,
           'i',
         );
-        if (activeReversal.test(sentence) || passiveReversal.test(sentence)) {
-          return sentence.trim();
+        const possessiveWeaponReversal = new RegExp(
+          `\\b${alleged}['’]s\\s+${weaponSubject}\\b[^.!?;]{0,80}\\b${fatalAttackVerb}\\b[^.!?;]{0,80}\\b${actual}(?:['’]s)?\\s+${fatalTarget}\\b`,
+          'i',
+        );
+        const fatalActiveReversal = new RegExp(
+          `\\b${alleged}\\b(?!['’]s)(?:(?!\\b${actual}\\b)[^.!?;]){0,120}\\b${fatalAttackVerb}\\b[^.!?;]{0,100}\\b${actual}(?:['’]s)?\\s+${fatalTarget}\\b`,
+          'i',
+        );
+        if (
+          explicitActiveReversal.test(clause) ||
+          passiveReversal.test(clause) ||
+          possessiveWeaponReversal.test(clause) ||
+          fatalActiveReversal.test(clause)
+        ) {
+          return clause.trim();
         }
       }
     }

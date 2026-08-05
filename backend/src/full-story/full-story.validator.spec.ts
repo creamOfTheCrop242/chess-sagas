@@ -5,7 +5,10 @@ import type { SceneBreakdown } from '../scene-breakdown/models/scene-breakdown';
 import type { GeneratedStoryDraft } from './models/generated-story';
 import {
   assembleStoryMarkdown,
+  buildCaptureManifest,
+  buildStoryCorrectionFeedback,
   isAllowedDefeatedKingFate,
+  isCorrectableStoryPackageError,
 } from './full-story.service';
 import {
   kingDiesFromFate,
@@ -150,9 +153,9 @@ The Southern King poured his strength into the Royal Seal, but every remaining r
       ),
     ).toBe(true);
     expect(isAllowedDefeatedKingFate('draw', 'survives')).toBe(true);
-    expect(
-      isAllowedDefeatedKingFate('draw', 'killed-after-checkmate'),
-    ).toBe(false);
+    expect(isAllowedDefeatedKingFate('draw', 'killed-after-checkmate')).toBe(
+      false,
+    );
   });
 
   it('maps each surrender outcome to coherent King and Seal states', () => {
@@ -164,5 +167,55 @@ The Southern King poured his strength into the Royal Seal, but every remaining r
     ).toBe('intact');
     expect(kingDiesFromFate('executed-after-rejected-surrender')).toBe(true);
     expect(kingDiesFromFate('abandons-seal-and-flees')).toBe(false);
+  });
+
+  it('targets deterministic story-package errors for one correction retry', () => {
+    const error =
+      'Generated story package contains capture attribution errors: Edric must kill Northeast Fortress at ply 66, but the prose reverses the captor and victim. Rejected prose: "The fortress crushed Edric."';
+
+    expect(isCorrectableStoryPackageError(error)).toBe(true);
+    expect(isCorrectableStoryPackageError('OpenAI request timed out')).toBe(
+      false,
+    );
+    expect(buildStoryCorrectionFeedback(error)).toContain(
+      'the actor kills the victim, never the reverse',
+    );
+    expect(buildStoryCorrectionFeedback(error)).toContain(error);
+  });
+
+  it('builds an explicit capture manifest from ledger identities', () => {
+    const captureLedger = {
+      pieces: [
+        {
+          id: 'w-p-e2',
+          permanentName: 'Northern Ember Company',
+          viewpointName: 'Aric',
+        },
+        {
+          id: 'b-p-d7',
+          permanentName: 'Southern Briar Company',
+          viewpointName: 'Tarin',
+        },
+      ],
+      events: [
+        {
+          ply: 63,
+          isCapture: true,
+          pieceId: 'w-p-e2',
+          capturedPieceId: 'b-p-d7',
+        },
+      ],
+    } as GameLedger;
+
+    expect(buildCaptureManifest(captureLedger)).toEqual([
+      {
+        ply: 63,
+        actorId: 'w-p-e2',
+        actorNames: ['Aric', 'Northern Ember Company'],
+        victimId: 'b-p-d7',
+        victimNames: ['Tarin', 'Southern Briar Company'],
+        requiredOutcome: 'Aric kills Tarin; Tarin must not kill Aric.',
+      },
+    ]);
   });
 });

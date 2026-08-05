@@ -3,6 +3,7 @@ import { GameLedgerService } from '../chess/game-ledger.service';
 import type { GameLedger } from '../chess/models/game-ledger';
 import { PieceIdentityService } from '../chess/piece-identity.service';
 import type { PrismaService } from '../database/prisma.service';
+import { GenerationPreparationService } from '../generation/generation-preparation.service';
 import { PgnService } from '../pgn/pgn.service';
 import type { NarrativeAnalysisProvider } from './llm-provider';
 import type { NarrativeAnalysis } from './models/narrative-analysis';
@@ -49,6 +50,7 @@ describe('NarrativeAnalysisService', () => {
     jest.clearAllMocks();
     service = new NarrativeAnalysisService(
       prisma,
+      new GenerationPreparationService(prisma),
       provider,
       new NarrativeAnalysisValidator(),
     );
@@ -80,6 +82,12 @@ describe('NarrativeAnalysisService', () => {
       requiredWoundEvents: selectRequiredWoundEvents(ledger),
       battlefieldEnvironment: selectBattlefieldEnvironment(ledger),
       surrenderContext: classifySurrender(ledger),
+      telemetry: {
+        gameId: 'game-1',
+        generationRunId: 'run-1',
+        attempt: 1,
+        repairMode: 'none',
+      },
     });
     expect(runCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({

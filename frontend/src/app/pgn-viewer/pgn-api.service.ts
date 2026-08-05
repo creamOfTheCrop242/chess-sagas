@@ -4,9 +4,11 @@ import { HttpClient } from '@angular/common/http';
 import {
   catchError,
   concatMap,
+  finalize,
   Observable,
   of,
   retry,
+  shareReplay,
   switchMap,
   tap,
   timer,
@@ -18,7 +20,9 @@ import {
   NarrateRequest,
   NarrateResponse,
   ParsedPgn,
+  PipelineStatus,
   SavedGame,
+  SavedGameRecord,
   SagaStage,
   SagaStageState,
   SceneBreakdownResponse,
@@ -26,8 +30,21 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class PgnApiService {
+  private readonly recentGenerationKey = 'chess-sagas:active-game-id';
   private readonly parseUrl = 'http://localhost:3000/pgn/parse';
   private readonly narrateUrl = 'http://localhost:3000/story/narrate';
+  private readonly activeGenerations = new Map<
+    string,
+    Observable<SceneBreakdownResponse>
+  >();
+  private readonly generationListeners = new Map<
+    string,
+    Set<(stage: SagaStage, state: SagaStageState) => void>
+  >();
+  private readonly generationState = new Map<
+    string,
+    Partial<Record<SagaStage, SagaStageState>>
+  >();
 
   constructor(private readonly http: HttpClient) {}
 
@@ -43,25 +60,91 @@ export class PgnApiService {
     return this.http.post<SavedGame>('http://localhost:3000/games', { pgn });
   }
 
+  getGame(gameId: string): Observable<SavedGameRecord> {
+    return this.http.get<SavedGameRecord>(
+      `http://localhost:3000/games/${gameId}`,
+    );
+  }
+
+  recentGenerationGameId(): string | null {
+    try {
+      return sessionStorage.getItem(this.recentGenerationKey);
+    } catch {
+      return null;
+    }
+  }
+
   generateSaga(
     gameId: string,
     onProgress: (stage: SagaStage, state: SagaStageState) => void,
   ): Observable<SceneBreakdownResponse> {
+    try {
+      sessionStorage.setItem(this.recentGenerationKey, gameId);
+    } catch {
+      // Session restoration is optional; generation still proceeds.
+    }
+    this.addGenerationListener(gameId, onProgress);
+    const active = this.activeGenerations.get(gameId);
+    if (active) return active;
+
     const base = `http://localhost:3000/games/${gameId}`;
-    return this.ensureStage(`${base}/analysis`, 'analysis', onProgress).pipe(
-      concatMap(() =>
-        this.ensureStage(`${base}/outline`, 'outline', onProgress),
-      ),
-      concatMap(() => this.ensureStage(`${base}/story`, 'story', onProgress)),
-      concatMap(() => this.ensureValidStory(base, onProgress)),
-      concatMap(() =>
-        this.ensureStage<SceneBreakdownResponse>(
-          `${base}/scenes`,
-          'scenes',
-          onProgress,
+    this.notifyAllStages(gameId, 'checking');
+    let storyResponse: SceneBreakdownResponse | null = null;
+    const generation = this.http
+      .get<PipelineStatus>(`${base}/pipeline-status`)
+      .pipe(
+        concatMap((status) =>
+          this.runStage(base, gameId, 'analysis', status.analysis, status),
         ),
-      ),
-    );
+        concatMap(({ status }) =>
+          this.runStage(base, gameId, 'outline', status.outline, status),
+        ),
+        concatMap(({ status }) =>
+          this.runStage<SceneBreakdownResponse>(
+            base,
+            gameId,
+            'story',
+            status.story,
+            status,
+          ),
+        ),
+        concatMap(({ status, response }) => {
+          storyResponse = response;
+          if (storyResponse?.sceneBreakdown) {
+            this.notify(gameId, 'validation', 'completed');
+            this.notify(gameId, 'scenes', 'completed');
+            return of(storyResponse);
+          }
+          return this.runStage(
+            base,
+            gameId,
+            'validation',
+            status.validation,
+            status,
+          ).pipe(
+            concatMap(() =>
+              status.scenes
+                ? this.loadReusedScenes(base, gameId)
+                : this.runStage<SceneBreakdownResponse>(
+                    base,
+                    gameId,
+                    'scenes',
+                    false,
+                    status,
+                  ).pipe(switchMap(({ response }) => of(response!))),
+            ),
+          );
+        }),
+        tap(() => this.clearRecentGeneration(gameId)),
+        finalize(() => {
+          this.activeGenerations.delete(gameId);
+          this.generationListeners.delete(gameId);
+          this.generationState.delete(gameId);
+        }),
+        shareReplay({ bufferSize: 1, refCount: false }),
+      );
+    this.activeGenerations.set(gameId, generation);
+    return generation;
   }
 
   getScenes(gameId: string): Observable<SceneBreakdownResponse> {
@@ -82,63 +165,36 @@ export class PgnApiService {
     );
   }
 
-  private ensureStage<T = unknown>(
-    url: string,
-    stage: SagaStage,
-    onProgress: (stage: SagaStage, state: SagaStageState) => void,
-  ): Observable<T> {
-    onProgress(stage, 'checking');
-    return this.http.get<T>(url).pipe(
-      tap(() => onProgress(stage, 'reused')),
-      catchError((error: unknown) => {
-        if (error instanceof HttpErrorResponse && error.status === 404) {
-          onProgress(stage, 'generating');
-          const generation =
-            stage === 'story'
-              ? this.generateStoryWithTargetedRetry<T>(url, () =>
-                  onProgress(stage, 'retrying'),
-                )
-              : this.http.post<T>(url, {}).pipe(this.retryFailedStage<T>());
-          return generation.pipe(tap(() => onProgress(stage, 'completed')));
-        }
-        return throwError(() => error);
-      }),
-      catchError((error: unknown) => {
-        onProgress(stage, 'failed');
-        return throwError(() => error);
-      }),
-    );
-  }
-
-  private ensureValidStory(
+  private runStage<T = unknown>(
     base: string,
-    onProgress: (stage: SagaStage, state: SagaStageState) => void,
-  ): Observable<unknown> {
-    const url = `${base}/validation`;
-    return this.ensureStage<{
-      storyValidation?: { valid: boolean };
-    }>(url, 'validation', onProgress).pipe(
-      switchMap((response) =>
-        response.storyValidation?.valid
-          ? of(response)
-          : this.regenerateValidation(url, onProgress),
-      ),
-    );
-  }
-
-  private regenerateValidation(
-    url: string,
-    onProgress: (stage: SagaStage, state: SagaStageState) => void,
-  ): Observable<unknown> {
-    onProgress('validation', 'generating');
-    return this.http.post(url, {}).pipe(
-      this.retryFailedStage(),
-      tap(() => onProgress('validation', 'completed')),
+    gameId: string,
+    stage: SagaStage,
+    reused: boolean,
+    status?: PipelineStatus,
+  ): Observable<{ status: PipelineStatus; response: T | null }> {
+    const pipelineStatus = status ?? ({} as PipelineStatus);
+    if (reused) {
+      this.notify(gameId, stage, 'reused');
+      return of({ status: pipelineStatus, response: null });
+    }
+    this.notify(gameId, stage, 'generating');
+    return this.http.post<T>(`${base}/${this.stagePath(stage)}`, {}).pipe(
+      this.retryFailedStage<T>(),
+      tap(() => this.notify(gameId, stage, 'completed')),
+      switchMap((response) => of({ status: pipelineStatus, response })),
       catchError((error: unknown) => {
-        onProgress('validation', 'failed');
+        this.notify(gameId, stage, 'failed');
         return throwError(() => error);
       }),
     );
+  }
+
+  private loadReusedScenes(
+    base: string,
+    gameId: string,
+  ): Observable<SceneBreakdownResponse> {
+    this.notify(gameId, 'scenes', 'reused');
+    return this.http.get<SceneBreakdownResponse>(`${base}/scenes`);
   }
 
   private retryFailedStage<T>() {
@@ -156,30 +212,50 @@ export class PgnApiService {
     });
   }
 
-  private generateStoryWithTargetedRetry<T>(
-    url: string,
-    onRetry: () => void,
-  ): Observable<T> {
-    return this.http.post<T>(url, {}).pipe(
-      catchError((error: unknown) => {
-        if (
-          error instanceof HttpErrorResponse &&
-          (error.status === 0 || error.status >= 500)
-        ) {
-          onRetry();
-          return this.http.post<T>(url, {
-            validationFeedback: this.generationErrorMessage(error),
-          });
-        }
-        return throwError(() => error);
-      }),
+  private stagePath(stage: SagaStage): string {
+    return stage === 'analysis' ? 'analysis' : stage;
+  }
+
+  private addGenerationListener(
+    gameId: string,
+    listener: (stage: SagaStage, state: SagaStageState) => void,
+  ): void {
+    const listeners = this.generationListeners.get(gameId) ?? new Set();
+    listeners.add(listener);
+    this.generationListeners.set(gameId, listeners);
+    const state = this.generationState.get(gameId);
+    if (!state) return;
+    Object.entries(state).forEach(([stage, value]) =>
+      listener(stage as SagaStage, value),
     );
   }
 
-  private generationErrorMessage(error: HttpErrorResponse): string {
-    const message = error.error?.message;
-    if (Array.isArray(message)) return message.join('; ').slice(0, 4_000);
-    if (typeof message === 'string') return message.slice(0, 4_000);
-    return (error.message || 'Story package failed validation').slice(0, 4_000);
+  private notify(
+    gameId: string,
+    stage: SagaStage,
+    state: SagaStageState,
+  ): void {
+    const snapshot = this.generationState.get(gameId) ?? {};
+    snapshot[stage] = state;
+    this.generationState.set(gameId, snapshot);
+    this.generationListeners
+      .get(gameId)
+      ?.forEach((listener) => listener(stage, state));
+  }
+
+  private notifyAllStages(gameId: string, state: SagaStageState): void {
+    (['analysis', 'outline', 'story', 'validation', 'scenes'] as const).forEach(
+      (stage) => this.notify(gameId, stage, state),
+    );
+  }
+
+  private clearRecentGeneration(gameId: string): void {
+    try {
+      if (sessionStorage.getItem(this.recentGenerationKey) === gameId) {
+        sessionStorage.removeItem(this.recentGenerationKey);
+      }
+    } catch {
+      // Session restoration is optional.
+    }
   }
 }

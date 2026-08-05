@@ -129,6 +129,10 @@ export type SavedGame = {
   ledger: { data: GameLedger };
 };
 
+export type SavedGameRecord = SavedGame & {
+  rawPgn: string;
+};
+
 export type PlaybackScene = {
   id: string;
   actNumber: number;
@@ -141,6 +145,8 @@ export type PlaybackScene = {
   characters: string[];
   locations: string[];
   deaths: string[];
+  captureActorId?: string | null;
+  captureVictimId?: string | null;
   promotions: string[];
   visualPrompt: string;
   videoPrompt: string;
@@ -213,3 +219,5 @@ export type SagaStageState =
   | 'retrying'
   | 'completed'
   | 'failed';
+
+export type PipelineStatus = Record<SagaStage, boolean>;

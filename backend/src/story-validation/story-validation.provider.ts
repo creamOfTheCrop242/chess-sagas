@@ -5,6 +5,7 @@ import type {
   StoryValidationResult,
   ValidationFinding,
 } from './models/story-validation';
+import type { GenerationTelemetryContext } from '../openai/openai-generation';
 
 export const STORY_VALIDATION_PROVIDER = Symbol('STORY_VALIDATION_PROVIDER');
 
@@ -15,6 +16,7 @@ export interface StoryValidationRequest {
   title: string;
   storyMarkdown: string;
   deterministicFindings: ValidationFinding[];
+  telemetry: GenerationTelemetryContext;
 }
 
 export interface StoryValidationProvider {

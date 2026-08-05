@@ -3,9 +3,21 @@ import type { ConfigService } from '@nestjs/config';
 import { appendFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import OpenAI from 'openai';
+import type { GameLedger } from '../chess/models/game-ledger';
 
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 const DEFAULT_MAX_RETRIES = 1;
+
+export interface GenerationTelemetryContext {
+  gameId: string;
+  generationRunId: string;
+  attempt: number;
+  repairMode?: 'none' | 'full' | 'partial';
+}
+
+interface GenerationCallTelemetry extends GenerationTelemetryContext {
+  payloadBytes: number;
+}
 
 export function createOpenAiGenerationClient(
   apiKey: string,
@@ -40,15 +52,63 @@ export function promptCacheOptions(model: string, key: string) {
 
 export function serializeRequestWithCharacterRegistry<
   T extends {
-    ledger: { pieces: unknown[] };
+    ledger: GameLedger;
     characterRegistry: unknown[];
+    telemetry?: GenerationTelemetryContext;
   },
 >(request: T): string {
-  const { pieces: _duplicatePieces, ...ledgerWithoutPieces } = request.ledger;
+  const { telemetry, ledger, ...modelRequest } = request;
+  void telemetry;
   return JSON.stringify({
-    ...request,
-    ledger: ledgerWithoutPieces,
+    ...modelRequest,
+    ledger: compactGameLedgerForModel(ledger, false),
   });
+}
+
+export function serializeRequestWithoutTelemetry<
+  T extends {
+    ledger: GameLedger;
+    telemetry?: GenerationTelemetryContext;
+  },
+>(request: T): string {
+  const { telemetry, ledger, ...modelRequest } = request;
+  void telemetry;
+  return JSON.stringify({
+    ...modelRequest,
+    ledger: compactGameLedgerForModel(ledger, true),
+  });
+}
+
+export function compactGameLedgerForModel(
+  ledger: GameLedger,
+  includePieces = true,
+) {
+  const { pieces, events, ...ledgerWithoutEventsAndPieces } = ledger;
+  return {
+    ...ledgerWithoutEventsAndPieces,
+    ...(includePieces ? { pieces } : {}),
+    events: events.map((event, index) => {
+      const { boardFenAfterMove, ...eventWithoutBoard } = event;
+      return shouldRetainBoardSnapshot(event, index, events.length)
+        ? { ...eventWithoutBoard, boardFenAfterMove }
+        : eventWithoutBoard;
+    }),
+  };
+}
+
+function shouldRetainBoardSnapshot(
+  event: GameLedger['events'][number],
+  index: number,
+  eventCount: number,
+): boolean {
+  return (
+    index === eventCount - 1 ||
+    event.isCapture ||
+    event.isCheck ||
+    event.isCheckmate ||
+    event.isCastle ||
+    event.isPromotion
+  );
 }
 
 export function logOpenAiGeneration(
@@ -67,6 +127,7 @@ export function logOpenAiGeneration(
       };
     } | null;
   },
+  telemetry: GenerationCallTelemetry,
 ): void {
   const usage = response.usage;
   const durationMs = Date.now() - startedAt;
@@ -80,6 +141,9 @@ export function logOpenAiGeneration(
       `cacheWriteTokens=${usage?.input_tokens_details?.cache_write_tokens ?? 0}`,
       `reasoningTokens=${usage?.output_tokens_details?.reasoning_tokens ?? 0}`,
       `outputTokens=${usage?.output_tokens ?? 0}`,
+      `payloadBytes=${telemetry.payloadBytes}`,
+      `gameId=${telemetry.gameId}`,
+      `attempt=${telemetry.attempt}`,
     ].join(' '),
   );
   appendOpenAiCallLog({
@@ -93,6 +157,7 @@ export function logOpenAiGeneration(
     cacheWriteTokens: usage?.input_tokens_details?.cache_write_tokens ?? 0,
     reasoningTokens: usage?.output_tokens_details?.reasoning_tokens ?? 0,
     outputTokens: usage?.output_tokens ?? 0,
+    ...telemetry,
   });
 }
 
@@ -102,6 +167,7 @@ export function logOpenAiGenerationFailure(
   model: string,
   startedAt: number,
   error: unknown,
+  telemetry: GenerationCallTelemetry,
 ): void {
   const durationMs = Date.now() - startedAt;
   const message =
@@ -121,6 +187,7 @@ export function logOpenAiGenerationFailure(
     reasoningTokens: 0,
     outputTokens: 0,
     error: message,
+    ...telemetry,
   });
 }
 

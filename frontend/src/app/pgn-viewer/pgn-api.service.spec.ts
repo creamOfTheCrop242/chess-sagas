@@ -24,7 +24,7 @@ describe('PgnApiService', () => {
 
   afterEach(() => http.verify());
 
-  it('passes a story validation failure into one targeted retry', () => {
+  it('uses one status request and skips redundant post-story stages', () => {
     const states: string[] = [];
     api
       .generateSaga('game-1', (stage, state) =>
@@ -32,46 +32,79 @@ describe('PgnApiService', () => {
       )
       .subscribe();
 
+    http
+      .expectOne('http://localhost:3000/games/game-1/pipeline-status')
+      .flush({
+        analysis: false,
+        outline: false,
+        story: false,
+        validation: false,
+        scenes: false,
+      });
     http.expectOne('http://localhost:3000/games/game-1/analysis').flush({});
     http.expectOne('http://localhost:3000/games/game-1/outline').flush({});
-    http
-      .expectOne('http://localhost:3000/games/game-1/story')
-      .flush('missing', { status: 404, statusText: 'Not Found' });
+    http.expectOne('http://localhost:3000/games/game-1/story').flush({
+      status: 'COMPLETED',
+      sceneBreakdown: { data: { scenes: [] } },
+    });
 
-    const firstAttempt = http.expectOne(
-      'http://localhost:3000/games/game-1/story',
-    );
-    expect(firstAttempt.request.method).toBe('POST');
-    expect(firstAttempt.request.body).toEqual({});
-    firstAttempt.flush(
-      {
-        message:
-          "Generated story package contains wound timeline errors: Aric's wound appears prematurely at ply 44",
-      },
-      { status: 500, statusText: 'Server Error' },
-    );
+    http.expectNone('http://localhost:3000/games/game-1/validation');
+    http.expectNone('http://localhost:3000/games/game-1/scenes');
+    expect(states).toContain('story:completed');
+    expect(states).toContain('validation:completed');
+    expect(states).toContain('scenes:completed');
+  });
 
-    const targetedRetry = http.expectOne(
-      'http://localhost:3000/games/game-1/story',
-    );
-    expect(targetedRetry.request.method).toBe('POST');
-    expect(targetedRetry.request.body.validationFeedback).toContain(
-      "Aric's wound appears prematurely at ply 44",
-    );
-    targetedRetry.flush({});
+  it('loads completed scenes after reusing every stage', () => {
+    const states: string[] = [];
+    api
+      .generateSaga('game-1', (stage, state) =>
+        states.push(`${stage}:${state}`),
+      )
+      .subscribe();
 
     http
-      .expectOne('http://localhost:3000/games/game-1/validation')
-      .flush({ storyValidation: { valid: true } });
+      .expectOne('http://localhost:3000/games/game-1/pipeline-status')
+      .flush({
+        analysis: true,
+        outline: true,
+        story: true,
+        validation: true,
+        scenes: true,
+      });
     http.expectOne('http://localhost:3000/games/game-1/scenes').flush({
       status: 'COMPLETED',
       sceneBreakdown: { data: { scenes: [] } },
     });
 
-    expect(states).toContain('story:completed');
-    expect(states).toContain('story:retrying');
-    expect(states.filter((entry) => entry === 'story:generating')).toHaveSize(
-      1,
-    );
+    expect(states).toContain('analysis:reused');
+    expect(states).toContain('outline:reused');
+    expect(states).toContain('story:reused');
+    expect(states).toContain('validation:reused');
+    expect(states).toContain('scenes:reused');
+  });
+
+  it('shares one active generation across duplicate callers', () => {
+    const first = api.generateSaga('game-1', () => undefined);
+    const second = api.generateSaga('game-1', () => undefined);
+    expect(second).toBe(first);
+    first.subscribe();
+    second.subscribe();
+
+    http
+      .expectOne('http://localhost:3000/games/game-1/pipeline-status')
+      .flush({
+        analysis: false,
+        outline: false,
+        story: false,
+        validation: false,
+        scenes: false,
+      });
+    http.expectOne('http://localhost:3000/games/game-1/analysis').flush({});
+    http.expectOne('http://localhost:3000/games/game-1/outline').flush({});
+    http.expectOne('http://localhost:3000/games/game-1/story').flush({
+      status: 'COMPLETED',
+      sceneBreakdown: { data: { scenes: [] } },
+    });
   });
 });

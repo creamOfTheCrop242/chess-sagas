@@ -76,10 +76,15 @@ The report includes:
 - OpenAI calls grouped by stage and model
 - Successful and failed call counts and failure rates
 - Average call duration
+- Serialized request payload size by stage
 - Input, output, cached-input, and cache-write token totals
 - Estimated API cost at the configured GPT-5.6 standard rates
+- Retry-call counts, including targeted repair calls
+- OpenAI calls, model time, payload size, and cost grouped by saga
 - Individual OpenAI error messages
 - Completed and failed pipeline stages from the configured database
+- First-pass completions, retry recoveries, and exhausted stages
+- End-to-end pipeline duration and cost per completed saga
 - Semantic and deterministic validation errors rejected after an OpenAI call
 
 The two failure sections measure different things. **OpenAI call failures**
@@ -91,6 +96,35 @@ Logging begins with the first OpenAI call made after the updated backend starts;
 the command does not reconstruct earlier provider calls from old console
 output. The pipeline section can still include older database records within
 the requested time window.
+
+Game-level call, retry, payload, and cost columns require logs written by the
+current telemetry version. Older JSONL entries remain readable, but fields
+that were not recorded at the time appear as zero or `unknown`.
+
+To reduce upload and model-processing overhead without shortening the story,
+the backend sends a compact game ledger to each AI stage. Every move, piece
+identity, capture, wound requirement, and narrative constraint is preserved.
+Repeated board-position snapshots are omitted from quiet moves and retained
+for captures, checks, checkmates, castling, promotions, and the final position.
+Use the report's payload-size columns to compare this reduction across stages.
+
+During an active backend session, deterministic game preparation is also
+reused across pipeline stages and retries. The normalized ledger, wound-event
+selection, battlefield environment, and surrender classification are held in
+a bounded 30-minute cache (up to 100 games). Concurrent requests for the same
+game share one preparation operation, while generated AI artifacts continue to
+be loaded from the database. Backend logs report each preparation as a cache
+`hit` or `miss` with its duration, making this optimization directly visible.
+
+The browser checks reusable pipeline work through one consolidated status
+request instead of probing every stage separately. A newly generated full
+story already contains deterministic validation and scene playback data, so
+the browser does not request those stages again. Duplicate generation requests
+for the same game share one frontend observable and one backend stage promise.
+The active game ID is kept in session storage while work is running, allowing
+the Chronicle page to restore the board and reattach after navigating to the
+lore, guide, or Hall of Records pages. A page refresh resumes from completed
+database stages rather than restarting the whole saga.
 
 To store call logs somewhere else, set `AI_CALL_LOG_DIR` in `backend/.env`:
 

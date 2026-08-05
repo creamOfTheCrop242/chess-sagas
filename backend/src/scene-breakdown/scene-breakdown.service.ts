@@ -1,8 +1,7 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
-import type { GameLedger } from '../chess/models/game-ledger';
-import { normalizePawnViewpoints } from '../chess/piece-identity.service';
 import { PrismaService } from '../database/prisma.service';
+import { GenerationPreparationService } from '../generation/generation-preparation.service';
 import { storyOutlineSchema } from '../story-outline/models/story-outline';
 import { sceneBreakdownSchema } from './models/scene-breakdown';
 import {
@@ -17,18 +16,21 @@ import { FULL_STORY_PROMPT_VERSION } from '../full-story/full-story.prompt';
 export class SceneBreakdownService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly preparation: GenerationPreparationService,
     @Inject(SCENE_BREAKDOWN_PROVIDER)
     private readonly provider: SceneBreakdownProvider,
     private readonly validator: SceneBreakdownValidator,
   ) {}
 
   async generate(gameId: string) {
-    const game = await this.prisma.game.findUnique({
-      where: { id: gameId },
-      select: { ledger: { select: { data: true } } },
-    });
-    if (!game?.ledger) throw new NotFoundException('Game ledger not found');
-    const [outlineRun, validationRun, storyRun] = await Promise.all([
+    return this.preparation.runStageOnce(gameId, 'SCENE_BREAKDOWN', () =>
+      this.generateOnce(gameId),
+    );
+  }
+
+  private async generateOnce(gameId: string) {
+    const [prepared, outlineRun, validationRun, storyRun] = await Promise.all([
+      this.preparation.prepare(gameId),
       this.prisma.generationRun.findFirst({
         where: { gameId, currentStage: 'OUTLINE', status: 'COMPLETED' },
         orderBy: { createdAt: 'desc' },
@@ -61,9 +63,7 @@ export class SceneBreakdownService {
       },
     });
     try {
-      const ledger = normalizePawnViewpoints(
-        game.ledger.data as unknown as GameLedger,
-      );
+      const { ledger } = prepared;
       if (!storyRun.sceneBreakdown) {
         throw new NotFoundException('Structured story ending state required');
       }
@@ -82,9 +82,23 @@ export class SceneBreakdownService {
           defeatedKingDeathDescription:
             storyBreakdown.defeatedKingDeathDescription,
         },
+        telemetry: {
+          gameId,
+          generationRunId: run.id,
+          attempt: 1,
+          repairMode: 'none',
+        },
       });
       const breakdown = sceneBreakdownSchema.parse({
         ...generatedBreakdown,
+        scenes: generatedBreakdown.scenes.map((scene) => {
+          const event = ledger.events[scene.startPly - 1];
+          return {
+            ...scene,
+            captureActorId: event?.isCapture ? event.pieceId : null,
+            captureVictimId: event?.capturedPieceId ?? null,
+          };
+        }),
         defeatedKingFate: storyBreakdown.defeatedKingFate,
         defeatedSealFate: storyBreakdown.defeatedSealFate,
         defeatedKingDeathDescription:

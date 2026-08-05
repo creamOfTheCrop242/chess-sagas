@@ -91,7 +91,11 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     const recordId = this.route?.snapshot.paramMap.get('id');
-    if (recordId) this.loadArchivedRecord(recordId);
+    if (recordId) {
+      this.loadArchivedRecord(recordId);
+    } else {
+      this.restoreRecentGeneration();
+    }
   }
 
   get currentFen(): string {
@@ -447,6 +451,11 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
 
   generateSaga(): void {
     if (!this.gameId) return;
+    this.watchSagaGeneration();
+  }
+
+  private watchSagaGeneration(): void {
+    if (!this.gameId) return;
     this.sagaGenerating = true;
     this.startGenerationTimer();
     this.storyError = null;
@@ -457,18 +466,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
       })
       .subscribe({
         next: (response) => {
-          this.scenes = response.sceneBreakdown.data.scenes;
-          this.wounds = response.sceneBreakdown.data.wounds ?? [];
-          this.epilogue = response.sceneBreakdown.data.epilogue ?? '';
-          this.laterEpilogueHeading =
-            response.sceneBreakdown.data.laterEpilogueHeading ?? '';
-          this.laterEpilogue = response.sceneBreakdown.data.laterEpilogue ?? '';
-          this.defeatedKingDeathDescription =
-            response.sceneBreakdown.data.defeatedKingDeathDescription ?? '';
-          this.defeatedKingFate =
-            response.sceneBreakdown.data.defeatedKingFate ?? '';
-          this.defeatedSealFate =
-            response.sceneBreakdown.data.defeatedSealFate ?? '';
+          this.applySagaResponse(response);
           this.sagaGenerating = false;
           this.stopGenerationTimer();
         },
@@ -481,6 +479,60 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
           )}`;
         },
       });
+  }
+
+  private restoreRecentGeneration(): void {
+    const gameId = this.pgnApi.recentGenerationGameId();
+    if (!gameId) return;
+    this.loading = true;
+    this.pgnApi
+      .getGame(gameId)
+      .pipe(
+        switchMap((saved) =>
+          forkJoin({ saved: of(saved), parsed: this.pgnApi.parse(saved.rawPgn) }),
+        ),
+      )
+      .subscribe({
+        next: ({ saved, parsed }) => {
+          this.pgnText = saved.rawPgn;
+          this.game = { ...parsed, ledger: saved.ledger.data };
+          this.gameId = saved.id;
+          this.currentPly = 0;
+          this.loading = false;
+          this.watchSagaGeneration();
+        },
+        error: () => {
+          this.loading = false;
+        },
+      });
+  }
+
+  private applySagaResponse(response: {
+    sceneBreakdown: {
+      data: {
+        scenes: PlaybackScene[];
+        wounds?: StoryWound[];
+        epilogue?: string | null;
+        laterEpilogueHeading?: string | null;
+        laterEpilogue?: string | null;
+        defeatedKingDeathDescription?: string | null;
+        defeatedKingFate?: string;
+        defeatedSealFate?: 'destroyed' | 'intact';
+      };
+    };
+  }): void {
+    this.scenes = response.sceneBreakdown.data.scenes;
+    this.wounds = response.sceneBreakdown.data.wounds ?? [];
+    this.epilogue = response.sceneBreakdown.data.epilogue ?? '';
+    this.laterEpilogueHeading =
+      response.sceneBreakdown.data.laterEpilogueHeading ?? '';
+    this.laterEpilogue = response.sceneBreakdown.data.laterEpilogue ?? '';
+    this.defeatedKingDeathDescription =
+      response.sceneBreakdown.data.defeatedKingDeathDescription ?? '';
+    this.defeatedKingFate =
+      response.sceneBreakdown.data.defeatedKingFate ?? '';
+    this.defeatedSealFate =
+      response.sceneBreakdown.data.defeatedSealFate ?? '';
   }
 
   ngOnDestroy(): void {

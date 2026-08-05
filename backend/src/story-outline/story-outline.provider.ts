@@ -1,6 +1,7 @@
 import type { GameLedger, PieceIdentity } from '../chess/models/game-ledger';
 import type { NarrativeAnalysis } from '../narrative-analysis/models/narrative-analysis';
 import type { StoryOutline } from './models/story-outline';
+import type { GenerationTelemetryContext } from '../openai/openai-generation';
 
 export const STORY_OUTLINE_PROVIDER = Symbol('STORY_OUTLINE_PROVIDER');
 
@@ -9,6 +10,7 @@ export interface StoryOutlineRequest {
   narrativeAnalysis: NarrativeAnalysis;
   characterRegistry: PieceIdentity[];
   validationFeedback?: string;
+  telemetry: GenerationTelemetryContext;
 }
 
 export interface StoryOutlineProvider {

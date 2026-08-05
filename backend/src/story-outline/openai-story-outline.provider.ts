@@ -38,13 +38,18 @@ export class OpenAiStoryOutlineProvider implements StoryOutlineProvider {
       throw new ServiceUnavailableException('OPENAI_API_KEY is not configured');
     }
     const startedAt = Date.now();
+    const input = serializeRequestWithCharacterRegistry(request);
+    const callTelemetry = {
+      ...request.telemetry,
+      payloadBytes: Buffer.byteLength(input, 'utf8'),
+    };
     try {
       const response = await this.client.responses.parse({
         model: this.model,
         ...promptCacheOptions(this.model, 'chess-sagas:story-outline'),
         reasoning: { effort: 'medium' },
         instructions: STORY_OUTLINE_INSTRUCTIONS,
-        input: serializeRequestWithCharacterRegistry(request),
+        input,
         text: {
           format: zodTextFormat(storyOutlineSchema, 'story_outline'),
         },
@@ -59,6 +64,7 @@ export class OpenAiStoryOutlineProvider implements StoryOutlineProvider {
         this.model,
         startedAt,
         response,
+        callTelemetry,
       );
       return outline;
     } catch (error) {
@@ -68,6 +74,7 @@ export class OpenAiStoryOutlineProvider implements StoryOutlineProvider {
         this.model,
         startedAt,
         error,
+        callTelemetry,
       );
       if (
         error instanceof ServiceUnavailableException ||

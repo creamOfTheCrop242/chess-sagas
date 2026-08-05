@@ -11,6 +11,7 @@ import { StoryOutlineModule } from './story-outline/story-outline.module';
 import { FullStoryModule } from './full-story/full-story.module';
 import { StoryValidationModule } from './story-validation/story-validation.module';
 import { SceneBreakdownModule } from './scene-breakdown/scene-breakdown.module';
+import { GenerationModule } from './generation/generation.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { SceneBreakdownModule } from './scene-breakdown/scene-breakdown.module';
       envFilePath: '.env',
     }),
     DatabaseModule,
+    GenerationModule,
     GamesModule,
     PgnModule,
     StoryModule,

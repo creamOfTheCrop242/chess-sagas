@@ -1,8 +1,7 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
-import type { GameLedger } from '../chess/models/game-ledger';
-import { normalizePawnViewpoints } from '../chess/piece-identity.service';
 import { PrismaService } from '../database/prisma.service';
+import { GenerationPreparationService } from '../generation/generation-preparation.service';
 import {
   NARRATIVE_ANALYSIS_PROVIDER,
   type NarrativeAnalysisProvider,
@@ -10,27 +9,25 @@ import {
 import { narrativeAnalysisSchema } from './models/narrative-analysis';
 import { NARRATIVE_ANALYSIS_PROMPT_VERSION } from './narrative-analysis.prompt';
 import { NarrativeAnalysisValidator } from './narrative-analysis.validator';
-import { selectRequiredWoundEvents } from './wound-planning';
-import { selectBattlefieldEnvironment } from '../chess/battlefield-environment';
-import { classifySurrender } from '../chess/surrender-context';
 
 @Injectable()
 export class NarrativeAnalysisService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly preparation: GenerationPreparationService,
     @Inject(NARRATIVE_ANALYSIS_PROVIDER)
     private readonly provider: NarrativeAnalysisProvider,
     private readonly validator: NarrativeAnalysisValidator,
   ) {}
 
   async generate(gameId: string) {
-    const game = await this.prisma.game.findUnique({
-      where: { id: gameId },
-      select: { id: true, ledger: { select: { data: true } } },
-    });
-    if (!game?.ledger) {
-      throw new NotFoundException(`Game ${gameId} or its ledger was not found`);
-    }
+    return this.preparation.runStageOnce(gameId, 'NARRATIVE_ANALYSIS', () =>
+      this.generateOnce(gameId),
+    );
+  }
+
+  private async generateOnce(gameId: string) {
+    const prepared = await this.preparation.prepare(gameId);
 
     const run = await this.prisma.generationRun.create({
       data: {
@@ -43,18 +40,24 @@ export class NarrativeAnalysisService {
     });
 
     try {
-      const ledger = normalizePawnViewpoints(
-        game.ledger.data as unknown as GameLedger,
-      );
-      const requiredWoundEvents = selectRequiredWoundEvents(ledger);
-      const battlefieldEnvironment = selectBattlefieldEnvironment(ledger);
-      const surrenderContext = classifySurrender(ledger);
+      const {
+        ledger,
+        requiredWoundEvents,
+        battlefieldEnvironment,
+        surrenderContext,
+      } = prepared;
       const analysis = narrativeAnalysisSchema.parse(
         await this.provider.analyze({
           ledger,
           requiredWoundEvents,
           battlefieldEnvironment,
           surrenderContext,
+          telemetry: {
+            gameId,
+            generationRunId: run.id,
+            attempt: 1,
+            repairMode: 'none',
+          },
         }),
       );
       this.validator.validate(analysis, ledger);

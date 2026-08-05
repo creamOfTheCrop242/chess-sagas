@@ -57,6 +57,35 @@ export class SceneBreakdownValidator {
     if (breakdown.scenes.length !== ledger.events.length) {
       errors.push('Scene breakdown must contain exactly one scene per ply');
     }
+    const result = ledger.metadata?.result;
+    const defeatedSide =
+      result === '1-0' ? 'south' : result === '0-1' ? 'north' : null;
+    const expectedFortressOutcomes = ledger.pieces
+      .filter(
+        (piece) =>
+          piece.alive &&
+          (piece.fantasyType === 'moving-fortress' ||
+            piece.currentChessType === 'r'),
+      )
+      .map((piece) => ({
+        pieceId: piece.id,
+        operatorName:
+          piece.operatorName ?? piece.viewpointName ?? piece.permanentName,
+        side: piece.side,
+        powerOutcome:
+          defeatedSide === piece.side &&
+          breakdown.defeatedSealFate === 'destroyed'
+            ? ('loses-seal-power' as const)
+            : ('retains-seal-power' as const),
+      }));
+    if (
+      JSON.stringify(breakdown.survivingFortressOutcomes) !==
+      JSON.stringify(expectedFortressOutcomes)
+    ) {
+      errors.push(
+        'Surviving Fortress power outcomes must match kingdom and Seal state',
+      );
+    }
     for (const wound of breakdown.wounds ?? []) {
       const event = ledger.events[wound.inflictedAtPly - 1];
       if (
@@ -109,16 +138,33 @@ export class SceneBreakdownValidator {
         .map((event) => event.capturedPieceId!);
       if (JSON.stringify(scene.deaths) !== JSON.stringify(deaths))
         errors.push(`Scene ${scene.id} has incorrect deaths`);
+      const captureEvent = events.find((event) => event.isCapture);
+      if (
+        scene.captureActorId !== undefined &&
+        scene.captureActorId !== (captureEvent?.pieceId ?? null)
+      ) {
+        errors.push(`Scene ${scene.id} has incorrect capture actor`);
+      }
+      if (
+        scene.captureVictimId !== undefined &&
+        scene.captureVictimId !== (captureEvent?.capturedPieceId ?? null)
+      ) {
+        errors.push(`Scene ${scene.id} has incorrect capture victim`);
+      }
       const promotions = events
         .filter((event) => event.isPromotion)
         .map((event) => event.pieceId);
       if (JSON.stringify(scene.promotions) !== JSON.stringify(promotions))
         errors.push(`Scene ${scene.id} has incorrect promotions`);
-      [...scene.characters, ...scene.deaths, ...scene.promotions].forEach(
-        (id) => {
-          if (!pieceIds.has(id)) errors.push(`Unknown piece ID: ${id}`);
-        },
-      );
+      [
+        ...scene.characters,
+        ...scene.deaths,
+        ...scene.promotions,
+        ...(scene.captureActorId ? [scene.captureActorId] : []),
+        ...(scene.captureVictimId ? [scene.captureVictimId] : []),
+      ].forEach((id) => {
+        if (!pieceIds.has(id)) errors.push(`Unknown piece ID: ${id}`);
+      });
     });
     if (nextPly !== ledger.events.length + 1)
       errors.push('Scenes must cover every ledger ply');

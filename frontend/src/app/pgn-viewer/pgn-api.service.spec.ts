@@ -33,7 +33,7 @@ describe('PgnApiService', () => {
       .subscribe();
 
     http
-      .expectOne('http://localhost:3000/games/game-1/pipeline-status')
+      .expectOne('/api/games/game-1/pipeline-status')
       .flush({
         analysis: false,
         outline: false,
@@ -41,15 +41,15 @@ describe('PgnApiService', () => {
         validation: false,
         scenes: false,
       });
-    http.expectOne('http://localhost:3000/games/game-1/analysis').flush({});
-    http.expectOne('http://localhost:3000/games/game-1/outline').flush({});
-    http.expectOne('http://localhost:3000/games/game-1/story').flush({
+    http.expectOne('/api/games/game-1/analysis').flush({});
+    http.expectOne('/api/games/game-1/outline').flush({});
+    http.expectOne('/api/games/game-1/story').flush({
       status: 'COMPLETED',
       sceneBreakdown: { data: { scenes: [] } },
     });
 
-    http.expectNone('http://localhost:3000/games/game-1/validation');
-    http.expectNone('http://localhost:3000/games/game-1/scenes');
+    http.expectNone('/api/games/game-1/validation');
+    http.expectNone('/api/games/game-1/scenes');
     expect(states).toContain('story:completed');
     expect(states).toContain('validation:completed');
     expect(states).toContain('scenes:completed');
@@ -64,7 +64,7 @@ describe('PgnApiService', () => {
       .subscribe();
 
     http
-      .expectOne('http://localhost:3000/games/game-1/pipeline-status')
+      .expectOne('/api/games/game-1/pipeline-status')
       .flush({
         analysis: true,
         outline: true,
@@ -72,7 +72,7 @@ describe('PgnApiService', () => {
         validation: true,
         scenes: true,
       });
-    http.expectOne('http://localhost:3000/games/game-1/scenes').flush({
+    http.expectOne('/api/games/game-1/scenes').flush({
       status: 'COMPLETED',
       sceneBreakdown: { data: { scenes: [] } },
     });
@@ -92,7 +92,7 @@ describe('PgnApiService', () => {
     second.subscribe();
 
     http
-      .expectOne('http://localhost:3000/games/game-1/pipeline-status')
+      .expectOne('/api/games/game-1/pipeline-status')
       .flush({
         analysis: false,
         outline: false,
@@ -100,9 +100,9 @@ describe('PgnApiService', () => {
         validation: false,
         scenes: false,
       });
-    http.expectOne('http://localhost:3000/games/game-1/analysis').flush({});
-    http.expectOne('http://localhost:3000/games/game-1/outline').flush({});
-    http.expectOne('http://localhost:3000/games/game-1/story').flush({
+    http.expectOne('/api/games/game-1/analysis').flush({});
+    http.expectOne('/api/games/game-1/outline').flush({});
+    http.expectOne('/api/games/game-1/story').flush({
       status: 'COMPLETED',
       sceneBreakdown: { data: { scenes: [] } },
     });

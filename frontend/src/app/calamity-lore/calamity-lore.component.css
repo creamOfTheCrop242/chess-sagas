@@ -217,6 +217,12 @@ a:focus-visible {
     padding: 1.3rem;
   }
 
+  .history-nav {
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 1.25rem;
+  }
+
   .history-line::before {
     left: 1.25rem;
   }
@@ -232,5 +238,36 @@ a:focus-visible {
 
   .chapter-copy {
     padding: 1rem;
+  }
+
+  .ending-links a {
+    min-height: 2.75rem;
+  }
+}
+
+@media (max-width: 430px) {
+  .history-chapter {
+    grid-template-columns: 1fr;
+    gap: 0.45rem;
+    padding: 0.75rem 0;
+  }
+
+  .history-line::before {
+    display: none;
+  }
+
+  .chapter-marker {
+    width: 3rem;
+    padding: 0.35rem 0;
+  }
+
+  .ending-links {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .ending-links a {
+    display: grid;
+    place-items: center;
   }
 }

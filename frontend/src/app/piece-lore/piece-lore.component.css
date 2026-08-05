@@ -228,4 +228,40 @@ a:focus-visible {
   .lore-card {
     padding: 1.3rem;
   }
+
+  .codex-nav {
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 1.2rem;
+  }
+
+  footer a {
+    min-height: 2.75rem;
+  }
+}
+
+@media (max-width: 430px) {
+  .codex-hero,
+  .lore-card {
+    padding: 1rem;
+  }
+
+  .card-heading {
+    gap: 0.65rem;
+  }
+
+  .piece-sigil {
+    width: 3.25rem;
+    font-size: 3rem;
+  }
+
+  footer {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  footer a {
+    display: grid;
+    place-items: center;
+  }
 }

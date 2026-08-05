@@ -15,5 +15,6 @@ import { StoryValidationService } from './story-validation.service';
       useClass: OpenAiStoryValidationProvider,
     },
   ],
+  exports: [StoryValidationService],
 })
 export class StoryValidationModule {}

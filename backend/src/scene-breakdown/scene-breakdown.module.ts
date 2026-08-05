@@ -14,5 +14,6 @@ import { SceneBreakdownValidator } from './scene-breakdown.validator';
       useClass: OpenAiSceneBreakdownProvider,
     },
   ],
+  exports: [SceneBreakdownService],
 })
 export class SceneBreakdownModule {}

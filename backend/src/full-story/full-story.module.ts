@@ -19,5 +19,6 @@ import { DeterministicStoryValidator } from '../story-validation/deterministic-s
       useClass: OpenAiFullStoryProvider,
     },
   ],
+  exports: [FullStoryService],
 })
 export class FullStoryModule {}

@@ -12,6 +12,7 @@ import { FullStoryModule } from './full-story/full-story.module';
 import { StoryValidationModule } from './story-validation/story-validation.module';
 import { SceneBreakdownModule } from './scene-breakdown/scene-breakdown.module';
 import { GenerationModule } from './generation/generation.module';
+import { SagaGenerationModule } from './generation/saga-generation.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { GenerationModule } from './generation/generation.module';
     FullStoryModule,
     StoryValidationModule,
     SceneBreakdownModule,
+    SagaGenerationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -3,7 +3,7 @@ import {
   HttpTestingController,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
-import { TestBed } from '@angular/core/testing';
+import { fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { PgnApiService } from './pgn-api.service';
 
 describe('PgnApiService', () => {
@@ -24,38 +24,51 @@ describe('PgnApiService', () => {
 
   afterEach(() => http.verify());
 
-  it('uses one status request and skips redundant post-story stages', () => {
+  it('starts one background job and polls until its scenes are ready', fakeAsync(() => {
     const states: string[] = [];
+    let completed = false;
     api
       .generateSaga('game-1', (stage, state) =>
         states.push(`${stage}:${state}`),
       )
-      .subscribe();
-
-    http
-      .expectOne('/api/games/game-1/pipeline-status')
-      .flush({
-        analysis: false,
-        outline: false,
-        story: false,
-        validation: false,
-        scenes: false,
+      .subscribe(() => {
+        completed = true;
       });
-    http.expectOne('/api/games/game-1/analysis').flush({});
-    http.expectOne('/api/games/game-1/outline').flush({});
-    http.expectOne('/api/games/game-1/story').flush({
+
+    http.expectOne('/api/games/game-1/generation').flush({
+      state: 'queued',
+      currentStage: 'analysis',
+      error: null,
+      stages: emptyStages,
+    });
+    tick(0);
+    http.expectOne('/api/games/game-1/generation').flush({
+      state: 'running',
+      currentStage: 'analysis',
+      error: null,
+      stages: emptyStages,
+    });
+    expect(states).toContain('analysis:generating');
+
+    tick(2_000);
+    http.expectOne('/api/games/game-1/generation').flush({
+      state: 'completed',
+      currentStage: 'scenes',
+      error: null,
+      stages: completedStages,
+    });
+    http.expectOne('/api/games/game-1/scenes').flush({
       status: 'COMPLETED',
       sceneBreakdown: { data: { scenes: [] } },
     });
 
-    http.expectNone('/api/games/game-1/validation');
-    http.expectNone('/api/games/game-1/scenes');
-    expect(states).toContain('story:completed');
+    expect(completed).toBeTrue();
+    expect(states).toContain('analysis:completed');
     expect(states).toContain('validation:completed');
     expect(states).toContain('scenes:completed');
-  });
+  }));
 
-  it('loads completed scenes after reusing every stage', () => {
+  it('loads completed scenes without restarting reusable work', fakeAsync(() => {
     const states: string[] = [];
     api
       .generateSaga('game-1', (stage, state) =>
@@ -63,15 +76,19 @@ describe('PgnApiService', () => {
       )
       .subscribe();
 
-    http
-      .expectOne('/api/games/game-1/pipeline-status')
-      .flush({
-        analysis: true,
-        outline: true,
-        story: true,
-        validation: true,
-        scenes: true,
-      });
+    http.expectOne('/api/games/game-1/generation').flush({
+      state: 'completed',
+      currentStage: 'scenes',
+      error: null,
+      stages: completedStages,
+    });
+    tick(0);
+    http.expectOne('/api/games/game-1/generation').flush({
+      state: 'completed',
+      currentStage: 'scenes',
+      error: null,
+      stages: completedStages,
+    });
     http.expectOne('/api/games/game-1/scenes').flush({
       status: 'COMPLETED',
       sceneBreakdown: { data: { scenes: [] } },
@@ -82,29 +99,47 @@ describe('PgnApiService', () => {
     expect(states).toContain('story:reused');
     expect(states).toContain('validation:reused');
     expect(states).toContain('scenes:reused');
-  });
+  }));
 
-  it('shares one active generation across duplicate callers', () => {
+  it('shares one active generation across duplicate callers', fakeAsync(() => {
     const first = api.generateSaga('game-1', () => undefined);
     const second = api.generateSaga('game-1', () => undefined);
     expect(second).toBe(first);
     first.subscribe();
     second.subscribe();
 
-    http
-      .expectOne('/api/games/game-1/pipeline-status')
-      .flush({
-        analysis: false,
-        outline: false,
-        story: false,
-        validation: false,
-        scenes: false,
-      });
-    http.expectOne('/api/games/game-1/analysis').flush({});
-    http.expectOne('/api/games/game-1/outline').flush({});
-    http.expectOne('/api/games/game-1/story').flush({
+    http.expectOne('/api/games/game-1/generation').flush({
+      state: 'queued',
+      currentStage: 'analysis',
+      error: null,
+      stages: emptyStages,
+    });
+    tick(0);
+    http.expectOne('/api/games/game-1/generation').flush({
+      state: 'completed',
+      currentStage: 'scenes',
+      error: null,
+      stages: completedStages,
+    });
+    http.expectOne('/api/games/game-1/scenes').flush({
       status: 'COMPLETED',
       sceneBreakdown: { data: { scenes: [] } },
     });
-  });
+  }));
 });
+
+const emptyStages = {
+  analysis: false,
+  outline: false,
+  story: false,
+  validation: false,
+  scenes: false,
+};
+
+const completedStages = {
+  analysis: true,
+  outline: true,
+  story: true,
+  validation: true,
+  scenes: true,
+};

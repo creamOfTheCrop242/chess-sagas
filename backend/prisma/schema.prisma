@@ -29,20 +29,38 @@ enum GenerationStage {
 }
 
 model Game {
-  id             String          @id @default(cuid())
+  id             String             @id @default(cuid())
   ownerId        String?
   pgnHash        String
-  rawPgn         String          @db.Text
+  rawPgn         String             @db.Text
   whitePlayer    String
   blackPlayer    String
   result         String
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
   ledger         GameLedger?
   generationRuns GenerationRun[]
+  sagaJob        SagaGenerationJob?
 
   @@index([ownerId, createdAt])
   @@index([pgnHash])
+}
+
+model SagaGenerationJob {
+  id           String           @id @default(cuid())
+  gameId       String           @unique
+  status       GenerationStatus @default(QUEUED)
+  currentStage GenerationStage  @default(NARRATIVE_ANALYSIS)
+  error        String?          @db.Text
+  workerId     String?
+  lockedUntil  DateTime?
+  heartbeatAt  DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  completedAt  DateTime?
+  game         Game             @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@index([status, lockedUntil])
 }
 
 model GameLedger {

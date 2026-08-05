@@ -1,16 +1,13 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import {
-  catchError,
-  concatMap,
+  filter,
   finalize,
   Observable,
-  of,
-  retry,
   shareReplay,
   switchMap,
   tap,
+  take,
   timer,
   throwError,
 } from 'rxjs';
@@ -20,9 +17,9 @@ import {
   NarrateRequest,
   NarrateResponse,
   ParsedPgn,
-  PipelineStatus,
   SavedGame,
   SavedGameRecord,
+  SagaGenerationStatus,
   SagaStage,
   SagaStageState,
   SceneBreakdownResponse,
@@ -46,6 +43,7 @@ export class PgnApiService {
     string,
     Partial<Record<SagaStage, SagaStageState>>
   >();
+  private readonly activeJobObserved = new Set<string>();
 
   constructor(private readonly http: HttpClient) {}
 
@@ -88,57 +86,36 @@ export class PgnApiService {
 
     const base = `${this.apiBase}/games/${gameId}`;
     this.notifyAllStages(gameId, 'checking');
-    let storyResponse: SceneBreakdownResponse | null = null;
     const generation = this.http
-      .get<PipelineStatus>(`${base}/pipeline-status`)
+      .post<SagaGenerationStatus>(`${base}/generation`, {})
       .pipe(
-        concatMap((status) =>
-          this.runStage(base, gameId, 'analysis', status.analysis, status),
-        ),
-        concatMap(({ status }) =>
-          this.runStage(base, gameId, 'outline', status.outline, status),
-        ),
-        concatMap(({ status }) =>
-          this.runStage<SceneBreakdownResponse>(
-            base,
-            gameId,
-            'story',
-            status.story,
-            status,
+        tap((status) => this.syncGenerationStatus(gameId, status)),
+        switchMap(() =>
+          timer(0, 2_000).pipe(
+            switchMap(() =>
+              this.http.get<SagaGenerationStatus>(`${base}/generation`),
+            ),
+            tap((status) => this.syncGenerationStatus(gameId, status)),
+            filter(
+              (status) =>
+                status.state === 'completed' || status.state === 'failed',
+            ),
+            take(1),
           ),
         ),
-        concatMap(({ status, response }) => {
-          storyResponse = response;
-          if (storyResponse?.sceneBreakdown) {
-            this.notify(gameId, 'validation', 'completed');
-            this.notify(gameId, 'scenes', 'completed');
-            return of(storyResponse);
-          }
-          return this.runStage(
-            base,
-            gameId,
-            'validation',
-            status.validation,
-            status,
-          ).pipe(
-            concatMap(() =>
-              status.scenes
-                ? this.loadReusedScenes(base, gameId)
-                : this.runStage<SceneBreakdownResponse>(
-                    base,
-                    gameId,
-                    'scenes',
-                    false,
-                    status,
-                  ).pipe(switchMap(({ response }) => of(response!))),
-            ),
-          );
-        }),
+        switchMap((status) =>
+          status.state === 'failed'
+            ? throwError(
+                () => new Error(status.error || 'Saga generation failed'),
+              )
+            : this.getScenes(gameId),
+        ),
         tap(() => this.clearRecentGeneration(gameId)),
         finalize(() => {
           this.activeGenerations.delete(gameId);
           this.generationListeners.delete(gameId);
           this.generationState.delete(gameId);
+          this.activeJobObserved.delete(gameId);
         }),
         shareReplay({ bufferSize: 1, refCount: false }),
       );
@@ -153,7 +130,9 @@ export class PgnApiService {
   }
 
   getRecords(): Observable<ArchiveRecordSummary[]> {
-    return this.http.get<ArchiveRecordSummary[]>(`${this.apiBase}/games/records`);
+    return this.http.get<ArchiveRecordSummary[]>(
+      `${this.apiBase}/games/records`,
+    );
   }
 
   getRecord(gameId: string): Observable<ArchivedRecord> {
@@ -162,55 +141,40 @@ export class PgnApiService {
     );
   }
 
-  private runStage<T = unknown>(
-    base: string,
+  private syncGenerationStatus(
     gameId: string,
-    stage: SagaStage,
-    reused: boolean,
-    status?: PipelineStatus,
-  ): Observable<{ status: PipelineStatus; response: T | null }> {
-    const pipelineStatus = status ?? ({} as PipelineStatus);
-    if (reused) {
-      this.notify(gameId, stage, 'reused');
-      return of({ status: pipelineStatus, response: null });
+    status: SagaGenerationStatus,
+  ): void {
+    if (status.state === 'queued' || status.state === 'running') {
+      this.activeJobObserved.add(gameId);
     }
-    this.notify(gameId, stage, 'generating');
-    return this.http.post<T>(`${base}/${this.stagePath(stage)}`, {}).pipe(
-      this.retryFailedStage<T>(),
-      tap(() => this.notify(gameId, stage, 'completed')),
-      switchMap((response) => of({ status: pipelineStatus, response })),
-      catchError((error: unknown) => {
+    const completedDuringThisRequest = this.activeJobObserved.has(gameId);
+    const stages: SagaStage[] = [
+      'analysis',
+      'outline',
+      'story',
+      'validation',
+      'scenes',
+    ];
+    const currentIndex = stages.indexOf(status.currentStage);
+    const previous = this.generationState.get(gameId) ?? {};
+    stages.forEach((stage, index) => {
+      if (status.stages[stage]) {
+        this.notify(
+          gameId,
+          stage,
+          previous[stage] === 'generating' || completedDuringThisRequest
+            ? 'completed'
+            : 'reused',
+        );
+      } else if (status.state === 'failed' && stage === status.currentStage) {
         this.notify(gameId, stage, 'failed');
-        return throwError(() => error);
-      }),
-    );
-  }
-
-  private loadReusedScenes(
-    base: string,
-    gameId: string,
-  ): Observable<SceneBreakdownResponse> {
-    this.notify(gameId, 'scenes', 'reused');
-    return this.http.get<SceneBreakdownResponse>(`${base}/scenes`);
-  }
-
-  private retryFailedStage<T>() {
-    return retry<T>({
-      count: 1,
-      delay: (error: unknown) => {
-        if (
-          error instanceof HttpErrorResponse &&
-          (error.status === 0 || error.status >= 500)
-        ) {
-          return timer(500);
-        }
-        return throwError(() => error);
-      },
+      } else if (status.state === 'running' && index === currentIndex) {
+        this.notify(gameId, stage, 'generating');
+      } else {
+        this.notify(gameId, stage, 'pending');
+      }
     });
-  }
-
-  private stagePath(stage: SagaStage): string {
-    return stage === 'analysis' ? 'analysis' : stage;
   }
 
   private addGenerationListener(

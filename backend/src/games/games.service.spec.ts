@@ -4,6 +4,9 @@ import { PieceIdentityService } from '../chess/piece-identity.service';
 import type { PrismaService } from '../database/prisma.service';
 import { PgnService } from '../pgn/pgn.service';
 import { GamesService } from './games.service';
+import { NARRATIVE_ANALYSIS_PROMPT_VERSION } from '../narrative-analysis/narrative-analysis.prompt';
+import { STORY_OUTLINE_PROMPT_VERSION } from '../story-outline/story-outline.prompt';
+import { FULL_STORY_PROMPT_VERSION } from '../full-story/full-story.prompt';
 
 jest.mock('../database/prisma.service', () => ({
   PrismaService: class PrismaService {},
@@ -151,6 +154,65 @@ describe('GamesService', () => {
     expect(gameFindMany).toHaveBeenCalledWith(
       expect.objectContaining({ orderBy: { createdAt: 'desc' } }),
     );
+  });
+
+  it('returns all reusable pipeline stages from one game query', async () => {
+    gameFindUnique.mockResolvedValue({
+      id: 'game-1',
+      generationRuns: [
+        {
+          currentStage: 'NARRATIVE_ANALYSIS',
+          promptVersion: NARRATIVE_ANALYSIS_PROMPT_VERSION,
+          narrativeAnalysis: { id: 'analysis-1' },
+        },
+        {
+          currentStage: 'OUTLINE',
+          promptVersion: STORY_OUTLINE_PROMPT_VERSION,
+          storyOutline: { id: 'outline-1' },
+        },
+        {
+          currentStage: 'STORY',
+          promptVersion: FULL_STORY_PROMPT_VERSION,
+          generatedStory: { id: 'story-1' },
+          sceneBreakdown: { id: 'scenes-1' },
+        },
+        {
+          currentStage: 'VALIDATION',
+          promptVersion: 'local-package-v1',
+          storyValidation: { valid: true },
+        },
+      ],
+    } as never);
+
+    await expect(service.pipelineStatus('game-1')).resolves.toEqual({
+      analysis: true,
+      outline: true,
+      story: true,
+      validation: true,
+      scenes: true,
+    });
+    expect(gameFindUnique).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not reuse artifacts produced by stale prompt versions', async () => {
+    gameFindUnique.mockResolvedValue({
+      id: 'game-1',
+      generationRuns: [
+        {
+          currentStage: 'NARRATIVE_ANALYSIS',
+          promptVersion: 'old-analysis',
+          narrativeAnalysis: { id: 'analysis-1' },
+        },
+      ],
+    } as never);
+
+    await expect(service.pipelineStatus('game-1')).resolves.toEqual({
+      analysis: false,
+      outline: false,
+      story: false,
+      validation: false,
+      scenes: false,
+    });
   });
 
   it('returns only completed saga records with their completion time', async () => {

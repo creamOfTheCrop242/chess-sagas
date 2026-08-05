@@ -12,6 +12,7 @@ import {
   logOpenAiGeneration,
   logOpenAiGenerationFailure,
   promptCacheOptions,
+  serializeRequestWithoutTelemetry,
 } from '../openai/openai-generation';
 import {
   storyValidationResultSchema,
@@ -44,6 +45,11 @@ export class OpenAiStoryValidationProvider implements StoryValidationProvider {
     if (!this.client)
       throw new ServiceUnavailableException('OPENAI_API_KEY is not configured');
     const startedAt = Date.now();
+    const input = serializeRequestWithoutTelemetry(request);
+    const callTelemetry = {
+      ...request.telemetry,
+      payloadBytes: Buffer.byteLength(input, 'utf8'),
+    };
     try {
       const response = await this.client.responses.parse({
         model: this.model,
@@ -52,7 +58,7 @@ export class OpenAiStoryValidationProvider implements StoryValidationProvider {
         instructions: `${STORY_VALIDATION_INSTRUCTIONS}
 
 ${PROHIBITED_PROSE_TERMS}`,
-        input: JSON.stringify(request),
+        input,
         max_output_tokens: 18_000,
         text: {
           format: zodTextFormat(
@@ -72,6 +78,7 @@ ${PROHIBITED_PROSE_TERMS}`,
         this.model,
         startedAt,
         response,
+        callTelemetry,
       );
       return validation;
     } catch (error) {
@@ -81,6 +88,7 @@ ${PROHIBITED_PROSE_TERMS}`,
         this.model,
         startedAt,
         error,
+        callTelemetry,
       );
       if (
         error instanceof ServiceUnavailableException ||

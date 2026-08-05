@@ -5,9 +5,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
-import type { GameLedger } from '../chess/models/game-ledger';
-import { normalizePawnViewpoints } from '../chess/piece-identity.service';
 import { PrismaService } from '../database/prisma.service';
+import { GenerationPreparationService } from '../generation/generation-preparation.service';
 import { narrativeAnalysisSchema } from '../narrative-analysis/models/narrative-analysis';
 import { storyOutlineSchema } from '../story-outline/models/story-outline';
 import { DeterministicStoryValidator } from './deterministic-story.validator';
@@ -22,20 +21,21 @@ import { STORY_VALIDATION_PROMPT_VERSION } from './story-validation.prompt';
 export class StoryValidationService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly preparation: GenerationPreparationService,
     @Inject(STORY_VALIDATION_PROVIDER)
     private readonly provider: StoryValidationProvider,
     private readonly deterministic: DeterministicStoryValidator,
   ) {}
 
   async validate(gameId: string) {
-    const game = await this.prisma.game.findUnique({
-      where: { id: gameId },
-      select: { ledger: { select: { data: true } } },
-    });
-    if (!game?.ledger) {
-      throw new NotFoundException(`Game ${gameId} or its ledger was not found`);
-    }
-    const [analysisRun, outlineRun, storyRun] = await Promise.all([
+    return this.preparation.runStageOnce(gameId, 'VALIDATION', () =>
+      this.validateOnce(gameId),
+    );
+  }
+
+  private async validateOnce(gameId: string) {
+    const [prepared, analysisRun, outlineRun, storyRun] = await Promise.all([
+      this.preparation.prepare(gameId),
       this.prisma.generationRun.findFirst({
         where: {
           gameId,
@@ -73,9 +73,7 @@ export class StoryValidationService {
       },
     });
     try {
-      const ledger = normalizePawnViewpoints(
-        game.ledger.data as unknown as GameLedger,
-      );
+      const { ledger } = prepared;
       const deterministicFindings = this.deterministic.validate(
         storyRun.generatedStory.storyMarkdown,
         ledger,
@@ -90,6 +88,12 @@ export class StoryValidationService {
           title: storyRun.generatedStory.title,
           storyMarkdown: storyRun.generatedStory.storyMarkdown,
           deterministicFindings,
+          telemetry: {
+            gameId,
+            generationRunId: run.id,
+            attempt: 1,
+            repairMode: deterministicFindings.length ? 'full' : 'none',
+          },
         }),
       );
       const findings = [

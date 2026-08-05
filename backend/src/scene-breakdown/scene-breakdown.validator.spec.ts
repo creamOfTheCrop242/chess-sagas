@@ -40,6 +40,7 @@ describe('SceneBreakdownValidator', () => {
       defeatedKingDeathDescription: null,
       defeatedKingFate: 'survives',
       defeatedSealFate: 'intact',
+      survivingFortressOutcomes: [],
       scenes: [
         {
           ...base,
@@ -83,6 +84,7 @@ describe('SceneBreakdownValidator', () => {
       defeatedKingDeathDescription: null,
       defeatedKingFate: 'survives',
       defeatedSealFate: 'intact',
+      survivingFortressOutcomes: [],
       scenes: [
         {
           id: 'grouped',
@@ -108,5 +110,56 @@ describe('SceneBreakdownValidator', () => {
     expect(() =>
       new SceneBreakdownValidator().validate(breakdown, ledger),
     ).toThrow('exactly one scene per ply');
+  });
+
+  it('rejects structured capture identities that disagree with the ledger', () => {
+    const ledger = {
+      pieces: [{ id: 'w-p-e2' }, { id: 'b-p-e7' }],
+      events: [
+        {
+          ply: 1,
+          san: 'exd5',
+          isCapture: true,
+          pieceId: 'w-p-e2',
+          capturedPieceId: 'b-p-e7',
+          isPromotion: false,
+        },
+      ],
+    } as GameLedger;
+    const breakdown = {
+      epilogue: 'The surviving company carried its wounded from the road.',
+      laterEpilogueHeading: 'One Winter Later',
+      laterEpilogue: 'A weathered monument stood where the company had fallen.',
+      defeatedKingDeathDescription: null,
+      defeatedKingFate: 'survives',
+      defeatedSealFate: 'intact',
+      survivingFortressOutcomes: [],
+      scenes: [
+        {
+          id: 'capture',
+          actNumber: 1,
+          sceneNumber: 1,
+          startPly: 1,
+          endPly: 1,
+          involvedMoves: ['exd5'],
+          chessExplanation: 'A company captures another company.',
+          fantasyNarration: 'The northern company broke the southern line.',
+          characters: ['w-p-e2', 'b-p-e7'],
+          locations: ['central road'],
+          deaths: ['b-p-e7'],
+          captureActorId: 'b-p-e7',
+          captureVictimId: 'w-p-e2',
+          promotions: [],
+          visualPrompt: 'Two companies clash.',
+          videoPrompt: 'The northern line advances.',
+          estimatedDurationSeconds: 10,
+          continuityNotes: [],
+        },
+      ],
+    } satisfies SceneBreakdown;
+
+    expect(() =>
+      new SceneBreakdownValidator().validate(breakdown, ledger),
+    ).toThrow('incorrect capture actor');
   });
 });

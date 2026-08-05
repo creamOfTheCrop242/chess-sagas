@@ -178,11 +178,11 @@ describe('DeterministicStoryValidator', () => {
     expect(findings).toEqual([
       expect.objectContaining({
         type: 'wound-continuity',
+        severity: 'warning',
         ply: 14,
         pieceId: 'b-q-d8',
-        message: expect.stringContaining(
-          'inflicted at ply 16 but appears prematurely at ply 14',
-        ),
+        message:
+          "Southern Queen's wound is inflicted at ply 16 but appears prematurely at ply 14",
       }),
     ]);
   });
@@ -279,9 +279,8 @@ describe('DeterministicStoryValidator', () => {
         type: 'wrong-captor',
         ply: 11,
         pieceId: 'w-p-e2',
-        message: expect.stringContaining(
-          "Dain is incorrectly given Cedric's capture",
-        ),
+        message:
+          'Cedric must kill Dain at ply 11, but the prose reverses the captor and victim',
       }),
     ]);
   });
@@ -316,6 +315,97 @@ describe('DeterministicStoryValidator', () => {
     ).toEqual([]);
   });
 
+  it('does not mistake the victim striking first for winning the capture', () => {
+    const captureLedger = {
+      pieces: [
+        { id: 'w-p-b2', permanentName: 'Aric', viewpointName: 'Aric' },
+        { id: 'b-p-a7', permanentName: 'Tarin', viewpointName: 'Tarin' },
+      ],
+      events: [
+        {
+          ply: 63,
+          isCapture: true,
+          pieceId: 'w-p-b2',
+          capturedPieceId: 'b-p-a7',
+        },
+      ],
+    } as GameLedger;
+
+    expect(
+      validator.validateCaptureAttribution(
+        [
+          {
+            ply: 63,
+            fantasyNarration:
+              'Tarin struck first but could not stop Aric’s counterattack;',
+          },
+        ],
+        captureLedger,
+      ),
+    ).toEqual([]);
+  });
+
+  it('rejects explicit direct, passive, and possessive-weapon reversals', () => {
+    const captureLedger = {
+      pieces: [
+        { id: 'w-p-e2', permanentName: 'Cedric', viewpointName: 'Cedric' },
+        { id: 'b-p-e7', permanentName: 'Dain', viewpointName: 'Dain' },
+      ],
+      events: [
+        {
+          ply: 11,
+          isCapture: true,
+          pieceId: 'w-p-e2',
+          capturedPieceId: 'b-p-e7',
+        },
+      ],
+    } as GameLedger;
+    const reversed = [
+      'Dain killed Cedric beneath the broken gate.',
+      'Cedric was crushed beneath the gate by Dain.',
+      'Dain’s spear pierced Cedric’s heart.',
+    ];
+
+    reversed.forEach((fantasyNarration) => {
+      expect(
+        validator.validateCaptureAttribution(
+          [{ ply: 11, fantasyNarration }],
+          captureLedger,
+        ),
+      ).toEqual([expect.objectContaining({ type: 'wrong-captor' })]);
+    });
+  });
+
+  it('does not hard-fail ambiguous observation language', () => {
+    const captureLedger = {
+      pieces: [
+        { id: 'w-p-e2', permanentName: 'Cedric', viewpointName: 'Cedric' },
+        { id: 'b-p-e7', permanentName: 'Dain', viewpointName: 'Dain' },
+      ],
+      events: [
+        {
+          ply: 11,
+          isCapture: true,
+          pieceId: 'w-p-e2',
+          capturedPieceId: 'b-p-e7',
+        },
+      ],
+    } as GameLedger;
+
+    expect(
+      validator.validateCaptureAttribution(
+        [
+          {
+            ply: 11,
+            fantasyNarration:
+              'Dain watched the outer wall crushed around Cedric as the banners vanished in smoke.',
+          },
+        ],
+        captureLedger,
+      ),
+    ).toEqual([]);
+  });
+
   it('does not treat a possessive victim reference as the killer', () => {
     const captureLedger = {
       pieces: [
@@ -342,6 +432,166 @@ describe('DeterministicStoryValidator', () => {
             ply: 8,
             fantasyNarration:
               'Dain caught the Northeast Archwizard’s warding wrist and buried a spear beneath the mage’s ribs as dying light burned Dain’s arm.',
+          },
+        ],
+        captureLedger,
+      ),
+    ).toEqual([]);
+  });
+
+  it('does not reverse a Fortress capture when the victim is described before the operator', () => {
+    const captureLedger = {
+      pieces: [
+        {
+          id: 'w-r-a1',
+          permanentName: 'Northeast Fortress',
+          operatorName: 'Theron',
+        },
+        {
+          id: 'b-r-a8',
+          permanentName: 'Southwest Fortress',
+          operatorName: 'Roderic',
+        },
+      ],
+      events: [
+        {
+          ply: 55,
+          isCapture: true,
+          pieceId: 'w-r-a1',
+          capturedPieceId: 'b-r-a8',
+        },
+      ],
+    } as GameLedger;
+
+    expect(
+      validator.validateCaptureAttribution(
+        [
+          {
+            ply: 55,
+            fantasyNarration:
+              'Roderic, unable to turn cleanly and crushed by his failing restraints, kept his guns trained northward until Theron’s directed ram and point-blank cannon fire split the engine open; steam, sparks, and water filled Roderic’s cradle and killed him.',
+          },
+        ],
+        captureLedger,
+      ),
+    ).toEqual([]);
+  });
+
+  it('does not give a capture to a victim who could not respond before the actor attacked', () => {
+    const captureLedger = {
+      pieces: [
+        {
+          id: 'w-r-a1',
+          permanentName: 'Northeast Fortress',
+          operatorName: 'Theron',
+        },
+        {
+          id: 'b-r-h8',
+          permanentName: 'Southwest Fortress',
+          operatorName: 'Roderic',
+        },
+      ],
+      events: [
+        {
+          ply: 55,
+          isCapture: true,
+          pieceId: 'w-r-a1',
+          capturedPieceId: 'b-r-h8',
+        },
+      ],
+    } as GameLedger;
+
+    expect(
+      validator.validateCaptureAttribution(
+        [
+          {
+            ply: 55,
+            fantasyNarration:
+              'Theron drove the Northeast Fortress into the Southwest Fortress before Roderic could realign his crippled engine, accepting the collision that tore away Theron’s outer wheel housing and cracked his lateral ward plates.',
+          },
+        ],
+        captureLedger,
+      ),
+    ).toEqual([]);
+  });
+
+  it('does not give a capture to a victim merely trying to defend', () => {
+    const captureLedger = {
+      pieces: [
+        {
+          id: 'w-r-a1',
+          permanentName: 'Northeast Fortress',
+          operatorName: 'Theron',
+        },
+        {
+          id: 'b-b-c8',
+          permanentName: 'Southwest Archwizard',
+        },
+      ],
+      events: [
+        {
+          ply: 75,
+          isCapture: true,
+          pieceId: 'w-r-a1',
+          capturedPieceId: 'b-b-c8',
+        },
+      ],
+    } as GameLedger;
+
+    expect(
+      validator.validateCaptureAttribution(
+        [
+          {
+            ply: 75,
+            fantasyNarration:
+              'Theron saw the wounded Southwest Archwizard trying to shape a defense with one ruined arm and drove the Northeast Fortress over the shattered bridge toward him.',
+          },
+        ],
+        captureLedger,
+      ),
+    ).toEqual([]);
+  });
+
+  it('does not reverse a capture when the real killer appears before the decisive verb', () => {
+    const captureLedger = {
+      pieces: [
+        { id: 'w-p-e2', permanentName: 'Merek', viewpointName: 'Merek' },
+        {
+          id: 'b-r-a8',
+          permanentName: 'Northwest Fortress',
+          operatorName: 'Edric',
+        },
+      ],
+      events: [
+        {
+          ply: 90,
+          isCapture: true,
+          pieceId: 'w-p-e2',
+          capturedPieceId: 'b-r-a8',
+        },
+      ],
+    } as GameLedger;
+
+    expect(
+      validator.validateCaptureAttribution(
+        [
+          {
+            ply: 90,
+            fantasyNarration:
+              'Edric felt his cradle rupture and the life-support pressure vanish as Merek’s guns tore the hull open; he died trapped within the collapsing engine while Merek whispered, “Forgive me,” into the iron dark.',
+          },
+        ],
+        captureLedger,
+      ),
+    ).toEqual([]);
+
+    expect(
+      validator.validateCaptureAttribution(
+        [
+          {
+            ply: 90,
+            fantasyNarration:
+              'Inside his own cradle, Edric felt the hull split and life-support pressure fail; he tried to redirect a gun toward Merek, but the promoted fortress’s ram crushed the command section before he could finish the order.',
           },
         ],
         captureLedger,
@@ -457,6 +707,159 @@ describe('DeterministicStoryValidator', () => {
             inflictedAtPly: 16,
             injury: 'A puncture through the lower abdomen.',
             lastingEffects: ['Persistent abdominal pain'],
+            recoveryPly: null,
+          },
+        ],
+        woundLedger,
+      ),
+    ).toEqual([]);
+  });
+
+  it('does not attribute environmental damage to a future Fortress wound', () => {
+    const woundLedger = {
+      pieces: [
+        {
+          id: 'w-r-a1',
+          permanentName: 'Northeast Fortress',
+          operatorName: 'Theron',
+          fantasyType: 'moving-fortress',
+        },
+      ],
+    } as GameLedger;
+
+    expect(
+      validator.validateTimedWounds(
+        [
+          {
+            ply: 54,
+            characters: ['w-r-a1'],
+            woundsInflicted: [],
+            fantasyNarration:
+              'Roderic aimed past the shattered bridge and fired the fortress’s heavy magical impact into the Northern Queen as she accelerated toward Theron’s distant signal.',
+          },
+          {
+            ply: 55,
+            characters: ['w-r-a1'],
+            woundsInflicted: [{ pieceId: 'w-r-a1', inflictedAtPly: 55 }],
+            fantasyNarration:
+              'The collision severed the Northeast Fortress’s outer wheel housing and cracked its lateral ward plates.',
+          },
+        ],
+        [
+          {
+            pieceId: 'w-r-a1',
+            inflictedAtPly: 55,
+            injury:
+              'severed outer wheel housing and cracked lateral ward plates',
+            lastingEffects: [
+              'exposure of vulnerable maintenance channels',
+              'increased risk of command-cradle shock',
+            ],
+            recoveryPly: null,
+          },
+        ],
+        woundLedger,
+      ),
+    ).toEqual([]);
+  });
+
+  it('does not carry a wound pronoun onto a different explicitly named pilot', () => {
+    const woundLedger = {
+      pieces: [
+        {
+          id: 'w-r-a1',
+          permanentName: 'Northeast Fortress',
+          operatorName: 'Theron',
+          fantasyType: 'moving-fortress',
+        },
+        {
+          id: 'b-r-h8',
+          permanentName: 'Southwest Fortress',
+          operatorName: 'Roderic',
+          fantasyType: 'moving-fortress',
+        },
+      ],
+    } as GameLedger;
+
+    expect(
+      validator.validateTimedWounds(
+        [
+          {
+            ply: 54,
+            characters: ['w-r-a1', 'b-r-h8'],
+            woundsInflicted: [],
+            fantasyNarration:
+              'Theron answered the distant signal. The recoil fractured Roderic’s ribs within his cradle and broke armor around him, yet he held the guns on the Northern route.',
+          },
+          {
+            ply: 55,
+            characters: ['w-r-a1'],
+            woundsInflicted: [{ pieceId: 'w-r-a1', inflictedAtPly: 55 }],
+            fantasyNarration:
+              'The collision severed the Northeast Fortress’s outer wheel housing and cracked its lateral ward plates.',
+          },
+        ],
+        [
+          {
+            pieceId: 'w-r-a1',
+            inflictedAtPly: 55,
+            injury:
+              'severed outer wheel housing and cracked lateral ward plates',
+            lastingEffects: ['increased risk of command-cradle shock'],
+            recoveryPly: null,
+          },
+        ],
+        woundLedger,
+      ),
+    ).toEqual([]);
+  });
+
+  it('attributes damage to the nearest named pilot when another pilot witnesses it', () => {
+    const woundLedger = {
+      pieces: [
+        {
+          id: 'w-r-a1',
+          permanentName: 'Northeast Fortress',
+          operatorName: 'Theron',
+          fantasyType: 'moving-fortress',
+        },
+        {
+          id: 'b-r-h8',
+          permanentName: 'Southwest Fortress',
+          operatorName: 'Roderic',
+          fantasyType: 'moving-fortress',
+        },
+      ],
+    } as GameLedger;
+
+    expect(
+      validator.validateTimedWounds(
+        [
+          {
+            ply: 54,
+            characters: ['w-r-a1', 'b-r-h8'],
+            woundsInflicted: [],
+            fantasyNarration:
+              "The answering magical recoil broke the engine's frontal plating and battered Roderic’s ribs inside the cradle, leaving him gasping beneath fractured restraint metal while Theron witnessed the Queen’s death.",
+          },
+          {
+            ply: 55,
+            characters: ['w-r-a1'],
+            woundsInflicted: [{ pieceId: 'w-r-a1', inflictedAtPly: 55 }],
+            fantasyNarration:
+              'The collision severed the Northeast Fortress’s outer wheel housing and cracked its lateral ward plates.',
+          },
+        ],
+        [
+          {
+            pieceId: 'w-r-a1',
+            inflictedAtPly: 55,
+            injury:
+              'severed outer wheel housing and cracked lateral ward plates',
+            lastingEffects: [
+              'exposure of vulnerable maintenance channels',
+              'increased risk of command-cradle shock',
+            ],
             recoveryPly: null,
           },
         ],

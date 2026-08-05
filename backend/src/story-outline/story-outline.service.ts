@@ -1,8 +1,8 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import type { GameLedger } from '../chess/models/game-ledger';
-import { normalizePawnViewpoints } from '../chess/piece-identity.service';
 import { PrismaService } from '../database/prisma.service';
+import { GenerationPreparationService } from '../generation/generation-preparation.service';
 import { NARRATIVE_ANALYSIS_PROMPT_VERSION } from '../narrative-analysis/narrative-analysis.prompt';
 import {
   narrativeAnalysisSchema,
@@ -20,29 +20,32 @@ import { StoryOutlineValidator } from './story-outline.validator';
 export class StoryOutlineService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly preparation: GenerationPreparationService,
     @Inject(STORY_OUTLINE_PROVIDER)
     private readonly provider: StoryOutlineProvider,
     private readonly validator: StoryOutlineValidator,
   ) {}
 
   async generate(gameId: string) {
-    const game = await this.prisma.game.findUnique({
-      where: { id: gameId },
-      select: { id: true, ledger: { select: { data: true } } },
-    });
-    if (!game?.ledger) {
-      throw new NotFoundException(`Game ${gameId} or its ledger was not found`);
-    }
-    const analysisRun = await this.prisma.generationRun.findFirst({
-      where: {
-        gameId,
-        currentStage: 'NARRATIVE_ANALYSIS',
-        status: 'COMPLETED',
-        promptVersion: NARRATIVE_ANALYSIS_PROMPT_VERSION,
-      },
-      orderBy: { createdAt: 'desc' },
-      include: { narrativeAnalysis: true },
-    });
+    return this.preparation.runStageOnce(gameId, 'OUTLINE', () =>
+      this.generateOnce(gameId),
+    );
+  }
+
+  private async generateOnce(gameId: string) {
+    const [prepared, analysisRun] = await Promise.all([
+      this.preparation.prepare(gameId),
+      this.prisma.generationRun.findFirst({
+        where: {
+          gameId,
+          currentStage: 'NARRATIVE_ANALYSIS',
+          status: 'COMPLETED',
+          promptVersion: NARRATIVE_ANALYSIS_PROMPT_VERSION,
+        },
+        orderBy: { createdAt: 'desc' },
+        include: { narrativeAnalysis: true },
+      }),
+    ]);
     if (!analysisRun?.narrativeAnalysis) {
       throw new NotFoundException(
         `Generate a completed narrative analysis for game ${gameId} first`,
@@ -60,9 +63,7 @@ export class StoryOutlineService {
     });
 
     try {
-      const ledger = normalizePawnViewpoints(
-        game.ledger.data as unknown as GameLedger,
-      );
+      const { ledger } = prepared;
       const narrativeAnalysis: NarrativeAnalysis =
         narrativeAnalysisSchema.parse(analysisRun.narrativeAnalysis.data);
       let outline: StoryOutline | undefined;
@@ -74,6 +75,12 @@ export class StoryOutlineService {
             narrativeAnalysis,
             characterRegistry: ledger.pieces,
             validationFeedback,
+            telemetry: {
+              gameId,
+              generationRunId: run.id,
+              attempt: attempt + 1,
+              repairMode: validationFeedback ? 'full' : 'none',
+            },
           }),
         );
         candidate = normalizeStoryOutlineNumbering(candidate);

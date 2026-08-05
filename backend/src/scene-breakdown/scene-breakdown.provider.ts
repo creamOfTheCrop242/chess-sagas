@@ -1,6 +1,7 @@
 import type { GameLedger } from '../chess/models/game-ledger';
 import type { StoryOutline } from '../story-outline/models/story-outline';
 import type { SceneBreakdown } from './models/scene-breakdown';
+import type { GenerationTelemetryContext } from '../openai/openai-generation';
 
 export const SCENE_BREAKDOWN_PROVIDER = Symbol('SCENE_BREAKDOWN_PROVIDER');
 
@@ -14,5 +15,6 @@ export interface SceneBreakdownProvider {
       SceneBreakdown,
       'defeatedKingFate' | 'defeatedSealFate' | 'defeatedKingDeathDescription'
     >;
+    telemetry: GenerationTelemetryContext;
   }): Promise<SceneBreakdown>;
 }

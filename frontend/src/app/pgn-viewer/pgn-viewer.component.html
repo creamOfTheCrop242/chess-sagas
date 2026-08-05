@@ -294,6 +294,20 @@
               }
             </div>
           }
+          @if (recordReplay) {
+            <div class="generation-panel replay-tools">
+              <div class="actions">
+                <button
+                  type="button"
+                  (click)="toggleFallenRoster()"
+                  [attr.aria-expanded]="fallenRosterOpen"
+                  aria-controls="fallen-roster"
+                >
+                  Hall of the Fallen
+                </button>
+              </div>
+            </div>
+          }
         </div>
 
         <aside class="story-panel" aria-live="polite">

@@ -26,6 +26,11 @@ export class GamesController {
     return this.games.findRecord(id);
   }
 
+  @Get(':id/pipeline-status')
+  pipelineStatus(@Param('id') id: string) {
+    return this.games.pipelineStatus(id);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.games.findOne(id);

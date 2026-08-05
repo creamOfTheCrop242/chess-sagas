@@ -9,6 +9,7 @@ import OpenAI from 'openai';
 import { zodTextFormat } from 'openai/helpers/zod';
 import {
   createOpenAiGenerationClient,
+  compactGameLedgerForModel,
   logOpenAiGeneration,
   logOpenAiGenerationFailure,
   promptCacheOptions,
@@ -41,24 +42,30 @@ export class OpenAiNarrativeAnalysisProvider implements NarrativeAnalysisProvide
     requiredWoundEvents,
     battlefieldEnvironment,
     surrenderContext,
+    telemetry,
   }: NarrativeAnalysisRequest): Promise<NarrativeAnalysis> {
     if (!this.client) {
       throw new ServiceUnavailableException('OPENAI_API_KEY is not configured');
     }
 
     const startedAt = Date.now();
+    const input = JSON.stringify({
+      completeLedger: compactGameLedgerForModel(ledger),
+      requiredWoundEvents,
+      battlefieldEnvironment,
+      surrenderContext,
+    });
+    const callTelemetry = {
+      ...telemetry,
+      payloadBytes: Buffer.byteLength(input, 'utf8'),
+    };
     try {
       const response = await this.client.responses.parse({
         model: this.model,
         ...promptCacheOptions(this.model, 'chess-sagas:narrative-analysis'),
         reasoning: { effort: 'medium' },
         instructions: NARRATIVE_ANALYSIS_INSTRUCTIONS,
-        input: JSON.stringify({
-          completeLedger: ledger,
-          requiredWoundEvents,
-          battlefieldEnvironment,
-          surrenderContext,
-        }),
+        input,
         text: {
           format: zodTextFormat(narrativeAnalysisSchema, 'narrative_analysis'),
         },
@@ -73,6 +80,7 @@ export class OpenAiNarrativeAnalysisProvider implements NarrativeAnalysisProvide
         this.model,
         startedAt,
         response,
+        callTelemetry,
       );
       return analysis;
     } catch (error) {
@@ -82,6 +90,7 @@ export class OpenAiNarrativeAnalysisProvider implements NarrativeAnalysisProvide
         this.model,
         startedAt,
         error,
+        callTelemetry,
       );
       if (
         error instanceof ServiceUnavailableException ||

@@ -5,6 +5,10 @@ import type { GameLedger } from '../chess/models/game-ledger';
 import { PrismaService } from '../database/prisma.service';
 import { PgnService } from '../pgn/pgn.service';
 import { archiveBattleTitle } from '../story-outline/story-title';
+import { NARRATIVE_ANALYSIS_PROMPT_VERSION } from '../narrative-analysis/narrative-analysis.prompt';
+import { STORY_OUTLINE_PROMPT_VERSION } from '../story-outline/story-outline.prompt';
+import { FULL_STORY_PROMPT_VERSION } from '../full-story/full-story.prompt';
+import { SCENE_BREAKDOWN_PROMPT_VERSION } from '../scene-breakdown/scene-breakdown.prompt';
 
 export const GAME_LEDGER_SCHEMA_VERSION = 5;
 
@@ -88,6 +92,59 @@ export class GamesService {
         updatedAt: true,
       },
     });
+  }
+
+  async pipelineStatus(id: string) {
+    const game = await this.prisma.game.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        generationRuns: {
+          where: { status: 'COMPLETED' },
+          select: {
+            currentStage: true,
+            promptVersion: true,
+            narrativeAnalysis: { select: { id: true } },
+            storyOutline: { select: { id: true } },
+            generatedStory: { select: { id: true } },
+            storyValidation: { select: { valid: true } },
+            sceneBreakdown: { select: { id: true } },
+          },
+        },
+      },
+    });
+    if (!game) throw new NotFoundException(`Game ${id} was not found`);
+
+    const runs = game.generationRuns;
+    return {
+      analysis: runs.some(
+        (run) =>
+          run.currentStage === 'NARRATIVE_ANALYSIS' &&
+          run.promptVersion === NARRATIVE_ANALYSIS_PROMPT_VERSION &&
+          Boolean(run.narrativeAnalysis),
+      ),
+      outline: runs.some(
+        (run) =>
+          run.currentStage === 'OUTLINE' &&
+          run.promptVersion === STORY_OUTLINE_PROMPT_VERSION &&
+          Boolean(run.storyOutline),
+      ),
+      story: runs.some(
+        (run) =>
+          run.currentStage === 'STORY' &&
+          run.promptVersion === FULL_STORY_PROMPT_VERSION &&
+          Boolean(run.generatedStory),
+      ),
+      validation: runs.some((run) => Boolean(run.storyValidation?.valid)),
+      scenes: runs.some(
+        (run) =>
+          Boolean(run.sceneBreakdown) &&
+          ((run.currentStage === 'STORY' &&
+            run.promptVersion === FULL_STORY_PROMPT_VERSION) ||
+            (run.currentStage === 'SCENE_BREAKDOWN' &&
+              run.promptVersion === SCENE_BREAKDOWN_PROMPT_VERSION)),
+      ),
+    };
   }
 
   async findRecords() {

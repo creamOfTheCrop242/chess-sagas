@@ -41,9 +41,34 @@ model Game {
   ledger         GameLedger?
   generationRuns GenerationRun[]
   sagaJob        SagaGenerationJob?
+  owner          User?              @relation(fields: [ownerId], references: [id], onDelete: SetNull)
 
   @@index([ownerId, createdAt])
   @@index([pgnHash])
+}
+
+model User {
+  id          String        @id @default(cuid())
+  googleSub   String        @unique
+  email       String        @unique
+  displayName String
+  avatarUrl   String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  sessions    AuthSession[]
+  games       Game[]
+}
+
+model AuthSession {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model SagaGenerationJob {

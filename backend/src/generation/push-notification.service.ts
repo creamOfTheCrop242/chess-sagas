@@ -123,6 +123,30 @@ export class PushNotificationService {
     );
   }
 
+  async sendSagaFailed(subscriptions: unknown, gameId: string): Promise<void> {
+    await this.send(
+      subscriptions,
+      {
+        title: 'Your saga needs attention',
+        body: 'The chronicler could not finish the saga. Open Chess Sagas and select Retry saga generation.',
+        tag: `saga-progress-${gameId}`,
+        icon: '/icons/icon-192x192.png',
+        badge: '/icons/icon-96x96.png',
+        data: {
+          gameId,
+          onActionClick: {
+            default: {
+              operation: 'openWindow',
+              url: '/',
+            },
+          },
+        },
+      },
+      'failure',
+      60 * 60,
+    );
+  }
+
   private async send(
     subscriptions: unknown,
     notification: Record<string, unknown>,

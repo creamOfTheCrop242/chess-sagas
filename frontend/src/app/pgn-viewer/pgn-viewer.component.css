@@ -533,6 +533,10 @@ button.piece-card-backdrop {
   gap: 0.85rem;
 }
 
+.mobile-fallen-trigger {
+  display: none;
+}
+
 .story-panel {
   position: sticky;
   top: 1rem;
@@ -781,12 +785,43 @@ button.piece-card-backdrop {
     overflow: visible;
   }
 
-  .playback-controls {
+  .playback-meta {
     grid-row: 3;
   }
 
-  .generation-panel {
+  .playback-controls {
+    position: sticky;
+    z-index: 60;
+    bottom: 0;
     grid-row: 4;
+    padding: 0.65rem;
+    border-top: 1px solid rgba(196, 168, 98, 0.35);
+    background: #0a1018;
+  }
+
+  .playback-controls .nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+
+  .playback-controls button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .mobile-fallen-trigger {
+    display: block;
+    grid-column: 1 / -1;
+  }
+
+  .desktop-fallen-trigger,
+  .replay-tools {
+    display: none;
+  }
+
+  .generation-panel {
+    grid-row: 5;
   }
 }
 
@@ -959,12 +994,12 @@ button.piece-card-backdrop {
 }
 
 button.fallen-close {
-  position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
+  position: sticky;
+  top: 0;
+  float: right;
   padding: 0.15rem 0.45rem;
   border-color: transparent;
-  background: transparent;
+  background: #0b1119;
   font-size: 1.2rem;
 }
 
@@ -1042,8 +1077,12 @@ button.fallen-close {
 
   .fallen-roster {
     width: 100%;
-    max-height: calc(100dvh - 1rem);
+    max-height: min(82dvh, 36rem);
     padding: 1.1rem;
     overscroll-behavior: contain;
+  }
+
+  button.fallen-close {
+    min-height: 2.75rem;
   }
 }

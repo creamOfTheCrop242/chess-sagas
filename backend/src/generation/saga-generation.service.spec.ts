@@ -42,6 +42,7 @@ describe('SagaGenerationService', () => {
     mergeSubscriptions: jest.fn().mockReturnValue([]),
     sendSagaStage: jest.fn().mockResolvedValue(undefined),
     sendSagaReady: jest.fn().mockResolvedValue(undefined),
+    sendSagaFailed: jest.fn().mockResolvedValue(undefined),
   } as unknown as PushNotificationService;
   let service: SagaGenerationService;
 
@@ -149,6 +150,35 @@ describe('SagaGenerationService', () => {
     );
     expect(pushNotifications.sendSagaReady).toHaveBeenCalledWith(
       undefined,
+      'game-1',
+    );
+  });
+
+  it('notifies the user when generation exhausts its automatic retries', async () => {
+    const subscriptions = [
+      {
+        endpoint: 'https://push.example/device',
+        keys: { p256dh: 'public-key', auth: 'auth-key' },
+      },
+    ];
+    jest.mocked(analysis.generate).mockRejectedValueOnce(new Error('failed'));
+    jest
+      .mocked(prisma.sagaGenerationJob.findUnique)
+      .mockResolvedValueOnce({ pushSubscriptions: subscriptions } as never);
+
+    await (
+      service as unknown as {
+        execute(jobId: string, gameId: string): Promise<void>;
+      }
+    ).execute('job-1', 'game-1');
+
+    expect(jobUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'FAILED' }),
+      }),
+    );
+    expect(pushNotifications.sendSagaFailed).toHaveBeenCalledWith(
+      subscriptions,
       'game-1',
     );
   });

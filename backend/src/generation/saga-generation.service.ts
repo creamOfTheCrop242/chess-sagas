@@ -262,7 +262,7 @@ export class SagaGenerationService
       const message =
         error instanceof Error ? error.message : 'Saga generation failed';
       this.logger.error(`Saga job failed gameId=${gameId}: ${message}`);
-      await this.prisma.sagaGenerationJob.updateMany({
+      const failed = await this.prisma.sagaGenerationJob.updateMany({
         where: { id: jobId, workerId: this.workerId },
         data: {
           status: 'FAILED',
@@ -272,6 +272,16 @@ export class SagaGenerationService
           lockedUntil: null,
         },
       });
+      if (failed.count === 1) {
+        const failedJob = await this.prisma.sagaGenerationJob.findUnique({
+          where: { id: jobId },
+          select: { pushSubscriptions: true },
+        });
+        await this.pushNotifications.sendSagaFailed(
+          failedJob?.pushSubscriptions,
+          gameId,
+        );
+      }
     } finally {
       clearInterval(heartbeat);
     }

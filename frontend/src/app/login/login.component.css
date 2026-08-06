@@ -57,6 +57,7 @@ h1 {
 }
 
 .google-button,
+.apple-button,
 .actions a,
 .actions button {
   position: relative;
@@ -76,6 +77,17 @@ h1 {
 }
 
 .google-button svg {
+  width: 1.35rem;
+  margin-right: 0.75rem;
+}
+
+.apple-button {
+  margin-top: 0.75rem;
+  background: #050505;
+  color: #fff;
+}
+
+.apple-button svg {
   width: 1.35rem;
   margin-right: 0.75rem;
 }
@@ -142,6 +154,7 @@ h1 {
   }
 
   .google-button,
+  .apple-button,
   .actions a,
   .actions button {
     width: 100%;

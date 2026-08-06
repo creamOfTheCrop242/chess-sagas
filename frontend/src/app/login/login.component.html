@@ -57,6 +57,19 @@
           </svg>
           Continue with Google
         </button>
+        <button
+          class="apple-button"
+          type="button"
+          (click)="auth.signInWithApple()"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M16.7 12.9c0-2.5 2.1-3.7 2.2-3.8a4.8 4.8 0 0 0-3.8-2.1c-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.3-.9a4.9 4.9 0 0 0-4.2 2.5c-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.3 2.5 1.3-.1 1.8-.8 3.4-.8 1.6 0 2 .8 3.4.8 1.4 0 2.3-1.3 3.2-2.5a11 11 0 0 0 1.4-2.9 4.4 4.4 0 0 1-3-3.9ZM14 5.3A4.4 4.4 0 0 0 15 2a4.5 4.5 0 0 0-3 1.5 4.2 4.2 0 0 0-1.1 3.2A3.7 3.7 0 0 0 14 5.3Z"
+            />
+          </svg>
+          Continue with Apple
+        </button>
         <p class="privacy-note">
           We use your name, email address, and profile image only to identify
           your account.

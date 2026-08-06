@@ -6,6 +6,8 @@ describe('AuthService', () => {
     GOOGLE_CLIENT_ID: 'client-id',
     GOOGLE_CLIENT_SECRET: 'client-secret',
     GOOGLE_CALLBACK_URL: 'http://localhost:3000/auth/google/callback',
+    APPLE_CLIENT_ID: 'com.example.chesssagas.web',
+    APPLE_CALLBACK_URL: 'https://chesssagas.com/api/auth/apple/callback',
     PUBLIC_APP_URL: 'http://localhost:4200/',
   };
   const config = {
@@ -13,7 +15,10 @@ describe('AuthService', () => {
   } as unknown as ConfigService;
   const prisma = {
     user: {
-      upsert: jest.fn(),
+      findFirst: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      create: jest.fn(),
     },
     authSession: {
       create: jest.fn(),
@@ -41,6 +46,22 @@ describe('AuthService', () => {
     expect(request.state.length).toBeGreaterThan(30);
   });
 
+  it('creates an Apple form-post authorization URL', () => {
+    const request = service.createAppleAuthorizationRequest();
+    const url = new URL(request.url);
+
+    expect(url.origin).toBe('https://appleid.apple.com');
+    expect(url.searchParams.get('client_id')).toBe(
+      'com.example.chesssagas.web',
+    );
+    expect(url.searchParams.get('redirect_uri')).toBe(
+      'https://chesssagas.com/api/auth/apple/callback',
+    );
+    expect(url.searchParams.get('response_mode')).toBe('form_post');
+    expect(url.searchParams.get('scope')).toBe('name email');
+    expect(url.searchParams.get('state')).toBe(request.state);
+  });
+
   it('returns no user when the session cookie is absent', async () => {
     await expect(service.currentUser(undefined)).resolves.toBeNull();
     expect(prisma.authSession.findFirst).not.toHaveBeenCalled();
@@ -51,6 +72,19 @@ describe('AuthService', () => {
     await expect(
       service.completeGoogleLogin('code', 'returned-state', 'expected-state'),
     ).rejects.toThrow('Invalid Google authentication response');
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('rejects an Apple callback whose state does not match before calling Apple', async () => {
+    const fetchSpy = jest.spyOn(global, 'fetch');
+    await expect(
+      service.completeAppleLogin(
+        'code',
+        'returned-state',
+        'expected-state',
+        undefined,
+      ),
+    ).rejects.toThrow('Invalid Apple authentication response');
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
@@ -81,7 +115,9 @@ describe('AuthService', () => {
       displayName: 'Saga Reader',
       avatarUrl: 'https://example.com/avatar.png',
     };
-    prisma.user.upsert.mockResolvedValue(user);
+    prisma.user.findFirst.mockResolvedValue(null);
+    prisma.user.findUnique.mockResolvedValue(null);
+    prisma.user.create.mockResolvedValue(user);
     prisma.authSession.create.mockResolvedValue({ id: 'session-1' });
 
     const result = await service.completeGoogleLogin(

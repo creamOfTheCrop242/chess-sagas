@@ -39,6 +39,10 @@ export class AuthService {
     window.location.assign('/api/auth/google');
   }
 
+  signInWithApple(): void {
+    window.location.assign('/api/auth/apple');
+  }
+
   logout(): void {
     this.http
       .post('/api/auth/logout', null, {

@@ -47,6 +47,31 @@ Production uses `https://chesssagas.com/api/auth/google/callback` for
 `GOOGLE_CALLBACK_URL` and `https://chesssagas.com` for `PUBLIC_APP_URL`.
 Never place `GOOGLE_CLIENT_SECRET` in the frontend or commit it to Git.
 
+### Sign in with Apple
+
+Sign in with Apple for websites requires an Apple Developer Program account, a
+primary App ID with Sign in with Apple enabled, a Services ID, and a Sign in
+with Apple private key. Configure the Services ID with:
+
+- Domain: `chesssagas.com`
+- Return URL: `https://chesssagas.com/api/auth/apple/callback`
+
+Set these backend environment variables:
+
+```bash
+APPLE_CLIENT_ID=com.yourcompany.chesssagas.web
+APPLE_TEAM_ID=your-apple-team-id
+APPLE_KEY_ID=your-sign-in-with-apple-key-id
+APPLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+APPLE_CALLBACK_URL=https://chesssagas.com/api/auth/apple/callback
+```
+
+`APPLE_CLIENT_ID` is the Services ID, not the primary App ID. The private key
+is the contents of the `.p8` file downloaded from Apple. Heroku accepts it as a
+multiline value or with newlines represented as `\n`. Apple web return URLs
+must use HTTPS, so test this flow on the production domain or an HTTPS test
+domain registered in the Services ID.
+
 Never commit `.env`. Restart the backend after changing it.
 
 ## Run locally

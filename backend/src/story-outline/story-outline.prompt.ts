@@ -1,4 +1,4 @@
-export const STORY_OUTLINE_PROMPT_VERSION = 'phase-3-v29';
+export const STORY_OUTLINE_PROMPT_VERSION = 'phase-3-v30';
 
 export const STORY_OUTLINE_INSTRUCTIONS = `Create a structured outline for one cohesive dark-fantasy story. Return planning JSON only; do not write story prose.
 
@@ -11,11 +11,13 @@ The complete ledger is factual source of truth. The narrative analysis supplies 
 - Follow the narrative analysis act boundaries.
 - Group related quiet moves into shared scenes.
 - Give every capture, check, checkmate, promotion, and castling event explicit weight by listing its ply in requiredEventPlies.
+- At every ledger check, explicitly outline a new cumulative increment of damage to the threatened King and his Royal Seal bond. Escalate repeated checks from strain to battered defenses, then wounds and grave magical exhaustion. Carry the accumulated effects into every later scene involving that King. This deterministic check strain is separate from woundBeats and must not be added to, removed from, or confused with capture-based wounds.
 - Never invent events, deaths, survivors, characters, or ply numbers.
 - selectedTitle is the public archive name shown before the saga is opened. Choose a titleConcept that names the battle without revealing the ending, result, winner, defeated King, destroyed Seal, checkmate, resignation, surrender, draw, victory, or defeat.
 - selectedTitle must contain no board square, coordinate, rank, file, move number, SAN, or chess notation. Favor terrain, atmosphere, character tension, a recurring image, or a remarkable non-final capture framed as a clash whose ultimate outcome remains unknown.
 - Establish important characters and promoting soldiers before their payoff.
 - Treat every Moving Fortress as a colossal wheeled war engine powered by magic. Its permanent living pilot in operatorName is physically embedded within a life-sustaining armored command cradle and cannot simply dismount. Track that pilot's viewpoint, orders, fear, injuries, and relationships whenever the Fortress acts; never give the structure independent thoughts, dialogue, or decisions.
+- The characterRegistry backstories are established personal canon. Use relevant histories to strengthen motivations and relationships for featured characters without forcing every history into the outline or contradicting any origin.
 - When a Moving Fortress captures, its operator directs the killing action through the machine. When one is captured, plan the machine's destruction and the operator's death or final fate as the same ledger-confirmed loss.
 - Copy every narrative-analysis woundPlan into woundBeats exactly. Do not add, remove, move, rename, intensify, or heal a planned injury.
 - When one character has multiple woundBeats, accumulate them: each later scene must preserve the combined limitations of every active injury. A new wound never replaces an old one.

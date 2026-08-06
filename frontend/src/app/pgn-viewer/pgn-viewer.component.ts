@@ -34,6 +34,13 @@ type PieceStatus = {
   tone: 'healthy' | 'wounded' | 'maimed' | 'dead' | 'entombed';
 };
 
+type PieceFate = {
+  killerName: string;
+  beat: number;
+  account: string;
+  finalCondition: string | null;
+};
+
 type WoundHistoryEntry = {
   inflictedAtPly: number;
   injury: string;
@@ -60,6 +67,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
   hoveredPieceId: string | null = null;
   selectedPieceId: string | null = null;
   fallenRosterOpen = false;
+  rosterPieceId: string | null = null;
   scenes: PlaybackScene[] = [];
   wounds: StoryWound[] = [];
   epilogue = '';
@@ -208,7 +216,10 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
   }
   get inspectedPieceKills(): number {
     const piece = this.inspectedPiece;
-    if (!this.game || !piece) return 0;
+    return piece ? this.pieceKills(piece) : 0;
+  }
+  pieceKills(piece: PieceIdentity): number {
+    if (!this.game) return 0;
     return this.game.ledger.events.filter(
       (event) =>
         event.ply <= this.currentPly &&
@@ -218,7 +229,12 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
   }
   get inspectedPieceStatus(): PieceStatus {
     const piece = this.inspectedPiece;
-    if (!piece || !this.game) {
+    return piece
+      ? this.pieceStatus(piece)
+      : { label: 'Unharmed', detail: null, tone: 'healthy' };
+  }
+  pieceStatus(piece: PieceIdentity): PieceStatus {
+    if (!this.game) {
       return { label: 'Unharmed', detail: null, tone: 'healthy' };
     }
     const checkmateDeathPly = this.checkmateDeathPlyFor(piece);
@@ -264,8 +280,11 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
       };
     }
     const visibleWounds = this.visibleWoundsFor(piece);
+    const kingStrain = this.kingStrainFor(piece);
     if (!visibleWounds.length) {
-      return { label: 'Unharmed', detail: null, tone: 'healthy' };
+      return (
+        kingStrain ?? { label: 'Unharmed', detail: null, tone: 'healthy' }
+      );
     }
     const activeWounds = visibleWounds.filter(
       (wound) =>
@@ -300,10 +319,13 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
                 }`
               : ''
           }`;
+    const combinedSummary = kingStrain?.detail
+      ? `${summary} · ${kingStrain.detail}`
+      : summary;
     if (activeWounds.some((wound) => this.isMaimingInjury(wound.injury))) {
       return {
         label: 'Maimed',
-        detail: summary,
+        detail: combinedSummary,
         tone: 'maimed',
       };
     }
@@ -311,16 +333,64 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
       this.isGraveInjury(`${wound.injury} ${wound.lastingEffects.join(' ')}`),
     );
     return {
-      label: gravelyWounded ? 'Gravely Wounded' : 'Wounded',
-      detail: summary,
+      label:
+        gravelyWounded || this.kingCheckEvents(piece).length >= 4
+          ? 'Gravely Wounded'
+          : 'Wounded',
+      detail: combinedSummary,
       tone: 'wounded',
+    };
+  }
+  pieceFate(piece: PieceIdentity): PieceFate | null {
+    if (!this.game || this.pieceStatus(piece).tone !== 'dead') return null;
+
+    const capture = this.game.ledger.events.find(
+      (event) =>
+        event.capturedPieceId === piece.id && event.ply <= this.currentPly,
+    );
+    const checkmate =
+      piece.chessType === 'k' && this.isDefeatedPiece(piece)
+        ? this.game.ledger.events.find(
+            (event) => event.isCheckmate && event.ply <= this.currentPly,
+          )
+        : undefined;
+    const deathEvent = capture ?? checkmate;
+    if (!deathEvent) {
+      if (!this.isEpiloguePage || !this.defeatedKingDeathDescription)
+        return null;
+      return {
+        killerName: 'The victorious kingdom',
+        beat: this.game.positions.length,
+        account: this.defeatedKingDeathDescription,
+        finalCondition: this.finalWoundCondition(piece),
+      };
+    }
+
+    const killer = this.game.ledger.pieces.find(
+      (candidate) => candidate.id === deathEvent.pieceId,
+    );
+    const scene = this.scenes.find(
+      (candidate) =>
+        deathEvent.ply >= candidate.startPly &&
+        deathEvent.ply <= candidate.endPly &&
+        (candidate.captureVictimId === undefined ||
+          candidate.captureVictimId === null ||
+          candidate.captureVictimId === piece.id),
+    );
+    return {
+      killerName: killer?.permanentName ?? 'An unknown enemy',
+      beat: deathEvent.ply,
+      account:
+        (checkmate ? this.defeatedKingDeathDescription : '') ||
+        scene?.fantasyNarration ||
+        `${piece.permanentName} fell during the clash at beat ${deathEvent.ply}.`,
+      finalCondition: this.finalWoundCondition(piece),
     };
   }
   get inspectedPieceWoundHistory(): WoundHistoryEntry[] {
     const piece = this.inspectedPiece;
     if (!piece) return [];
-    return this.visibleWoundsFor(piece)
-      .map((wound) => ({
+    const woundHistory = this.visibleWoundsFor(piece).map((wound) => ({
         inflictedAtPly: wound.inflictedAtPly,
         injury: this.safeWoundInjury(wound, piece),
         effects: wound.lastingEffects.filter((effect) =>
@@ -331,7 +401,16 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
             ? ('recovered' as const)
             : ('active' as const),
         recoveryPly: wound.recoveryPly,
-      }))
+      }));
+    const strainHistory = this.kingCheckEvents(piece).map((event, index) => ({
+      inflictedAtPly: event.ply,
+      injury: this.kingStrainLabel(index + 1),
+      effects: [this.kingStrainEffect(index + 1)],
+      state: 'active' as const,
+      recoveryPly: null,
+    }));
+    return [...woundHistory, ...strainHistory]
+      .sort((left, right) => left.inflictedAtPly - right.inflictedAtPly)
       .reverse();
   }
   get lightKingdomFallen(): FallenPiece[] {
@@ -339,6 +418,12 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
   }
   get darkKingdomFallen(): FallenPiece[] {
     return this.fallenPiecesFor('south');
+  }
+  get lightKingdomRoster(): PieceIdentity[] {
+    return this.rosterFor('north');
+  }
+  get darkKingdomRoster(): PieceIdentity[] {
+    return this.rosterFor('south');
   }
   get pipelineVisible(): boolean {
     return this.pipelineSteps.some(
@@ -489,7 +574,10 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
       .getGame(gameId)
       .pipe(
         switchMap((saved) =>
-          forkJoin({ saved: of(saved), parsed: this.pgnApi.parse(saved.rawPgn) }),
+          forkJoin({
+            saved: of(saved),
+            parsed: this.pgnApi.parse(saved.rawPgn),
+          }),
         ),
       )
       .subscribe({
@@ -529,10 +617,8 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
     this.laterEpilogue = response.sceneBreakdown.data.laterEpilogue ?? '';
     this.defeatedKingDeathDescription =
       response.sceneBreakdown.data.defeatedKingDeathDescription ?? '';
-    this.defeatedKingFate =
-      response.sceneBreakdown.data.defeatedKingFate ?? '';
-    this.defeatedSealFate =
-      response.sceneBreakdown.data.defeatedSealFate ?? '';
+    this.defeatedKingFate = response.sceneBreakdown.data.defeatedKingFate ?? '';
+    this.defeatedSealFate = response.sceneBreakdown.data.defeatedSealFate ?? '';
   }
 
   ngOnDestroy(): void {
@@ -566,9 +652,14 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
   }
   toggleFallenRoster(): void {
     this.fallenRosterOpen = !this.fallenRosterOpen;
+    if (!this.fallenRosterOpen) this.rosterPieceId = null;
   }
   closeFallenRoster(): void {
     this.fallenRosterOpen = false;
+    this.rosterPieceId = null;
+  }
+  toggleRosterPiece(piece: PieceIdentity): void {
+    this.rosterPieceId = this.rosterPieceId === piece.id ? null : piece.id;
   }
   pieceKingdom(piece: PieceIdentity): string {
     return piece.side === 'north'
@@ -588,6 +679,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
     return this.displayRole(piece.fantasyType);
   }
   pieceDescription(piece: PieceIdentity): string {
+    if (piece.backstory) return piece.backstory;
     if (piece.chessType === 'p') {
       const role = this.displayRole(piece.viewpointRole ?? 'soldier');
       const company = piece.companyName ?? 'their company';
@@ -663,6 +755,13 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
           ? [{ victim, killer, ply: event.ply }]
           : [];
       });
+  }
+  private rosterFor(side: 'north' | 'south'): PieceIdentity[] {
+    return (this.game?.ledger.pieces ?? [])
+      .filter((piece) => piece.side === side)
+      .sort((left, right) =>
+        left.originalSquare.localeCompare(right.originalSquare),
+      );
   }
   private get piecesBySquare(): Map<string, string> {
     const pieces = new Map<string, string>();
@@ -753,6 +852,44 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
   private isGraveInjury(injury: string): boolean {
     return /\b(grave|critical|crippl|organ|spine|skull)\b/i.test(injury);
   }
+  private kingCheckEvents(piece: PieceIdentity): ChessEvent[] {
+    if (!this.game || piece.chessType !== 'k') return [];
+    return this.game.ledger.events.filter(
+      (event) =>
+        event.ply <= this.currentPly &&
+        event.isCheck &&
+        event.side !== piece.side,
+    );
+  }
+  private kingStrainFor(piece: PieceIdentity): PieceStatus | null {
+    const count = this.kingCheckEvents(piece).length;
+    if (!count) return null;
+    const label =
+      count === 1
+        ? 'Strained'
+        : count === 2
+          ? 'Battered'
+          : count === 3
+            ? 'Wounded'
+            : 'Gravely Wounded';
+    return {
+      label,
+      detail: `${count} direct ${count === 1 ? 'threat has' : 'threats have'} damaged the King's wards and strained his connection to the Royal Seal.`,
+      tone: 'wounded',
+    };
+  }
+  private kingStrainLabel(count: number): string {
+    if (count === 1) return 'The Royal Seal wards absorbed a damaging impact.';
+    if (count === 2) return 'A second assault battered the Royal Seal wards.';
+    if (count === 3) return 'Repeated attacks wounded the King through the Seal bond.';
+    return 'Another direct assault deepened the King’s accumulated damage.';
+  }
+  private kingStrainEffect(count: number): string {
+    if (count === 1) return 'The inter-universal connection begins to falter.';
+    if (count === 2) return 'Maintaining the realm’s magic demands visible effort.';
+    if (count === 3) return 'Pain and magical exhaustion hinder concentration.';
+    return 'The failing wards and cumulative strain leave the King near collapse.';
+  }
   private visibleWoundsFor(piece: PieceIdentity): StoryWound[] {
     return this.wounds
       .filter(
@@ -760,6 +897,16 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
           wound.pieceId === piece.id && wound.inflictedAtPly <= this.currentPly,
       )
       .sort((left, right) => left.inflictedAtPly - right.inflictedAtPly);
+  }
+  private finalWoundCondition(piece: PieceIdentity): string | null {
+    const wounds = this.visibleWoundsFor(piece);
+    if (!wounds.length) return null;
+    const wound = wounds[wounds.length - 1];
+    const effects = wound.lastingEffects
+      .filter((effect) => this.isSafeWoundStatusText(effect, piece))
+      .join(' · ');
+    const injury = this.safeWoundInjury(wound, piece);
+    return effects ? `${injury} · ${effects}` : injury;
   }
   private safeWoundInjury(wound: StoryWound, piece: PieceIdentity): string {
     return this.isSafeWoundStatusText(wound.injury, piece)

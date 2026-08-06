@@ -35,6 +35,7 @@ describe('PgnService deterministic ledger', () => {
       viewpointName: expect.any(String),
       viewpointRole: expect.any(String),
       companyName: 'Northern Ember Company',
+      backstory: expect.stringContaining(viewpointPawn.permanentName),
     });
     expect(viewpointPawn.permanentName).toBe(viewpointPawn.viewpointName);
     expect(game.ledger.finalFen).toBe(capture.boardFenAfterMove);
@@ -190,6 +191,26 @@ describe('PgnService deterministic ledger', () => {
       fortresses.map((piece) => piece.operatorName),
     );
     expect(differentOperators).not.toEqual(repeatedOperators);
+    expect(
+      fortresses.every(
+        (piece) =>
+          piece.backstory?.includes(piece.operatorName!) &&
+          piece.backstory.includes('cannot survive apart'),
+      ),
+    ).toBe(true);
+  });
+
+  it('assigns deterministic personal histories that vary between games', () => {
+    const pgn =
+      '[White "Ada"]\n[Black "Turing"]\n[Date "2026.08.06"]\n[Result "*"]\n\n1. e4 e5 *';
+    const histories = (gamePgn: string) =>
+      service.parse(gamePgn).ledger.pieces.map((piece) => piece.backstory);
+
+    expect(histories(pgn)).toEqual(histories(pgn));
+    expect(histories(pgn.replace('1. e4 e5', '1. d4 d5'))).not.toEqual(
+      histories(pgn),
+    );
+    expect(histories(pgn).every(Boolean)).toBe(true);
   });
 
   it('reverses east and west for commanders, Archwizards, and Fortresses', () => {

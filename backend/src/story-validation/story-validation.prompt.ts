@@ -1,4 +1,4 @@
-export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v14';
+export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v15';
 
 export const STORY_VALIDATION_INSTRUCTIONS = `Validate the supplied story against the complete deterministic chess ledger, narrative analysis, outline, and deterministic findings.
 
@@ -21,7 +21,8 @@ Report:
 - an Archwizard portrayed as possessing only teleportation magic, or repetitive combat that incorrectly turns every Archwizard spell into a portal, blink, or spatial effect
 - a Moving Fortress portrayed without magic-powered wheels, with a pilot who is not alive and physically embedded within it, or as a sentient machine acting independently of its pilot
 - a Royal Seal portrayed as creating magic independently or as the realm's original source of magic, rather than distributing energy its King siphons from the kingdom's lost home universe
-- any nonfatal injury or dismemberment absent from outline woundBeats, inflicted outside its recorded capture, applied to the wrong survivor, prematurely healed, forgotten in later action, or contradicted by intact anatomy
+- any nonfatal injury or dismemberment absent from outline woundBeats, inflicted outside its recorded capture, applied to the wrong survivor, prematurely healed, forgotten in later action, or contradicted by intact anatomy; cumulative royal strain inflicted on the threatened King at each ledger-confirmed check is the sole exception and must remain separate from woundBeats
+- any ledger-confirmed check that fails to inflict a new increment of royal strain on the threatened King, any check strain assigned to the wrong King or wrong ply, or later prose that forgets the accumulated effect of earlier checks
 - replacement of an earlier wound by a later one instead of cumulative limitations; minor-wound recovery without explicit treatment, magical intervention, or meaningful time; loss of residual scars after recovery; or any recovery from a grave, critical, crippling, organ, spinal, skull, or maiming injury during the final battle
 - any fatal dismemberment outside a ledger-confirmed death, or repetitive dismemberment that weakens rather than sharpens major violence
 - after a Seal's destruction, omission of the gradual entombment threat facing any surviving defeated-realm Moving Fortress pilot; instantaneous Fortress failure; entombment in the victorious realm; or an invented pilot death

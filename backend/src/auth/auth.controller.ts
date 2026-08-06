@@ -1,5 +1,6 @@
 import {
   Controller,
+  Body,
   Get,
   Header,
   Logger,
@@ -12,6 +13,7 @@ import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 
 const OAUTH_STATE_COOKIE = 'chess_sagas_oauth_state';
+const APPLE_STATE_COOKIE = 'chess_sagas_apple_oauth_state';
 const SESSION_COOKIE = 'chess_sagas_session';
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -27,6 +29,17 @@ export class AuthController {
     const request = this.auth.createAuthorizationRequest();
     response.cookie(OAUTH_STATE_COOKIE, request.state, {
       ...this.cookieOptions(),
+      maxAge: 10 * 60 * 1000,
+    });
+    response.redirect(request.url);
+  }
+
+  @Get('apple')
+  @Header('Cache-Control', 'no-store')
+  beginAppleLogin(@Res() response: Response): void {
+    const request = this.auth.createAppleAuthorizationRequest();
+    response.cookie(APPLE_STATE_COOKIE, request.state, {
+      ...this.appleStateCookieOptions(),
       maxAge: 10 * 60 * 1000,
     });
     response.redirect(request.url);
@@ -58,6 +71,43 @@ export class AuthController {
       const message = caught instanceof Error ? caught.message : String(caught);
       this.logger.warn(`Google login failed: ${message}`);
       response.clearCookie(OAUTH_STATE_COOKIE, this.cookieOptions());
+      response.redirect(
+        `${this.auth.appUrl}/login?error=authentication_failed`,
+      );
+    }
+  }
+
+  @Post('apple/callback')
+  @Header('Cache-Control', 'no-store')
+  async finishAppleLogin(
+    @Body()
+    body: {
+      code?: string;
+      state?: string;
+      user?: string;
+      error?: string;
+    },
+    @Req() request: Request,
+    @Res() response: Response,
+  ): Promise<void> {
+    try {
+      if (body.error) throw new Error(`Apple returned ${body.error}`);
+      const result = await this.auth.completeAppleLogin(
+        body.code,
+        body.state,
+        this.readCookie(request, APPLE_STATE_COOKIE),
+        body.user,
+      );
+      response.clearCookie(APPLE_STATE_COOKIE, this.appleStateCookieOptions());
+      response.cookie(SESSION_COOKIE, result.sessionToken, {
+        ...this.cookieOptions(),
+        maxAge: SESSION_MAX_AGE_MS,
+      });
+      response.redirect(`${this.auth.appUrl}/`);
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : String(caught);
+      this.logger.warn(`Apple login failed: ${message}`);
+      response.clearCookie(APPLE_STATE_COOKIE, this.appleStateCookieOptions());
       response.redirect(
         `${this.auth.appUrl}/login?error=authentication_failed`,
       );
@@ -96,6 +146,20 @@ export class AuthController {
       httpOnly: true,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
+      path: '/',
+    };
+  }
+
+  private appleStateCookieOptions(): {
+    httpOnly: true;
+    sameSite: 'none';
+    secure: true;
+    path: '/';
+  } {
+    return {
+      httpOnly: true,
+      sameSite: 'none',
+      secure: true,
       path: '/',
     };
   }

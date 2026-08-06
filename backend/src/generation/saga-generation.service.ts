@@ -6,6 +6,7 @@ import {
   OnModuleDestroy,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { FullStoryService } from '../full-story/full-story.service';
 import { FULL_STORY_PROMPT_VERSION } from '../full-story/full-story.prompt';
@@ -16,6 +17,7 @@ import { SCENE_BREAKDOWN_PROMPT_VERSION } from '../scene-breakdown/scene-breakdo
 import { StoryOutlineService } from '../story-outline/story-outline.service';
 import { STORY_OUTLINE_PROMPT_VERSION } from '../story-outline/story-outline.prompt';
 import { StoryValidationService } from '../story-validation/story-validation.service';
+import { PushNotificationService } from './push-notification.service';
 
 const LEASE_MS = 90_000;
 const HEARTBEAT_MS = 20_000;
@@ -53,6 +55,7 @@ export class SagaGenerationService
     private readonly story: FullStoryService,
     private readonly validation: StoryValidationService,
     private readonly scenes: SceneBreakdownService,
+    private readonly pushNotifications: PushNotificationService,
   ) {
     this.sweepTimer = setInterval(() => this.scheduleDrain(), 30_000);
   }
@@ -65,7 +68,10 @@ export class SagaGenerationService
     clearInterval(this.sweepTimer);
   }
 
-  async start(gameId: string): Promise<SagaGenerationStatus> {
+  async start(
+    gameId: string,
+    pushSubscription?: unknown,
+  ): Promise<SagaGenerationStatus> {
     await this.assertGame(gameId);
     const stages = await this.stageSnapshot(gameId);
     if (stages.scenes) {
@@ -92,6 +98,10 @@ export class SagaGenerationService
     const existing = await this.prisma.sagaGenerationJob.findUnique({
       where: { gameId },
     });
+    const pushSubscriptions = this.pushNotifications.mergeSubscriptions(
+      existing?.pushSubscriptions,
+      pushSubscription,
+    );
     if (!existing || ['FAILED', 'COMPLETED'].includes(existing.status)) {
       await this.prisma.sagaGenerationJob.upsert({
         where: { gameId },
@@ -99,6 +109,8 @@ export class SagaGenerationService
           gameId,
           status: 'QUEUED',
           currentStage: this.nextStage(stages),
+          pushSubscriptions:
+            pushSubscriptions as unknown as Prisma.InputJsonValue,
         },
         update: {
           status: 'QUEUED',
@@ -108,6 +120,16 @@ export class SagaGenerationService
           workerId: null,
           lockedUntil: null,
           heartbeatAt: null,
+          pushSubscriptions:
+            pushSubscriptions as unknown as Prisma.InputJsonValue,
+        },
+      });
+    } else if (pushSubscriptions.length) {
+      await this.prisma.sagaGenerationJob.update({
+        where: { gameId },
+        data: {
+          pushSubscriptions:
+            pushSubscriptions as unknown as Prisma.InputJsonValue,
         },
       });
     }
@@ -193,30 +215,30 @@ export class SagaGenerationService
     try {
       let stages = await this.stageSnapshot(gameId);
       if (!stages.analysis) {
-        await this.setStage(jobId, 'NARRATIVE_ANALYSIS');
+        await this.setStage(jobId, gameId, 'NARRATIVE_ANALYSIS');
         await this.analysis.generate(gameId);
       }
       stages = await this.stageSnapshot(gameId);
       if (!stages.outline) {
-        await this.setStage(jobId, 'OUTLINE');
+        await this.setStage(jobId, gameId, 'OUTLINE');
         await this.outline.generate(gameId);
       }
       stages = await this.stageSnapshot(gameId);
       if (!stages.story) {
-        await this.setStage(jobId, 'STORY');
+        await this.setStage(jobId, gameId, 'STORY');
         await this.story.generate(gameId);
       }
       stages = await this.stageSnapshot(gameId);
       if (!stages.validation) {
-        await this.setStage(jobId, 'VALIDATION');
+        await this.setStage(jobId, gameId, 'VALIDATION');
         await this.validation.validate(gameId);
       }
       stages = await this.stageSnapshot(gameId);
       if (!stages.scenes) {
-        await this.setStage(jobId, 'SCENE_BREAKDOWN');
+        await this.setStage(jobId, gameId, 'SCENE_BREAKDOWN');
         await this.scenes.generate(gameId);
       }
-      await this.prisma.sagaGenerationJob.update({
+      const completedJob = await this.prisma.sagaGenerationJob.update({
         where: { id: jobId },
         data: {
           status: 'COMPLETED',
@@ -226,6 +248,15 @@ export class SagaGenerationService
           workerId: null,
           lockedUntil: null,
         },
+        select: { pushSubscriptions: true },
+      });
+      await this.pushNotifications.sendSagaReady(
+        completedJob.pushSubscriptions,
+        gameId,
+      );
+      await this.prisma.sagaGenerationJob.update({
+        where: { id: jobId },
+        data: { pushSubscriptions: [] },
       });
     } catch (error) {
       const message =
@@ -248,6 +279,7 @@ export class SagaGenerationService
 
   private async setStage(
     jobId: string,
+    gameId: string,
     stage:
       | 'NARRATIVE_ANALYSIS'
       | 'OUTLINE'
@@ -256,14 +288,20 @@ export class SagaGenerationService
       | 'SCENE_BREAKDOWN',
   ): Promise<void> {
     const now = new Date();
-    await this.prisma.sagaGenerationJob.update({
+    const job = await this.prisma.sagaGenerationJob.update({
       where: { id: jobId },
       data: {
         currentStage: stage,
         heartbeatAt: now,
         lockedUntil: new Date(now.getTime() + LEASE_MS),
       },
+      select: { pushSubscriptions: true },
     });
+    await this.pushNotifications.sendSagaStage(
+      job.pushSubscriptions,
+      gameId,
+      stage,
+    );
   }
 
   private async extendLease(jobId: string): Promise<void> {

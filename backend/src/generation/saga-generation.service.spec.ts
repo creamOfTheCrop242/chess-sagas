@@ -8,6 +8,7 @@ import type { StoryOutlineService } from '../story-outline/story-outline.service
 import { STORY_OUTLINE_PROMPT_VERSION } from '../story-outline/story-outline.prompt';
 import type { StoryValidationService } from '../story-validation/story-validation.service';
 import { SagaGenerationService } from './saga-generation.service';
+import type { PushNotificationService } from './push-notification.service';
 
 describe('SagaGenerationService', () => {
   const runs: Array<Record<string, unknown>> = [];
@@ -37,6 +38,11 @@ describe('SagaGenerationService', () => {
     validate: jest.fn(),
   } as unknown as StoryValidationService;
   const scenes = { generate: jest.fn() } as unknown as SceneBreakdownService;
+  const pushNotifications = {
+    mergeSubscriptions: jest.fn().mockReturnValue([]),
+    sendSagaStage: jest.fn().mockResolvedValue(undefined),
+    sendSagaReady: jest.fn().mockResolvedValue(undefined),
+  } as unknown as PushNotificationService;
   let service: SagaGenerationService;
 
   beforeEach(() => {
@@ -49,6 +55,7 @@ describe('SagaGenerationService', () => {
       story,
       validation,
       scenes,
+      pushNotifications,
     );
   });
 
@@ -114,13 +121,35 @@ describe('SagaGenerationService', () => {
     expect(analysis.generate).toHaveBeenCalledWith('game-1');
     expect(outline.generate).toHaveBeenCalledWith('game-1');
     expect(story.generate).toHaveBeenCalledWith('game-1');
+    expect(pushNotifications.sendSagaStage).toHaveBeenNthCalledWith(
+      1,
+      undefined,
+      'game-1',
+      'NARRATIVE_ANALYSIS',
+    );
+    expect(pushNotifications.sendSagaStage).toHaveBeenNthCalledWith(
+      2,
+      undefined,
+      'game-1',
+      'OUTLINE',
+    );
+    expect(pushNotifications.sendSagaStage).toHaveBeenNthCalledWith(
+      3,
+      undefined,
+      'game-1',
+      'STORY',
+    );
     expect(validation.validate).not.toHaveBeenCalled();
     expect(scenes.generate).not.toHaveBeenCalled();
-    expect(jobUpdate).toHaveBeenLastCalledWith(
+    expect(jobUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: 'job-1' },
         data: expect.objectContaining({ status: 'COMPLETED' }),
       }),
+    );
+    expect(pushNotifications.sendSagaReady).toHaveBeenCalledWith(
+      undefined,
+      'game-1',
     );
   });
 });

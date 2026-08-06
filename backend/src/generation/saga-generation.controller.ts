@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   HttpCode,
@@ -14,8 +15,11 @@ export class SagaGenerationController {
 
   @Post()
   @HttpCode(HttpStatus.ACCEPTED)
-  start(@Param('gameId') gameId: string) {
-    return this.generation.start(gameId);
+  start(
+    @Param('gameId') gameId: string,
+    @Body() body: { pushSubscription?: unknown },
+  ) {
+    return this.generation.start(gameId, body?.pushSubscription);
   }
 
   @Get()

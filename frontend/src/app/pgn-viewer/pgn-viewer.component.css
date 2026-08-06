@@ -481,6 +481,10 @@ button.piece-card-close {
   font-size: 1rem;
 }
 
+button.piece-card-backdrop {
+  display: none;
+}
+
 :host ::ng-deep app-chessboard piece:focus-visible {
   outline: 3px solid var(--gold-bright);
   outline-offset: -3px;
@@ -678,11 +682,14 @@ button.piece-card-close {
   }
 
   .nav {
-    flex-direction: column-reverse;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
   }
 
   .nav button {
     width: 100%;
+    min-width: 0;
   }
 
   .board-toolbar {
@@ -783,17 +790,33 @@ button.piece-card-close {
   }
 }
 
-@media (hover: none) and (pointer: coarse) and (max-width: 900px) {
+@media (hover: none) and (pointer: coarse) {
+  button.piece-card-backdrop {
+    display: block;
+    position: fixed;
+    z-index: 119;
+    inset: 0;
+    width: 100%;
+    min-height: 100%;
+    padding: 0;
+    border: 0;
+    background: rgba(2, 5, 9, 0.55);
+  }
+
   .piece-card-pinned {
     position: fixed;
     z-index: 120;
-    inset: auto 0.5rem max(0.5rem, env(safe-area-inset-bottom));
-    width: auto;
-    max-height: min(72dvh, 36rem);
+    top: 50%;
+    right: auto;
+    bottom: auto;
+    left: 50%;
+    width: min(28rem, calc(100vw - 1.5rem));
+    max-height: min(80dvh, 40rem);
     overflow-y: auto;
     overscroll-behavior: contain;
     padding: 1rem;
     pointer-events: auto;
+    transform: translate(-50%, -50%);
   }
 }
 

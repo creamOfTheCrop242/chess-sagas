@@ -103,6 +103,15 @@
                 />
               </div>
 
+              @if (selectedPieceId) {
+                <button
+                  type="button"
+                  class="piece-card-backdrop"
+                  (click)="clearSelectedPiece()"
+                  aria-label="Close character details"
+                ></button>
+              }
+
               @if (inspectedPiece; as piece) {
                 <aside
                   class="piece-card"

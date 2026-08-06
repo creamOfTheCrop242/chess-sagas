@@ -4,7 +4,9 @@ import {
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { fakeAsync, TestBed, tick } from '@angular/core/testing';
+import { of } from 'rxjs';
 import { PgnApiService } from './pgn-api.service';
+import { SagaPushNotificationService } from './saga-push-notification.service';
 
 describe('PgnApiService', () => {
   let api: PgnApiService;
@@ -14,6 +16,10 @@ describe('PgnApiService', () => {
     TestBed.configureTestingModule({
       providers: [
         PgnApiService,
+        {
+          provide: SagaPushNotificationService,
+          useValue: { subscriptionForSaga: () => of(null) },
+        },
         provideHttpClient(),
         provideHttpClientTesting(),
       ],
@@ -35,7 +41,9 @@ describe('PgnApiService', () => {
         completed = true;
       });
 
-    http.expectOne('/api/games/game-1/generation').flush({
+    const start = http.expectOne('/api/games/game-1/generation');
+    expect(start.request.body).toEqual({ pushSubscription: null });
+    start.flush({
       state: 'queued',
       currentStage: 'analysis',
       error: null,

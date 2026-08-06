@@ -6,6 +6,8 @@ import { StoryOutlineModule } from '../story-outline/story-outline.module';
 import { StoryValidationModule } from '../story-validation/story-validation.module';
 import { SagaGenerationController } from './saga-generation.controller';
 import { SagaGenerationService } from './saga-generation.service';
+import { PushNotificationController } from './push-notification.controller';
+import { PushNotificationService } from './push-notification.service';
 
 @Module({
   imports: [
@@ -15,7 +17,7 @@ import { SagaGenerationService } from './saga-generation.service';
     StoryValidationModule,
     SceneBreakdownModule,
   ],
-  controllers: [SagaGenerationController],
-  providers: [SagaGenerationService],
+  controllers: [SagaGenerationController, PushNotificationController],
+  providers: [SagaGenerationService, PushNotificationService],
 })
 export class SagaGenerationModule {}

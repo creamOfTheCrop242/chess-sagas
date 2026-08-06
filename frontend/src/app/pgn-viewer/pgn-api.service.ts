@@ -24,6 +24,7 @@ import {
   SagaStageState,
   SceneBreakdownResponse,
 } from './pgn.models';
+import { SagaPushNotificationService } from './saga-push-notification.service';
 
 @Injectable({ providedIn: 'root' })
 export class PgnApiService {
@@ -45,7 +46,10 @@ export class PgnApiService {
   >();
   private readonly activeJobObserved = new Set<string>();
 
-  constructor(private readonly http: HttpClient) {}
+  constructor(
+    private readonly http: HttpClient,
+    private readonly pushNotifications: SagaPushNotificationService,
+  ) {}
 
   parse(pgn: string): Observable<ParsedPgn> {
     return this.http.post<ParsedPgn>(this.parseUrl, { pgn });
@@ -86,39 +90,42 @@ export class PgnApiService {
 
     const base = `${this.apiBase}/games/${gameId}`;
     this.notifyAllStages(gameId, 'checking');
-    const generation = this.http
-      .post<SagaGenerationStatus>(`${base}/generation`, {})
-      .pipe(
-        tap((status) => this.syncGenerationStatus(gameId, status)),
-        switchMap(() =>
-          timer(0, 2_000).pipe(
-            switchMap(() =>
-              this.http.get<SagaGenerationStatus>(`${base}/generation`),
-            ),
-            tap((status) => this.syncGenerationStatus(gameId, status)),
-            filter(
-              (status) =>
-                status.state === 'completed' || status.state === 'failed',
-            ),
-            take(1),
-          ),
-        ),
-        switchMap((status) =>
-          status.state === 'failed'
-            ? throwError(
-                () => new Error(status.error || 'Saga generation failed'),
-              )
-            : this.getScenes(gameId),
-        ),
-        tap(() => this.clearRecentGeneration(gameId)),
-        finalize(() => {
-          this.activeGenerations.delete(gameId);
-          this.generationListeners.delete(gameId);
-          this.generationState.delete(gameId);
-          this.activeJobObserved.delete(gameId);
+    const generation = this.pushNotifications.subscriptionForSaga().pipe(
+      switchMap((pushSubscription) =>
+        this.http.post<SagaGenerationStatus>(`${base}/generation`, {
+          pushSubscription,
         }),
-        shareReplay({ bufferSize: 1, refCount: false }),
-      );
+      ),
+      tap((status) => this.syncGenerationStatus(gameId, status)),
+      switchMap(() =>
+        timer(0, 2_000).pipe(
+          switchMap(() =>
+            this.http.get<SagaGenerationStatus>(`${base}/generation`),
+          ),
+          tap((status) => this.syncGenerationStatus(gameId, status)),
+          filter(
+            (status) =>
+              status.state === 'completed' || status.state === 'failed',
+          ),
+          take(1),
+        ),
+      ),
+      switchMap((status) =>
+        status.state === 'failed'
+          ? throwError(
+              () => new Error(status.error || 'Saga generation failed'),
+            )
+          : this.getScenes(gameId),
+      ),
+      tap(() => this.clearRecentGeneration(gameId)),
+      finalize(() => {
+        this.activeGenerations.delete(gameId);
+        this.generationListeners.delete(gameId);
+        this.generationState.delete(gameId);
+        this.activeJobObserved.delete(gameId);
+      }),
+      shareReplay({ bufferSize: 1, refCount: false }),
+    );
     this.activeGenerations.set(gameId, generation);
     return generation;
   }

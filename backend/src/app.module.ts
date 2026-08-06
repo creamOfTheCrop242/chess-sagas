@@ -13,6 +13,7 @@ import { StoryValidationModule } from './story-validation/story-validation.modul
 import { SceneBreakdownModule } from './scene-breakdown/scene-breakdown.module';
 import { GenerationModule } from './generation/generation.module';
 import { SagaGenerationModule } from './generation/saga-generation.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { SagaGenerationModule } from './generation/saga-generation.module';
     StoryValidationModule,
     SceneBreakdownModule,
     SagaGenerationModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

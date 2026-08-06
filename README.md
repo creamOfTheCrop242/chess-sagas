@@ -21,6 +21,32 @@ Edit `backend/.env` and set:
 OPENAI_API_KEY=sk-...
 ```
 
+### Google sign-in
+
+Create a Google OAuth client with application type **Web application**. For
+local development, configure:
+
+- Authorized JavaScript origin: `http://localhost:4200`
+- Authorized redirect URI: `http://localhost:3000/auth/google/callback`
+
+For production, configure:
+
+- Authorized JavaScript origin: `https://chesssagas.com`
+- Authorized redirect URI: `https://chesssagas.com/api/auth/google/callback`
+
+Set these backend environment variables (Heroku config vars in production):
+
+```bash
+GOOGLE_CLIENT_ID=your-google-web-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
+PUBLIC_APP_URL=http://localhost:4200
+```
+
+Production uses `https://chesssagas.com/api/auth/google/callback` for
+`GOOGLE_CALLBACK_URL` and `https://chesssagas.com` for `PUBLIC_APP_URL`.
+Never place `GOOGLE_CLIENT_SECRET` in the frontend or commit it to Git.
+
 Never commit `.env`. Restart the backend after changing it.
 
 ## Run locally

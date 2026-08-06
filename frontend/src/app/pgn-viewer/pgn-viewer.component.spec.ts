@@ -108,6 +108,38 @@ describe('PgnViewerComponent character inspection', () => {
     });
   });
 
+  it('accumulates deterministic strain each time a king is checked', () => {
+    const southernKing = {
+      id: 'b-k-e8',
+      chessColor: 'b' as const,
+      side: 'south' as const,
+      originalSquare: 'e8',
+      chessType: 'k' as const,
+      currentChessType: 'k' as const,
+      fantasyType: 'king' as const,
+      permanentName: 'Southern King',
+      alive: true,
+    };
+    component.game!.ledger.pieces.push(southernKing);
+    component.game!.ledger.events[0].isCheck = true;
+    component.game!.ledger.events[2].isCheck = true;
+    component.game!.ledger.events[3].isCheck = true;
+
+    component.currentPly = 1;
+    expect(component.pieceStatus(southernKing).label).toBe('Strained');
+
+    component.currentPly = 4;
+    expect(component.pieceStatus(southernKing)).toEqual({
+      label: 'Wounded',
+      detail:
+        "3 direct threats have damaged the King's wards and strained his connection to the Royal Seal.",
+      tone: 'wounded',
+    });
+    component.selectedPieceId = southernKing.id;
+    expect(component.inspectedPieceWoundHistory).toHaveSize(3);
+    expect(component.inspectedPieceWoundHistory[0].inflictedAtPly).toBe(4);
+  });
+
   it('hides cross-character names and piece IDs in malformed wound status data', () => {
     component.wounds = [
       {
@@ -297,6 +329,71 @@ describe('PgnViewerComponent character inspection', () => {
 
     component.closeFallenRoster();
     expect(component.fallenRosterOpen).toBeFalse();
+  });
+
+  it('lists every character in the Warhost Ledger with current health', () => {
+    component.currentPly = 2;
+
+    expect(component.lightKingdomRoster).toHaveSize(1);
+    expect(component.darkKingdomRoster).toHaveSize(1);
+    expect(component.pieceStatus(component.darkKingdomRoster[0]).label).toBe(
+      'Unharmed',
+    );
+
+    component.currentPly = 3;
+
+    expect(component.pieceStatus(component.darkKingdomRoster[0]).label).toBe(
+      'Dead',
+    );
+  });
+
+  it('uses a character backstory in the board inspector and roster', () => {
+    const piece = component.game!.ledger.pieces[0];
+    piece.backstory = 'Mara enlisted after defending her village ward.';
+
+    expect(component.pieceDescription(piece)).toBe(piece.backstory);
+    component.toggleRosterPiece(piece);
+    expect(component.rosterPieceId).toBe(piece.id);
+    component.toggleRosterPiece(piece);
+    expect(component.rosterPieceId).toBeNull();
+  });
+
+  it('reveals a fallen character fate only after the death beat', () => {
+    const victim = component.darkKingdomRoster[0];
+    component.scenes = [
+      {
+        id: 'scene-3',
+        actNumber: 1,
+        sceneNumber: 3,
+        startPly: 3,
+        endPly: 3,
+        involvedMoves: ['exd5'],
+        fantasyNarration:
+          'Mara broke through the shield wall, and Nessa fell defending her company standard.',
+        chessExplanation: 'The white pawn captures the black pawn.',
+        characters: ['w-p-e2', 'b-p-d7'],
+        locations: [],
+        deaths: ['b-p-d7'],
+        captureActorId: 'w-p-e2',
+        captureVictimId: 'b-p-d7',
+        promotions: [],
+        visualPrompt: '',
+        videoPrompt: '',
+        estimatedDurationSeconds: 8,
+        continuityNotes: [],
+      },
+    ];
+    component.currentPly = 2;
+    expect(component.pieceFate(victim)).toBeNull();
+
+    component.currentPly = 3;
+    expect(component.pieceFate(victim)).toEqual({
+      killerName: 'Mara',
+      beat: 3,
+      account:
+        'Mara broke through the shield wall, and Nessa fell defending her company standard.',
+      finalCondition: null,
+    });
   });
 
   it('presents the epilogue as a final playback page', () => {

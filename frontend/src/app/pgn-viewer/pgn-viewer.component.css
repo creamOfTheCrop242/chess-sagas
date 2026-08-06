@@ -2,7 +2,7 @@
   max-width: 1180px;
   margin: 0 auto;
   padding: 2.75rem 1.25rem 5rem;
-  animation: page-rise 0.7s ease-out both;
+  animation: page-rise 0.7s ease-out backwards;
 }
 
 @keyframes page-rise {
@@ -825,7 +825,7 @@ button.piece-card-backdrop {
   }
 }
 
-@media (hover: none) and (pointer: coarse) {
+@media (max-width: 900px), (hover: none) and (pointer: coarse) {
   button.piece-card-backdrop {
     display: block;
     position: fixed;
@@ -846,7 +846,7 @@ button.piece-card-backdrop {
     bottom: auto;
     left: 50%;
     width: min(28rem, calc(100vw - 1.5rem));
-    max-height: min(80dvh, 40rem);
+    max-height: min(82dvh, 40rem);
     overflow-y: auto;
     overscroll-behavior: contain;
     padding: 1rem;
@@ -1060,15 +1060,108 @@ button.fallen-close {
   line-height: 1.4;
 }
 
+button.roster-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  text-transform: none;
+}
+
+.roster-entry > span:first-child,
+.roster-detail {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.fallen-columns .roster-health {
+  color: var(--seal);
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.fallen-columns .roster-health-maimed,
+.fallen-columns .roster-health-dead {
+  color: #d78376;
+}
+
+.fallen-columns .roster-health-healthy,
+.fallen-columns .roster-health-wounded {
+  color: var(--seal);
+}
+
+.fallen-columns .roster-health-entombed {
+  color: var(--gold-bright);
+}
+
+.roster-detail {
+  margin-top: 0.7rem;
+  padding: 0.75rem;
+  border-left: 2px solid var(--gold);
+  background: rgba(196, 168, 98, 0.06);
+}
+
+.roster-detail p {
+  margin: 0 0 0.35rem;
+  color: var(--ink);
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+
+.roster-fate {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.55rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid rgba(196, 168, 98, 0.3);
+}
+
+.roster-fate > strong {
+  color: #d78376;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.roster-fate dl,
+.roster-fate dl div {
+  display: grid;
+  gap: 0.2rem 0.7rem;
+  margin: 0;
+}
+
+.roster-fate dl div {
+  grid-template-columns: auto 1fr;
+}
+
+.roster-fate dt {
+  color: var(--ink-dim);
+}
+
+.roster-fate dd {
+  margin: 0;
+  color: var(--gold);
+}
+
 .fallen-empty {
   color: var(--ink-dim);
   font-style: italic;
 }
 
-@media (max-width: 620px) {
+@media (max-width: 900px) {
   .fallen-backdrop {
-    align-items: end;
-    padding: 0.5rem;
+    place-items: center;
+    padding:
+      max(0.75rem, env(safe-area-inset-top))
+      max(0.75rem, env(safe-area-inset-right))
+      max(0.75rem, env(safe-area-inset-bottom))
+      max(0.75rem, env(safe-area-inset-left));
   }
 
   .fallen-columns {

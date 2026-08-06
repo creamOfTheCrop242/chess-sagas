@@ -290,6 +290,7 @@ function preserveNarrativeIdentities(
         viewpointName: existing.viewpointName,
         viewpointRole: existing.viewpointRole,
         operatorName: existing.operatorName,
+        backstory: existing.backstory ?? piece.backstory,
       };
     }),
   };

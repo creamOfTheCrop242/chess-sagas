@@ -159,6 +159,7 @@ export class PieceIdentityService {
             ? characterNames[pawnCount + fortressIndex++]
             : undefined,
         );
+        identity.backstory = pieceBackstory(identity, seed);
         pieces.push(identity);
         squareToId.set(square, identity.id);
       }
@@ -249,7 +250,13 @@ export function normalizePawnViewpoints(ledger: GameLedger): GameLedger {
   return {
     ...ledger,
     pieces: ledger.pieces.map((piece) => {
-      if (piece.chessType !== 'p') return piece;
+      if (piece.chessType !== 'p') {
+        return {
+          ...piece,
+          backstory:
+            piece.backstory ?? pieceBackstory(piece, ledger.initialFen),
+        };
+      }
       const profile = pawnNarrativeProfile(
         piece.side,
         piece.originalSquare,
@@ -262,9 +269,74 @@ export function normalizePawnViewpoints(ledger: GameLedger): GameLedger {
         companyName: profile.companyName,
         viewpointName: profile.viewpointName,
         viewpointRole: profile.viewpointRole,
+        backstory: piece.backstory ?? pieceBackstory(piece, ledger.initialFen),
       };
     }),
   };
+}
+
+function pieceBackstory(piece: PieceIdentity, seed: string): string {
+  const kingdom = piece.side === 'north' ? 'Light Kingdom' : 'Dark Kingdom';
+  const name = piece.operatorName ?? piece.permanentName;
+  const choice = (values: readonly string[], key: string): string =>
+    values[hashSeed(`${seed}:${piece.id}:${key}`) % values.length];
+
+  if (piece.chessType === 'p') {
+    const origins = [
+      'a family of millers who kept grain moving during the first winters after the Calamity',
+      'a border village whose watch bells were rung by every child old enough to climb the tower',
+      'a caravan household that crossed the kingdom repairing roads and ward-stones',
+      'a riverside district where flood crews and soldiers trained beside one another',
+      'an ironworking family that supplied armor but had never before sent anyone to war',
+      'a remote farming settlement protected for years by the same company now carrying their banner',
+    ];
+    const motives = [
+      'enlisted after raiders destroyed a neighboring settlement and left its wounded behind',
+      'joined to earn citizenship and a protected home for the family left behind',
+      'volunteered after a veteran saved the household during a failing Seal storm',
+      'entered service to repay a company medic who once refused to abandon them',
+      'took the oath after years of carrying messages between isolated garrisons',
+      'was conscripted, but chose to remain after the company became the first true family they had known',
+    ];
+    const role = piece.viewpointRole ?? 'company soldier';
+    const company = piece.companyName ?? `${kingdom} army`;
+    return `${piece.permanentName} came from ${choice(origins, 'origin')} and ${choice(motives, 'motive')}. Experience and temperament made them the ${role} of ${company}.`;
+  }
+
+  if (piece.chessType === 'r') {
+    const injuries = [
+      'was crushed while holding a collapsing Seal conduit long enough for civilians to escape',
+      'suffered mortal burns shielding an ammunition ward from enemy spellfire',
+      'was broken beyond healing beneath a fortress wheel during an evacuation',
+      'survived the destruction of a border engine with injuries no healer could restore',
+    ];
+    return `${name} ${choice(injuries, 'injury')}. With death otherwise certain, the kingdom’s Archwizards placed the soldier’s living body inside ${piece.permanentName}; its magical cradle now sustains the pilot, who cannot survive apart from the Moving Fortress.`;
+  }
+
+  const histories: Record<string, readonly string[]> = {
+    king: [
+      `${piece.permanentName} studied war beside the realm’s finest commanders and magic beneath its greatest Archwizards. When the Calamity severed the old world’s power, the King learned to reach across realities and forged the Royal Seal before the kingdom’s last reserves failed.`,
+      `${piece.permanentName} inherited a realm already dying from the loss of its native magic. Years of martial and arcane discipline allowed the King to find the distant current that now feeds the Royal Seal and every surviving wonder of the ${kingdom}.`,
+    ],
+    queen: [
+      `${piece.permanentName} was chosen in infancy from the royal bloodline after the court’s seers recognized an unusual tolerance for Seal-magic. Raised by the King, Archwizards, Knight Commanders, and soldier companies, she was augmented to bear fortress-grade armor and defend the realm at superhuman speed.`,
+      `${piece.permanentName} became heir only after surviving the Seal Vigil, a rite that overwhelmed every other candidate. From childhood she trained under every branch of the army until magic and discipline remade her into the kingdom’s most formidable living champion.`,
+    ],
+    archwizard: [
+      `${piece.permanentName} first drew notice by containing a wild spell that had consumed three trained adepts. Decades in the royal colleges produced a master of wards, elemental forces, transformation, and battlefield teleportation sworn to protect the Seal.`,
+      `${piece.permanentName} was taken into the royal colleges after forbidden talent surfaced far from the capital. The future Archwizard mastered many schools of magic, using teleportation only as the swiftest means of bringing that power wherever the line is failing.`,
+    ],
+    'knight-commander': [
+      `${piece.permanentName} rose from a frontier cavalry order after leading scattered survivors through an encirclement no conventional route could escape. The crown rewarded that instinct with command of the kingdom’s fastest and most unpredictable striking force.`,
+      `${piece.permanentName} earned command by repeatedly reaching isolated companies before the enemy believed help could arrive. Years of campaigning turned an audacious rider into a disciplined commander trusted with attacks across broken terrain.`,
+    ],
+  };
+  return choice(
+    histories[piece.fantasyType] ?? [
+      `${piece.permanentName} has served the ${kingdom} through years of preparation for this final battle.`,
+    ],
+    'history',
+  );
 }
 
 function shuffledCharacterNames(seed: string): string[] {

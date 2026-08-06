@@ -157,8 +157,11 @@
                     }
                   </div>
                   @if (inspectedPieceWoundHistory.length) {
-                    <section class="wound-history" aria-label="Injury history">
-                      <h4>Injury history</h4>
+                    <section
+                      class="wound-history"
+                      aria-label="Injury and strain history"
+                    >
+                      <h4>Injury and strain history</h4>
                       <ol>
                         @for (
                           wound of inspectedPieceWoundHistory;
@@ -233,7 +236,7 @@
                 [attr.aria-expanded]="fallenRosterOpen"
                 aria-controls="fallen-roster"
               >
-                Hall of the Fallen
+                Warhost Ledger
               </button>
             </div>
           </div>
@@ -264,7 +267,7 @@
                   [attr.aria-expanded]="fallenRosterOpen"
                   aria-controls="fallen-roster"
                 >
-                  Hall of the Fallen
+                  Warhost Ledger
                 </button>
               </div>
               @if (sagaGenerating) {
@@ -325,7 +328,7 @@
                   [attr.aria-expanded]="fallenRosterOpen"
                   aria-controls="fallen-roster"
                 >
-                  Hall of the Fallen
+                  Warhost Ledger
                 </button>
               </div>
             </div>
@@ -394,59 +397,130 @@
               type="button"
               class="fallen-close"
               (click)="closeFallenRoster()"
-              aria-label="Close Hall of the Fallen"
+              aria-label="Close Warhost Ledger"
             >
               ×
             </button>
-            <p class="fallen-kicker">Battlefield record</p>
-            <h3 id="fallen-roster-title">Hall of the Fallen</h3>
+            <p class="fallen-kicker">Lives bound to the final battle</p>
+            <h3 id="fallen-roster-title">Warhost Ledger</h3>
             <p class="fallen-intro">
-              Losses recorded through beat {{ currentPly }}. Future fates remain
-              veiled.
+              Health and deeds recorded through beat {{ currentPly }}. Select a
+              character to reveal their history. Future fates remain veiled.
             </p>
 
             <div class="fallen-columns">
               <section>
-                <h4>Light Kingdom losses</h4>
-                @if (lightKingdomFallen.length) {
-                  <ol>
-                    @for (
-                      fallen of lightKingdomFallen;
-                      track fallen.victim.id
-                    ) {
-                      <li>
-                        <strong>{{ fallen.victim.permanentName }}</strong>
-                        <span>{{ pieceRole(fallen.victim) }}</span>
-                        <small>
-                          Destroyed by {{ fallen.killer.permanentName }} · Beat
-                          {{ fallen.ply }}
-                        </small>
-                      </li>
-                    }
-                  </ol>
-                } @else {
-                  <p class="fallen-empty">No losses recorded.</p>
-                }
+                <h4>Light Kingdom</h4>
+                <ol>
+                  @for (piece of lightKingdomRoster; track piece.id) {
+                    <li [class.roster-expanded]="rosterPieceId === piece.id">
+                      <button
+                        type="button"
+                        class="roster-entry"
+                        (click)="toggleRosterPiece(piece)"
+                        [attr.aria-expanded]="rosterPieceId === piece.id"
+                      >
+                        <span>
+                          <strong>{{ piece.permanentName }}</strong>
+                          <small>{{ pieceRole(piece) }}</small>
+                        </span>
+                        <span
+                          [class]="
+                            'roster-health roster-health-' +
+                            pieceStatus(piece).tone
+                          "
+                        >
+                          {{ pieceStatus(piece).label }}
+                        </span>
+                      </button>
+                      @if (rosterPieceId === piece.id) {
+                        <div class="roster-detail">
+                          <p>{{ pieceDescription(piece) }}</p>
+                          <small>Kills: {{ pieceKills(piece) }}</small>
+                          @if (pieceStatus(piece).detail) {
+                            <small>{{ pieceStatus(piece).detail }}</small>
+                          }
+                          @if (pieceFate(piece); as fate) {
+                            <section class="roster-fate">
+                              <strong>Fate</strong>
+                              <dl>
+                                <div>
+                                  <dt>Slain by</dt>
+                                  <dd>{{ fate.killerName }}</dd>
+                                </div>
+                                <div>
+                                  <dt>Final beat</dt>
+                                  <dd>{{ fate.beat }}</dd>
+                                </div>
+                              </dl>
+                              <p>{{ fate.account }}</p>
+                              @if (fate.finalCondition) {
+                                <small>Final condition: {{ fate.finalCondition }}</small>
+                              }
+                            </section>
+                          }
+                        </div>
+                      }
+                    </li>
+                  }
+                </ol>
               </section>
 
               <section>
-                <h4>Dark Kingdom losses</h4>
-                @if (darkKingdomFallen.length) {
-                  <ol>
-                    @for (fallen of darkKingdomFallen; track fallen.victim.id) {
-                      <li>
-                        <strong>{{ fallen.victim.permanentName }}</strong>
-                        <span>{{ pieceRole(fallen.victim) }}</span>
-                        <small>
-                          Destroyed by {{ fallen.killer.permanentName }} · Beat
-                          {{ fallen.ply }}
-                        </small>
-                      </li>
-                    }
-                  </ol>
-                } @else {
-                  <p class="fallen-empty">No losses recorded.</p>
-                }
+                <h4>Dark Kingdom</h4>
+                <ol>
+                  @for (piece of darkKingdomRoster; track piece.id) {
+                    <li [class.roster-expanded]="rosterPieceId === piece.id">
+                      <button
+                        type="button"
+                        class="roster-entry"
+                        (click)="toggleRosterPiece(piece)"
+                        [attr.aria-expanded]="rosterPieceId === piece.id"
+                      >
+                        <span>
+                          <strong>{{ piece.permanentName }}</strong>
+                          <small>{{ pieceRole(piece) }}</small>
+                        </span>
+                        <span
+                          [class]="
+                            'roster-health roster-health-' +
+                            pieceStatus(piece).tone
+                          "
+                        >
+                          {{ pieceStatus(piece).label }}
+                        </span>
+                      </button>
+                      @if (rosterPieceId === piece.id) {
+                        <div class="roster-detail">
+                          <p>{{ pieceDescription(piece) }}</p>
+                          <small>Kills: {{ pieceKills(piece) }}</small>
+                          @if (pieceStatus(piece).detail) {
+                            <small>{{ pieceStatus(piece).detail }}</small>
+                          }
+                          @if (pieceFate(piece); as fate) {
+                            <section class="roster-fate">
+                              <strong>Fate</strong>
+                              <dl>
+                                <div>
+                                  <dt>Slain by</dt>
+                                  <dd>{{ fate.killerName }}</dd>
+                                </div>
+                                <div>
+                                  <dt>Final beat</dt>
+                                  <dd>{{ fate.beat }}</dd>
+                                </div>
+                              </dl>
+                              <p>{{ fate.account }}</p>
+                              @if (fate.finalCondition) {
+                                <small>Final condition: {{ fate.finalCondition }}</small>
+                              }
+                            </section>
+                          }
+                        </div>
+                      }
+                    </li>
+                  }
+                </ol>
               </section>
             </div>
           </section>

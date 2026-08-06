@@ -3,6 +3,16 @@
   command = "npm run build"
   publish = "dist/frontend/browser"
 
+[[headers]]
+  for = "/ngsw.json"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/ngsw-worker.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
 [[redirects]]
   from = "/api/*"
   to = "https://chess-sagas-eef8c106c633.herokuapp.com/:splat"

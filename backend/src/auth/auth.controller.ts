@@ -11,10 +11,10 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
+import { readCookie, SESSION_COOKIE } from './session-cookie';
 
 const OAUTH_STATE_COOKIE = 'chess_sagas_oauth_state';
 const APPLE_STATE_COOKIE = 'chess_sagas_apple_oauth_state';
-const SESSION_COOKIE = 'chess_sagas_session';
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
 @Controller('auth')
@@ -59,7 +59,7 @@ export class AuthController {
       const result = await this.auth.completeGoogleLogin(
         code,
         state,
-        this.readCookie(request, OAUTH_STATE_COOKIE),
+        readCookie(request, OAUTH_STATE_COOKIE),
       );
       response.clearCookie(OAUTH_STATE_COOKIE, this.cookieOptions());
       response.cookie(SESSION_COOKIE, result.sessionToken, {
@@ -95,7 +95,7 @@ export class AuthController {
       const result = await this.auth.completeAppleLogin(
         body.code,
         body.state,
-        this.readCookie(request, APPLE_STATE_COOKIE),
+        readCookie(request, APPLE_STATE_COOKIE),
         body.user,
       );
       response.clearCookie(APPLE_STATE_COOKIE, this.appleStateCookieOptions());
@@ -120,9 +120,7 @@ export class AuthController {
     @Req() request: Request,
   ): Promise<{ user: Awaited<ReturnType<AuthService['currentUser']>> }> {
     return {
-      user: await this.auth.currentUser(
-        this.readCookie(request, SESSION_COOKIE),
-      ),
+      user: await this.auth.currentUser(readCookie(request, SESSION_COOKIE)),
     };
   }
 
@@ -131,7 +129,7 @@ export class AuthController {
     @Req() request: Request,
     @Res() response: Response,
   ): Promise<void> {
-    await this.auth.logout(this.readCookie(request, SESSION_COOKIE));
+    await this.auth.logout(readCookie(request, SESSION_COOKIE));
     response.clearCookie(SESSION_COOKIE, this.cookieOptions());
     response.status(204).send();
   }
@@ -162,18 +160,5 @@ export class AuthController {
       secure: true,
       path: '/',
     };
-  }
-
-  private readCookie(request: Request, name: string): string | undefined {
-    const cookieHeader = request.headers.cookie;
-    if (!cookieHeader) return undefined;
-    for (const pair of cookieHeader.split(';')) {
-      const separator = pair.indexOf('=');
-      if (separator < 0) continue;
-      if (pair.slice(0, separator).trim() === name) {
-        return decodeURIComponent(pair.slice(separator + 1).trim());
-      }
-    }
-    return undefined;
   }
 }

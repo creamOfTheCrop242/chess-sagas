@@ -91,6 +91,25 @@ the same checkout or invoice twice. Phase 2 records purchases and balances but
 does not yet require a credit to generate a saga; generation enforcement is a
 separate Phase 3 change.
 
+### Credit enforcement rollout
+
+Phase 3A provides atomic reservation, consumption, release, and stale-cleanup
+operations without changing the generation pipeline. Keep enforcement disabled
+until the later generation and purchase-interface phases have been verified:
+
+```text
+CREDIT_ENFORCEMENT_ENABLED=false
+UNLIMITED_CREDIT_EMAILS=dhudson0242@gmail.com
+CREDIT_RESERVATION_STALE_MINUTES=30
+```
+
+`UNLIMITED_CREDIT_EMAILS` accepts a comma-separated list and is matched only
+against normalized, authenticated account emails. Unlimited accounts are
+reported explicitly and do not create or consume credit reservations. The
+stale cleanup only releases reservations belonging to terminal generation jobs
+or reservations whose job no longer exists; recoverable running jobs retain
+their credit.
+
 ### Sign in with Apple
 
 Sign in with Apple for websites requires an Apple Developer Program account, a

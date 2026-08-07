@@ -22,6 +22,9 @@ describe('BillingService', () => {
     },
   };
   const originalEnvironment = { ...process.env };
+  const credits = {
+    state: jest.fn(),
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -33,6 +36,13 @@ describe('BillingService', () => {
     process.env.STRIPE_PRICE_CHRONICLER = 'price_chronicler';
     process.env.STRIPE_PRICE_REALM_FOUNDER = 'price_founder';
     process.env.PUBLIC_APP_URL = 'https://chesssagas.com/';
+    credits.state.mockResolvedValue({
+      enforcementEnabled: false,
+      unlimited: false,
+      balance: 7,
+      reserved: 2,
+      available: 5,
+    });
   });
 
   afterAll(() => {
@@ -40,17 +50,13 @@ describe('BillingService', () => {
   });
 
   it('reports ledger balance separately from active reservations', async () => {
-    prisma.creditLedgerEntry.aggregate.mockResolvedValue({
-      _sum: { amount: 7 },
-    });
-    prisma.creditReservation.aggregate.mockResolvedValue({
-      _sum: { amount: 2 },
-    });
     prisma.billingSubscription.findFirst.mockResolvedValue(null);
-    const service = new BillingService(prisma as never);
+    const service = new BillingService(prisma as never, credits as never);
 
     await expect(service.status('user-1')).resolves.toMatchObject({
       configured: true,
+      enforcementEnabled: false,
+      unlimited: false,
       balance: 7,
       reserved: 2,
       available: 5,
@@ -69,7 +75,7 @@ describe('BillingService', () => {
       id: 'cs_123',
       url: 'https://checkout.stripe.com/session',
     });
-    const service = new BillingService(prisma as never);
+    const service = new BillingService(prisma as never, credits as never);
     Object.defineProperty(service, 'stripe', {
       value: { checkout: { sessions: { create } } },
     });
@@ -98,7 +104,7 @@ describe('BillingService', () => {
       livemode: false,
       data: { object: { id: 'cs_123' } },
     };
-    const service = new BillingService(prisma as never);
+    const service = new BillingService(prisma as never, credits as never);
     Object.defineProperty(service, 'stripe', {
       value: {
         webhooks: { constructEvent: jest.fn().mockReturnValue(event) },
@@ -136,7 +142,7 @@ describe('BillingService', () => {
         },
       },
     };
-    const service = new BillingService(prisma as never);
+    const service = new BillingService(prisma as never, credits as never);
     Object.defineProperty(service, 'stripe', {
       value: {
         webhooks: { constructEvent: jest.fn().mockReturnValue(event) },

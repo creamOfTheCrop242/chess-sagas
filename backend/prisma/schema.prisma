@@ -235,7 +235,7 @@ model CreditLedgerEntry {
 model CreditReservation {
   id                  String                  @id @default(cuid())
   userId              String
-  sagaGenerationJobId String?
+  sagaGenerationJobId String?                 @unique
   amount              Int                     @default(1)
   status              CreditReservationStatus @default(ACTIVE)
   createdAt           DateTime                @default(now())
@@ -245,7 +245,6 @@ model CreditReservation {
   sagaGenerationJob   SagaGenerationJob?      @relation(fields: [sagaGenerationJobId], references: [id], onDelete: SetNull)
 
   @@index([userId, status])
-  @@index([sagaGenerationJobId])
 }
 
 model StripeEvent {

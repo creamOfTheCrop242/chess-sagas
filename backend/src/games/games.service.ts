@@ -19,7 +19,7 @@ export class GamesService {
     private readonly pgn: PgnService,
   ) {}
 
-  async create(rawPgn: string) {
+  async create(rawPgn: string, ownerId?: string) {
     const parsed = this.pgn.parse(rawPgn);
     const canonicalPgn = rawPgn.trim();
     const pgnHash = createHash('sha256').update(canonicalPgn).digest('hex');
@@ -62,6 +62,7 @@ export class GamesService {
     ) as Prisma.InputJsonValue;
     return this.prisma.game.create({
       data: {
+        ownerId,
         pgnHash,
         rawPgn: canonicalPgn,
         whitePlayer: parsed.ledger.metadata.whitePlayer,

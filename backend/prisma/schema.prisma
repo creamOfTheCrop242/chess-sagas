@@ -56,6 +56,20 @@ enum BillingPlan {
   REALM_FOUNDER
 }
 
+enum GenerationBillingState {
+  UNTRACKED
+  AUTHORIZING
+  SHADOW_ANONYMOUS
+  SHADOW_UNLIMITED
+  SHADOW_AVAILABLE
+  SHADOW_INSUFFICIENT
+  RESERVED
+  UNLIMITED
+  REUSED
+  CONSUMED
+  RELEASED
+}
+
 model Game {
   id             String             @id @default(cuid())
   ownerId        String?
@@ -94,6 +108,7 @@ model User {
   creditEntries        CreditLedgerEntry[]
   creditReservations   CreditReservation[]
   billingSubscriptions BillingSubscription[]
+  requestedSagaJobs    SagaGenerationJob[]   @relation("SagaJobRequester")
 }
 
 model PublicProfile {
@@ -124,22 +139,27 @@ model AuthSession {
 }
 
 model SagaGenerationJob {
-  id                 String              @id @default(cuid())
-  gameId             String              @unique
-  status             GenerationStatus    @default(QUEUED)
-  currentStage       GenerationStage     @default(NARRATIVE_ANALYSIS)
-  error              String?             @db.Text
+  id                 String                 @id @default(cuid())
+  gameId             String                 @unique
+  status             GenerationStatus       @default(QUEUED)
+  currentStage       GenerationStage        @default(NARRATIVE_ANALYSIS)
+  error              String?                @db.Text
   workerId           String?
   lockedUntil        DateTime?
   heartbeatAt        DateTime?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
   completedAt        DateTime?
   pushSubscriptions  Json?
-  game               Game                @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  requestedByUserId  String?
+  billingState       GenerationBillingState @default(UNTRACKED)
+  game               Game                   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  requestedBy        User?                  @relation("SagaJobRequester", fields: [requestedByUserId], references: [id], onDelete: SetNull)
   creditReservations CreditReservation[]
 
   @@index([status, lockedUntil])
+  @@index([requestedByUserId, createdAt])
+  @@index([billingState, updatedAt])
 }
 
 model GameLedger {

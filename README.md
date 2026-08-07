@@ -110,6 +110,16 @@ stale cleanup only releases reservations belonging to terminal generation jobs
 or reservations whose job no longer exists; recoverable running jobs retain
 their credit.
 
+Phase 3B connects those operations to saga generation. With enforcement still
+disabled, generation remains open and uncharged while every new job records a
+shadow decision: anonymous, unlimited, credit available, or credit
+insufficient. This lets production traffic validate the rules before they can
+block a user. When enforcement is enabled, a signed-in account must reserve one
+credit before a new job is queued; the credit is consumed only after the saga
+has been persisted and is released after a terminal failure. Retrying the same
+job reuses its reservation, and opening a game whose completed saga artifacts
+already exist is marked as reused and never charged.
+
 ### Sign in with Apple
 
 Sign in with Apple for websites requires an Apple Developer Program account, a

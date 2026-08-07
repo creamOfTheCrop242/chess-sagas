@@ -218,6 +218,16 @@ export class CreditService implements OnApplicationBootstrap, OnModuleDestroy {
     );
   }
 
+  async consumeForJob(sagaGenerationJobId: string): Promise<boolean> {
+    const reservation = await this.prisma.creditReservation.findUnique({
+      where: { sagaGenerationJobId },
+      select: { id: true },
+    });
+    if (!reservation) return false;
+    await this.consume(reservation.id);
+    return true;
+  }
+
   async release(reservationId: string): Promise<void> {
     const reservation = await this.prisma.creditReservation.findUnique({
       where: { id: reservationId },
@@ -237,6 +247,16 @@ export class CreditService implements OnApplicationBootstrap, OnModuleDestroy {
         resolvedAt: new Date(),
       },
     });
+  }
+
+  async releaseForJob(sagaGenerationJobId: string): Promise<boolean> {
+    const reservation = await this.prisma.creditReservation.findUnique({
+      where: { sagaGenerationJobId },
+      select: { id: true },
+    });
+    if (!reservation) return false;
+    await this.release(reservation.id);
+    return true;
   }
 
   async releaseStaleReservations(now = new Date()): Promise<number> {

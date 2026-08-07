@@ -6,20 +6,31 @@ import {
   HttpStatus,
   Param,
   Post,
+  Req,
 } from '@nestjs/common';
+import type { Request } from 'express';
+import { AuthService } from '../auth/auth.service';
+import { readCookie, SESSION_COOKIE } from '../auth/session-cookie';
 import { SagaGenerationService } from './saga-generation.service';
 
 @Controller('games/:gameId/generation')
 export class SagaGenerationController {
-  constructor(private readonly generation: SagaGenerationService) {}
+  constructor(
+    private readonly generation: SagaGenerationService,
+    private readonly auth: AuthService,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.ACCEPTED)
-  start(
+  async start(
     @Param('gameId') gameId: string,
     @Body() body: { pushSubscription?: unknown },
+    @Req() request: Request,
   ) {
-    return this.generation.start(gameId, body?.pushSubscription);
+    const user = await this.auth.currentUser(
+      readCookie(request, SESSION_COOKIE),
+    );
+    return this.generation.start(gameId, body?.pushSubscription, user);
   }
 
   @Get()

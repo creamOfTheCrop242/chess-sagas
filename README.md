@@ -47,6 +47,50 @@ Production uses `https://chesssagas.com/api/auth/google/callback` for
 `GOOGLE_CALLBACK_URL` and `https://chesssagas.com` for `PUBLIC_APP_URL`.
 Never place `GOOGLE_CLIENT_SECRET` in the frontend or commit it to Git.
 
+### Stripe billing (Phase 2)
+
+The backend can create hosted Stripe Checkout sessions for individual saga
+credits and monthly plans, open Stripe's customer portal, and fulfill paid
+credits from signed webhooks. Add these backend environment variables:
+
+```text
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_PRICE_SINGLE_SAGA=price_...
+STRIPE_PRICE_FIVE_SAGAS=price_...
+STRIPE_PRICE_SCRIBE=price_...
+STRIPE_PRICE_CHRONICLER=price_...
+STRIPE_PRICE_REALM_FOUNDER=price_...
+```
+
+The monthly plans grant 4, 9, and 20 saga credits respectively. Product and
+price IDs are selected on the server; the browser cannot submit an arbitrary
+Stripe price. If Stripe variables are absent, billing endpoints report that
+billing is unavailable while existing saga generation continues to work.
+
+For local webhook testing, install the Stripe CLI and run:
+
+```bash
+stripe listen --forward-to localhost:3000/billing/webhook
+```
+
+Copy the resulting `whsec_...` value into `backend/.env`. In Stripe's
+production webhook configuration, send these events to
+`https://chesssagas.com/api/billing/webhook`:
+
+- `checkout.session.completed`
+- `checkout.session.async_payment_succeeded`
+- `invoice.paid`
+- `customer.subscription.created`
+- `customer.subscription.updated`
+- `customer.subscription.deleted`
+- `charge.refunded`
+
+Credit fulfillment is idempotent: repeated Stripe event delivery cannot grant
+the same checkout or invoice twice. Phase 2 records purchases and balances but
+does not yet require a credit to generate a saga; generation enforcement is a
+separate Phase 3 change.
+
 ### Sign in with Apple
 
 Sign in with Apple for websites requires an Apple Developer Program account, a

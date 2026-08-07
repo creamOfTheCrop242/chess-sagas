@@ -14,6 +14,7 @@ import { SceneBreakdownModule } from './scene-breakdown/scene-breakdown.module';
 import { GenerationModule } from './generation/generation.module';
 import { SagaGenerationModule } from './generation/saga-generation.module';
 import { AuthModule } from './auth/auth.module';
+import { BillingModule } from './billing/billing.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { AuthModule } from './auth/auth.module';
     SceneBreakdownModule,
     SagaGenerationModule,
     AuthModule,
+    BillingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

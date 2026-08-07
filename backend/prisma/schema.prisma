@@ -50,6 +50,12 @@ enum CreditReservationStatus {
   RELEASED
 }
 
+enum BillingPlan {
+  SCRIBE
+  CHRONICLER
+  REALM_FOUNDER
+}
+
 model Game {
   id             String             @id @default(cuid())
   ownerId        String?
@@ -71,22 +77,23 @@ model Game {
 }
 
 model User {
-  id                 String              @id @default(cuid())
-  googleSub          String?             @unique
-  appleSub           String?             @unique
-  email              String              @unique
-  displayName        String
-  avatarUrl          String?
-  stripeCustomerId   String?             @unique
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  sessions           AuthSession[]
-  games              Game[]
-  publicProfile      PublicProfile?
-  sagas              Saga[]              @relation("SagaCreator")
-  sagaBookmarks      SagaBookmark[]
-  creditEntries      CreditLedgerEntry[]
-  creditReservations CreditReservation[]
+  id                   String                @id @default(cuid())
+  googleSub            String?               @unique
+  appleSub             String?               @unique
+  email                String                @unique
+  displayName          String
+  avatarUrl            String?
+  stripeCustomerId     String?               @unique
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  sessions             AuthSession[]
+  games                Game[]
+  publicProfile        PublicProfile?
+  sagas                Saga[]                @relation("SagaCreator")
+  sagaBookmarks        SagaBookmark[]
+  creditEntries        CreditLedgerEntry[]
+  creditReservations   CreditReservation[]
+  billingSubscriptions BillingSubscription[]
 }
 
 model PublicProfile {
@@ -256,6 +263,23 @@ model StripeEvent {
   @@index([type, receivedAt])
   @@index([objectId])
   @@index([processedAt])
+}
+
+model BillingSubscription {
+  id                 String      @id
+  userId             String
+  plan               BillingPlan
+  priceId            String
+  status             String
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  cancelAtPeriodEnd  Boolean     @default(false)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  user               User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([priceId])
 }
 
 model SceneBreakdown {

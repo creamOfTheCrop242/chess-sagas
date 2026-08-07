@@ -108,6 +108,7 @@ export class ChessboardComponent
     x: number;
     y: number;
   } | null = null;
+  private suppressClickUntil = 0;
 
   ngAfterViewInit(): void {
     this.ground = Chessground(this.boardEl.nativeElement, {
@@ -183,7 +184,9 @@ export class ChessboardComponent
       event.clientX - candidate.x,
       event.clientY - candidate.y,
     );
-    if (movement <= 10 && this.pieceSquare(event.target) === candidate.square) {
+    if (movement <= 16) {
+      event.preventDefault();
+      this.suppressClickUntil = performance.now() + 750;
       this.pieceSelected.emit(candidate.square);
     }
   }
@@ -193,6 +196,7 @@ export class ChessboardComponent
   }
 
   selectPointerTarget(event: MouseEvent): void {
+    if (performance.now() < this.suppressClickUntil) return;
     const square = this.pieceSquare(event.target);
     if (square) this.pieceSelected.emit(square);
   }

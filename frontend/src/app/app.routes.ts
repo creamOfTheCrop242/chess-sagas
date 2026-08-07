@@ -5,6 +5,7 @@ import { PieceLoreComponent } from './piece-lore/piece-lore.component';
 import { PgnViewerComponent } from './pgn-viewer/pgn-viewer.component';
 import { SagaGuideComponent } from './saga-guide/saga-guide.component';
 import { LoginComponent } from './login/login.component';
+import { PricingComponent } from './pricing/pricing.component';
 
 export const routes: Routes = [
   { path: '', component: PgnViewerComponent },
@@ -14,5 +15,6 @@ export const routes: Routes = [
   { path: 'records/:id', component: PgnViewerComponent },
   { path: 'guide', component: SagaGuideComponent },
   { path: 'login', component: LoginComponent },
+  { path: 'pricing', component: PricingComponent },
   { path: '**', redirectTo: '' },
 ];

@@ -80,6 +80,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
   storyError: string | null = null;
   recordReplay = false;
   generationElapsedSeconds = 0;
+  billingFailure: 'signin' | 'credits' | null = null;
   private generationStartedAt: number | null = null;
   private generationTimer: ReturnType<typeof setInterval> | null = null;
   readonly pipelineSteps: Array<{ id: SagaStage; label: string }> = [
@@ -544,6 +545,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
     this.sagaGenerating = true;
     this.startGenerationTimer();
     this.storyError = null;
+    this.billingFailure = null;
     this.pipelineState = this.initialPipelineState();
     this.pgnApi
       .generateSaga(this.gameId, (stage, state) => {
@@ -558,6 +560,16 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
         error: (error: unknown) => {
           this.sagaGenerating = false;
           this.stopGenerationTimer();
+          if (error instanceof HttpErrorResponse && error.status === 401) {
+            this.billingFailure = 'signin';
+            this.storyError = 'Sign in to forge a new saga.';
+            return;
+          }
+          if (error instanceof HttpErrorResponse && error.status === 402) {
+            this.billingFailure = 'credits';
+            this.storyError = 'A saga credit is required to begin this chronicle.';
+            return;
+          }
           this.storyError = `Saga generation could not finish. Select “Retry saga generation” to try again. ${this.extractError(
             error,
             'The story could not pass validation.',

@@ -620,6 +620,19 @@ button.piece-card-backdrop {
   font-style: italic;
 }
 
+.billing-generation-message {
+  margin: 0.9rem 0 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(196, 168, 98, 0.45);
+  color: var(--ink-muted);
+  background: rgba(196, 168, 98, 0.08);
+}
+
+.billing-generation-message a {
+  margin-left: 0.35rem;
+  color: var(--gold-bright);
+}
+
 .story-panel .error {
   margin: 0;
 }

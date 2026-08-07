@@ -1,0 +1,81 @@
+<main class="pricing-page">
+  <header class="pricing-hero">
+    <p class="eyebrow">Support the chroniclers</p>
+    <h1>Saga Credits</h1>
+    <p>
+      One credit forges one new saga. Replaying or reopening an existing saga
+      never uses another credit.
+    </p>
+    @if (auth.user()) {
+      @if (billing.status(); as status) {
+        <div class="credit-summary">
+          <span>Your account</span>
+          <strong>
+            {{ status.unlimited ? "Unlimited sagas" : status.available + " credits available" }}
+          </strong>
+          @if (status.subscription) {
+            <button type="button" (click)="billing.openPortal()">
+              Manage subscription
+            </button>
+          }
+        </div>
+      }
+    } @else {
+      <a class="sign-in-callout" routerLink="/login">Sign in before purchasing</a>
+    }
+  </header>
+
+  @if (billing.error()) {
+    <p class="billing-error" role="alert">{{ billing.error() }}</p>
+  }
+
+  <section aria-labelledby="packs-title">
+    <h2 id="packs-title">Purchase only what you need</h2>
+    <div class="offer-grid packs">
+      @for (offer of oneTimeOffers; track offer.product) {
+        <article [class.featured]="offer.featured">
+          <p class="offer-type">Credit pack</p>
+          <h3>{{ offer.name }}</h3>
+          <p class="price">{{ offer.price }} <small>{{ offer.cadence }}</small></p>
+          <strong>{{ offer.credits }}</strong>
+          <p>{{ offer.description }}</p>
+          <button
+            type="button"
+            (click)="choose(offer.product)"
+            [disabled]="!auth.user() || billing.loading()"
+          >
+            {{ auth.user() ? "Choose " + offer.name : "Sign in to purchase" }}
+          </button>
+        </article>
+      }
+    </div>
+  </section>
+
+  <section aria-labelledby="plans-title">
+    <h2 id="plans-title">Monthly chronicles</h2>
+    <p class="section-intro">Monthly credits are granted after each successful subscription payment.</p>
+    <div class="offer-grid plans">
+      @for (offer of plans; track offer.product) {
+        <article [class.featured]="offer.featured">
+          <p class="offer-type">Monthly plan</p>
+          <h3>{{ offer.name }}</h3>
+          <p class="price">{{ offer.price }} <small>{{ offer.cadence }}</small></p>
+          <strong>{{ offer.credits }}</strong>
+          <p>{{ offer.description }}</p>
+          <button
+            type="button"
+            (click)="choose(offer.product)"
+            [disabled]="!auth.user() || billing.loading() || !!billing.status()?.subscription"
+          >
+            {{ billing.status()?.subscription ? "Manage current plan above" : "Choose " + offer.name }}
+          </button>
+        </article>
+      }
+    </div>
+  </section>
+
+  <footer>
+    <p>Generation remains available during the current billing preview.</p>
+    <a routerLink="/">Return to the battlefield</a>
+  </footer>
+</main>

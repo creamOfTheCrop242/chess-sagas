@@ -282,6 +282,17 @@
                   }
                 </p>
               }
+              @if (billingFailure === "signin") {
+                <p class="billing-generation-message" role="alert">
+                  Sign in to preserve your account and forge this saga.
+                  <a routerLink="/login">Sign in</a>
+                </p>
+              } @else if (billingFailure === "credits") {
+                <p class="billing-generation-message" role="alert">
+                  This battle needs one saga credit.
+                  <a routerLink="/pricing">View credit options</a>
+                </p>
+              }
 
               @if (pipelineVisible) {
                 <section class="pipeline-progress" aria-live="polite">

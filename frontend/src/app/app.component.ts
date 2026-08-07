@@ -1,9 +1,10 @@
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, effect, inject, signal } from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
 import { AuthService } from './auth/auth.service';
+import { BillingClientService } from './billing/billing.service';
 
 @Component({
   selector: 'app-root',
@@ -12,22 +13,38 @@ import { AuthService } from './auth/auth.service';
   template: `
     <nav class="account-bar" aria-label="Account navigation">
       <a class="home-link" routerLink="/">Chess Sagas</a>
-      @if (auth.loading()) {
-        <span class="account-loading">Checking the records…</span>
-      } @else {
-        @if (auth.user(); as user) {
-          <a class="account-link" routerLink="/login">
-            @if (user.avatarUrl) {
-              <img [src]="user.avatarUrl" alt="" referrerpolicy="no-referrer" />
-            }
-            <span>{{ user.displayName }}</span>
-          </a>
+      <div class="account-actions">
+        <a class="pricing-link" routerLink="/pricing">
+          @if (billing.status(); as status) {
+            {{ status.unlimited ? "Unlimited" : status.available + " credits" }}
+          } @else {
+            Saga credits
+          }
+        </a>
+        @if (auth.loading()) {
+          <span class="account-loading">Checking the records…</span>
         } @else {
-          <a class="account-link" routerLink="/login">Sign in</a>
+          @if (auth.user(); as user) {
+            <a class="account-link" routerLink="/login">
+              @if (user.avatarUrl) {
+                <img [src]="user.avatarUrl" alt="" referrerpolicy="no-referrer" />
+              }
+              <span>{{ user.displayName }}</span>
+            </a>
+          } @else {
+            <a class="account-link" routerLink="/login">Sign in</a>
+          }
         }
-      }
+      </div>
     </nav>
     <router-outlet />
+    @if (billingNotice(); as notice) {
+      <section class="billing-notice" role="status">
+        <span>{{ notice }}</span>
+        <a routerLink="/pricing">View saga credits</a>
+        <button type="button" (click)="billingNotice.set(null)" aria-label="Dismiss">×</button>
+      </section>
+    }
     @if (updateReady()) {
       <section
         class="update-prompt"
@@ -83,6 +100,21 @@ import { AuthService } from './auth/auth.service';
         text-transform: uppercase;
       }
 
+      .account-actions {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+
+      .pricing-link {
+        color: var(--seal);
+        font-family: var(--font-display);
+        font-size: 0.66rem;
+        letter-spacing: 0.08em;
+        text-decoration: none;
+        text-transform: uppercase;
+      }
+
       .account-link {
         display: flex;
         align-items: center;
@@ -113,6 +145,33 @@ import { AuthService } from './auth/auth.service';
           linear-gradient(135deg, rgba(196, 168, 98, 0.12), transparent 45%),
           rgba(8, 15, 24, 0.98);
         box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.55);
+      }
+
+      .billing-notice {
+        position: fixed;
+        top: 4.25rem;
+        left: 50%;
+        z-index: 1001;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        width: min(36rem, calc(100vw - 2rem));
+        padding: 0.85rem 1rem;
+        border: 1px solid var(--gold);
+        background: rgba(8, 15, 24, 0.98);
+        color: var(--ink);
+        box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.45);
+        transform: translateX(-50%);
+      }
+
+      .billing-notice a { color: var(--seal); }
+      .billing-notice button { margin-left: auto; border: 0; color: var(--gold-bright); background: transparent; font-size: 1.4rem; cursor: pointer; }
+
+      @media (max-width: 520px) {
+        .account-actions { gap: 0.6rem; }
+        .account-link span { display: none; }
+        .pricing-link { font-size: 0.58rem; }
+        .billing-notice { align-items: flex-start; flex-wrap: wrap; }
       }
 
       .update-kicker,
@@ -176,12 +235,29 @@ import { AuthService } from './auth/auth.service';
 })
 export class AppComponent {
   readonly auth = inject(AuthService);
+  readonly billing = inject(BillingClientService);
   readonly updateReady = signal(false);
+  readonly billingNotice = signal<string | null>(null);
 
   private readonly swUpdate = inject(SwUpdate);
   private readonly destroyRef = inject(DestroyRef);
 
   constructor() {
+    effect(() => {
+      if (this.auth.user()) this.billing.refresh();
+      else if (!this.auth.loading()) this.billing.clear();
+    });
+
+    const billingResult = new URLSearchParams(window.location.search).get('billing');
+    if (billingResult === 'success') {
+      this.billingNotice.set('Payment received. Your saga credits are being added.');
+      [0, 1500, 4000].forEach((delay) =>
+        window.setTimeout(() => this.billing.refresh(), delay),
+      );
+    } else if (billingResult === 'cancelled') {
+      this.billingNotice.set('Checkout was cancelled. No charge was made.');
+    }
+
     if (!this.swUpdate.isEnabled) return;
 
     this.swUpdate.versionUpdates

@@ -4,9 +4,12 @@ import {
   NotFoundException,
   OnApplicationBootstrap,
   OnModuleDestroy,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { Prisma } from '@prisma/client';
+import { GenerationBillingState, Prisma } from '@prisma/client';
+import type { AuthenticatedUser } from '../auth/auth.service';
+import { CreditService } from '../billing/credit.service';
 import { PrismaService } from '../database/prisma.service';
 import { FullStoryService } from '../full-story/full-story.service';
 import { FULL_STORY_PROMPT_VERSION } from '../full-story/full-story.prompt';
@@ -36,6 +39,11 @@ export interface SagaGenerationStatus {
     validation: boolean;
     scenes: boolean;
   };
+  billing: {
+    enforcementEnabled: boolean;
+    state: GenerationBillingState;
+    reused: boolean;
+  };
 }
 
 @Injectable()
@@ -56,6 +64,7 @@ export class SagaGenerationService
     private readonly validation: StoryValidationService,
     private readonly scenes: SceneBreakdownService,
     private readonly pushNotifications: PushNotificationService,
+    private readonly credits: CreditService,
   ) {
     this.sweepTimer = setInterval(() => this.scheduleDrain(), 30_000);
   }
@@ -71,10 +80,31 @@ export class SagaGenerationService
   async start(
     gameId: string,
     pushSubscription?: unknown,
+    user: AuthenticatedUser | null = null,
   ): Promise<SagaGenerationStatus> {
     await this.assertGame(gameId);
     const stages = await this.stageSnapshot(gameId);
     if (stages.scenes) {
+      const existingCompleted = await this.prisma.sagaGenerationJob.findUnique({
+        where: { gameId },
+      });
+      if (existingCompleted?.billingState === GenerationBillingState.RESERVED) {
+        await this.persistSagaForJob(existingCompleted.id, gameId);
+        const consumed = await this.consumeReservedCredit(existingCompleted.id);
+        await this.prisma.sagaGenerationJob.update({
+          where: { id: existingCompleted.id },
+          data: {
+            status: 'COMPLETED',
+            currentStage: 'SCENE_BREAKDOWN',
+            completedAt: new Date(),
+            error: null,
+            workerId: null,
+            lockedUntil: null,
+            ...(consumed ? { billingState: consumed } : {}),
+          },
+        });
+        return this.status(gameId);
+      }
       await this.prisma.sagaGenerationJob.upsert({
         where: { gameId },
         create: {
@@ -82,6 +112,8 @@ export class SagaGenerationService
           status: 'COMPLETED',
           currentStage: 'SCENE_BREAKDOWN',
           completedAt: new Date(),
+          requestedByUserId: user?.id,
+          billingState: GenerationBillingState.REUSED,
         },
         update: {
           status: 'COMPLETED',
@@ -90,9 +122,19 @@ export class SagaGenerationService
           error: null,
           workerId: null,
           lockedUntil: null,
+          ...(existingCompleted?.billingState ===
+            GenerationBillingState.UNTRACKED && {
+            billingState: GenerationBillingState.REUSED,
+          }),
         },
       });
-      return this.status(gameId);
+      await this.persistSaga(gameId, null);
+      const status = await this.status(gameId);
+      return { ...status, billing: { ...status.billing, reused: true } };
+    }
+
+    if (this.credits.enforcementEnabled && !user) {
+      throw new UnauthorizedException('Sign in to generate a new saga');
     }
 
     const existing = await this.prisma.sagaGenerationJob.findUnique({
@@ -103,27 +145,80 @@ export class SagaGenerationService
       pushSubscription,
     );
     if (!existing || ['FAILED', 'COMPLETED'].includes(existing.status)) {
-      await this.prisma.sagaGenerationJob.upsert({
-        where: { gameId },
-        create: {
-          gameId,
-          status: 'QUEUED',
-          currentStage: this.nextStage(stages),
-          pushSubscriptions:
-            pushSubscriptions as unknown as Prisma.InputJsonValue,
-        },
-        update: {
-          status: 'QUEUED',
-          currentStage: this.nextStage(stages),
-          error: null,
-          completedAt: null,
-          workerId: null,
-          lockedUntil: null,
-          heartbeatAt: null,
-          pushSubscriptions:
-            pushSubscriptions as unknown as Prisma.InputJsonValue,
-        },
-      });
+      const shadowState = await this.shadowBillingState(user);
+      const pendingAuthorization = this.credits.enforcementEnabled;
+      const claimState = pendingAuthorization
+        ? GenerationBillingState.AUTHORIZING
+        : shadowState;
+      const claimData = {
+        status: pendingAuthorization
+          ? ('FAILED' as const)
+          : ('QUEUED' as const),
+        currentStage: this.nextStage(stages),
+        error: pendingAuthorization ? 'Awaiting credit authorization' : null,
+        completedAt: null,
+        workerId: null,
+        lockedUntil: null,
+        heartbeatAt: null,
+        requestedByUserId: user?.id,
+        billingState: claimState,
+        pushSubscriptions:
+          pushSubscriptions as unknown as Prisma.InputJsonValue,
+      };
+      let job: { id: string } | null = null;
+      if (!existing) {
+        try {
+          job = await this.prisma.sagaGenerationJob.create({
+            data: { gameId, ...claimData },
+            select: { id: true },
+          });
+        } catch (caught) {
+          if (!this.isUniqueConstraintError(caught)) throw caught;
+        }
+      } else if (existing.billingState !== GenerationBillingState.AUTHORIZING) {
+        const claimed = await this.prisma.sagaGenerationJob.updateMany({
+          where: {
+            id: existing.id,
+            status: existing.status,
+            billingState: existing.billingState,
+          },
+          data: claimData,
+        });
+        if (claimed.count === 1) job = { id: existing.id };
+      }
+      if (pendingAuthorization && user) {
+        if (job) {
+          try {
+            const reservation = await this.credits.reserve(user.id, job.id);
+            await this.prisma.sagaGenerationJob.update({
+              where: { id: job.id },
+              data: {
+                status: 'QUEUED',
+                error: null,
+                billingState: reservation.bypassed
+                  ? GenerationBillingState.UNLIMITED
+                  : GenerationBillingState.RESERVED,
+              },
+            });
+          } catch (caught) {
+            await this.prisma.sagaGenerationJob.updateMany({
+              where: {
+                id: job.id,
+                billingState: GenerationBillingState.AUTHORIZING,
+              },
+              data: {
+                status: 'FAILED',
+                error:
+                  caught instanceof Error
+                    ? caught.message
+                    : 'Credit authorization failed',
+                billingState: GenerationBillingState.UNTRACKED,
+              },
+            });
+            throw caught;
+          }
+        }
+      }
     } else if (pushSubscriptions.length) {
       await this.prisma.sagaGenerationJob.update({
         where: { gameId },
@@ -154,6 +249,11 @@ export class SagaGenerationService
       ),
       error: job?.error ?? null,
       stages,
+      billing: {
+        enforcementEnabled: this.credits.enforcementEnabled,
+        state: job?.billingState ?? GenerationBillingState.UNTRACKED,
+        reused: false,
+      },
     };
   }
 
@@ -238,6 +338,8 @@ export class SagaGenerationService
         await this.setStage(jobId, gameId, 'SCENE_BREAKDOWN');
         await this.scenes.generate(gameId);
       }
+      await this.persistSagaForJob(jobId, gameId);
+      const billingState = await this.consumeReservedCredit(jobId);
       const completedJob = await this.prisma.sagaGenerationJob.update({
         where: { id: jobId },
         data: {
@@ -247,6 +349,7 @@ export class SagaGenerationService
           error: null,
           workerId: null,
           lockedUntil: null,
+          ...(billingState ? { billingState } : {}),
         },
         select: { pushSubscriptions: true },
       });
@@ -273,6 +376,7 @@ export class SagaGenerationService
         },
       });
       if (failed.count === 1) {
+        await this.releaseReservedCredit(jobId);
         const failedJob = await this.prisma.sagaGenerationJob.findUnique({
           where: { id: jobId },
           select: { pushSubscriptions: true },
@@ -331,6 +435,110 @@ export class SagaGenerationService
       select: { id: true },
     });
     if (!game) throw new NotFoundException(`Game ${gameId} was not found`);
+  }
+
+  private async shadowBillingState(
+    user: AuthenticatedUser | null,
+  ): Promise<GenerationBillingState> {
+    if (!user) return GenerationBillingState.SHADOW_ANONYMOUS;
+    const state = await this.credits.state(user.id);
+    if (state.unlimited) return GenerationBillingState.SHADOW_UNLIMITED;
+    return (state.available ?? 0) >= 1
+      ? GenerationBillingState.SHADOW_AVAILABLE
+      : GenerationBillingState.SHADOW_INSUFFICIENT;
+  }
+
+  private isUniqueConstraintError(caught: unknown): boolean {
+    return (
+      typeof caught === 'object' &&
+      caught !== null &&
+      'code' in caught &&
+      caught.code === 'P2002'
+    );
+  }
+
+  private async consumeReservedCredit(
+    jobId: string,
+  ): Promise<GenerationBillingState | null> {
+    const job = await this.prisma.sagaGenerationJob.findUnique({
+      where: { id: jobId },
+      select: { billingState: true },
+    });
+    if (job?.billingState !== GenerationBillingState.RESERVED) return null;
+    const consumed = await this.credits.consumeForJob(jobId);
+    if (!consumed) {
+      throw new Error(
+        `Credit reservation for generation job ${jobId} is missing`,
+      );
+    }
+    return GenerationBillingState.CONSUMED;
+  }
+
+  private async releaseReservedCredit(jobId: string): Promise<void> {
+    const job = await this.prisma.sagaGenerationJob.findUnique({
+      where: { id: jobId },
+      select: { billingState: true },
+    });
+    if (job?.billingState !== GenerationBillingState.RESERVED) return;
+    try {
+      const released = await this.credits.releaseForJob(jobId);
+      if (!released) {
+        this.logger.error(
+          `Credit reservation for failed generation job ${jobId} is missing`,
+        );
+        return;
+      }
+      await this.prisma.sagaGenerationJob.update({
+        where: { id: jobId },
+        data: { billingState: GenerationBillingState.RELEASED },
+      });
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : String(caught);
+      this.logger.error(
+        `Credit release failed generationJobId=${jobId}: ${message}`,
+      );
+    }
+  }
+
+  private async persistSagaForJob(
+    jobId: string,
+    gameId: string,
+  ): Promise<void> {
+    const job = await this.prisma.sagaGenerationJob.findUnique({
+      where: { id: jobId },
+      select: { requestedByUserId: true },
+    });
+    await this.persistSaga(gameId, job?.requestedByUserId ?? null);
+  }
+
+  private async persistSaga(
+    gameId: string,
+    creatorId: string | null,
+  ): Promise<void> {
+    const run = await this.prisma.generationRun.findFirst({
+      where: {
+        gameId,
+        status: 'COMPLETED',
+        sceneBreakdown: { isNot: null },
+      },
+      orderBy: { completedAt: 'desc' },
+      select: { id: true },
+    });
+    if (!run) return;
+    const existing = await this.prisma.saga.findUnique({
+      where: { generationRunId: run.id },
+      select: { id: true },
+    });
+    if (existing) return;
+    await this.prisma.saga.create({
+      data: {
+        gameId,
+        generationRunId: run.id,
+        creatorId,
+        visibility: 'PUBLIC',
+        storyVersion: FULL_STORY_PROMPT_VERSION,
+      },
+    });
   }
 
   private async stageSnapshot(gameId: string) {

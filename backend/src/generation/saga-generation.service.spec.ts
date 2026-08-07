@@ -1,3 +1,5 @@
+import { GenerationBillingState } from '@prisma/client';
+import type { CreditService } from '../billing/credit.service';
 import type { PrismaService } from '../database/prisma.service';
 import type { FullStoryService } from '../full-story/full-story.service';
 import { FULL_STORY_PROMPT_VERSION } from '../full-story/full-story.prompt';
@@ -20,13 +22,19 @@ describe('SagaGenerationService', () => {
     },
     generationRun: {
       findMany: jest.fn().mockImplementation(() => Promise.resolve(runs)),
+      findFirst: jest.fn().mockResolvedValue({ id: 'scene-run-1' }),
+    },
+    saga: {
+      findUnique: jest.fn().mockResolvedValue(null),
+      create: jest.fn().mockResolvedValue({ id: 'saga-1' }),
     },
     sagaGenerationJob: {
       findUnique: jest.fn().mockResolvedValue(null),
       findMany: jest.fn().mockResolvedValue([]),
+      create: jest.fn().mockResolvedValue({ id: 'job-1' }),
       update: jobUpdate.mockResolvedValue({}),
       updateMany: jobUpdateMany,
-      upsert: jest.fn().mockResolvedValue({}),
+      upsert: jest.fn().mockResolvedValue({ id: 'job-1' }),
     },
   } as unknown as PrismaService;
   const analysis = {
@@ -44,11 +52,48 @@ describe('SagaGenerationService', () => {
     sendSagaReady: jest.fn().mockResolvedValue(undefined),
     sendSagaFailed: jest.fn().mockResolvedValue(undefined),
   } as unknown as PushNotificationService;
+  let enforcementEnabled = false;
+  const credits = {
+    get enforcementEnabled() {
+      return enforcementEnabled;
+    },
+    state: jest.fn().mockResolvedValue({
+      enforcementEnabled: false,
+      unlimited: false,
+      balance: 1,
+      reserved: 0,
+      available: 1,
+    }),
+    reserve: jest.fn(),
+    consumeForJob: jest.fn().mockResolvedValue(true),
+    releaseForJob: jest.fn().mockResolvedValue(true),
+  } as unknown as CreditService;
   let service: SagaGenerationService;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    enforcementEnabled = false;
     runs.length = 0;
+    jest.mocked(prisma.sagaGenerationJob.findUnique).mockResolvedValue(null);
+    jest.mocked(prisma.generationRun.findFirst).mockResolvedValue({
+      id: 'scene-run-1',
+    } as never);
+    jest.mocked(prisma.saga.findUnique).mockResolvedValue(null);
+    jest.mocked(prisma.sagaGenerationJob.upsert).mockResolvedValue({
+      id: 'job-1',
+    } as never);
+    jest.mocked(prisma.sagaGenerationJob.create).mockResolvedValue({
+      id: 'job-1',
+    } as never);
+    jest.mocked(credits.state).mockResolvedValue({
+      enforcementEnabled: false,
+      unlimited: false,
+      balance: 1,
+      reserved: 0,
+      available: 1,
+    });
+    jest.mocked(credits.consumeForJob).mockResolvedValue(true);
+    jest.mocked(credits.releaseForJob).mockResolvedValue(true);
     service = new SagaGenerationService(
       prisma,
       analysis,
@@ -57,6 +102,7 @@ describe('SagaGenerationService', () => {
       validation,
       scenes,
       pushNotifications,
+      credits,
     );
   });
 
@@ -75,6 +121,11 @@ describe('SagaGenerationService', () => {
         story: true,
         validation: true,
         scenes: true,
+      },
+      billing: {
+        enforcementEnabled: false,
+        state: GenerationBillingState.UNTRACKED,
+        reused: false,
       },
     });
   });
@@ -164,6 +215,7 @@ describe('SagaGenerationService', () => {
     jest.mocked(analysis.generate).mockRejectedValueOnce(new Error('failed'));
     jest
       .mocked(prisma.sagaGenerationJob.findUnique)
+      .mockResolvedValueOnce({ billingState: 'UNTRACKED' } as never)
       .mockResolvedValueOnce({ pushSubscriptions: subscriptions } as never);
 
     await (
@@ -181,6 +233,235 @@ describe('SagaGenerationService', () => {
       subscriptions,
       'game-1',
     );
+  });
+
+  it('records an available shadow decision without reserving credit', async () => {
+    jest.mocked(prisma.sagaGenerationJob.findUnique).mockResolvedValue(null);
+
+    const result = await service.start('game-1', undefined, {
+      id: 'user-1',
+      email: 'reader@example.com',
+      displayName: 'Reader',
+      avatarUrl: null,
+    });
+
+    expect(credits.state).toHaveBeenCalledWith('user-1');
+    expect(credits.reserve).not.toHaveBeenCalled();
+    expect(prisma.sagaGenerationJob.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          requestedByUserId: 'user-1',
+          billingState: GenerationBillingState.SHADOW_AVAILABLE,
+          status: 'QUEUED',
+        }),
+      }),
+    );
+    expect(result.billing.enforcementEnabled).toBe(false);
+  });
+
+  it.each([
+    [null, GenerationBillingState.SHADOW_ANONYMOUS],
+    [
+      {
+        id: 'user-1',
+        email: 'reader@example.com',
+        displayName: 'Reader',
+        avatarUrl: null,
+      },
+      GenerationBillingState.SHADOW_INSUFFICIENT,
+    ],
+  ])(
+    'records shadow eligibility without blocking generation',
+    async (user, state) => {
+      jest.mocked(credits.state).mockResolvedValue({
+        enforcementEnabled: false,
+        unlimited: false,
+        balance: 0,
+        reserved: 0,
+        available: 0,
+      });
+
+      await service.start('game-1', undefined, user);
+
+      expect(prisma.sagaGenerationJob.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            billingState: state,
+            status: 'QUEUED',
+          }),
+        }),
+      );
+      expect(credits.reserve).not.toHaveBeenCalled();
+    },
+  );
+
+  it('reuses completed scene data without reserving or consuming credit', async () => {
+    runs.push(...completedRuns());
+    jest.mocked(prisma.sagaGenerationJob.findUnique).mockResolvedValue(null);
+
+    const result = await service.start('game-1', undefined, {
+      id: 'user-1',
+      email: 'reader@example.com',
+      displayName: 'Reader',
+      avatarUrl: null,
+    });
+
+    expect(result.billing.reused).toBe(true);
+    expect(credits.reserve).not.toHaveBeenCalled();
+    expect(credits.consumeForJob).not.toHaveBeenCalled();
+    expect(prisma.saga.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        gameId: 'game-1',
+        generationRunId: 'scene-run-1',
+        creatorId: null,
+      }),
+    });
+  });
+
+  it('finishes consuming an existing reservation before treating scenes as reused', async () => {
+    runs.push(...completedRuns());
+    jest
+      .mocked(prisma.sagaGenerationJob.findUnique)
+      .mockResolvedValueOnce({
+        id: 'job-1',
+        billingState: GenerationBillingState.RESERVED,
+      } as never)
+      .mockResolvedValueOnce({ requestedByUserId: 'user-1' } as never)
+      .mockResolvedValueOnce({
+        billingState: GenerationBillingState.RESERVED,
+      } as never)
+      .mockResolvedValueOnce({
+        status: 'COMPLETED',
+        currentStage: 'SCENE_BREAKDOWN',
+        error: null,
+        billingState: GenerationBillingState.CONSUMED,
+      } as never);
+
+    const result = await service.start('game-1');
+
+    expect(credits.consumeForJob).toHaveBeenCalledWith('job-1');
+    expect(jobUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: 'COMPLETED',
+          billingState: GenerationBillingState.CONSUMED,
+        }),
+      }),
+    );
+    expect(result.billing.reused).toBe(false);
+  });
+
+  it('requires authentication before reserving when enforcement is enabled', async () => {
+    enforcementEnabled = true;
+
+    await expect(service.start('game-1')).rejects.toThrow(
+      'Sign in to generate a new saga',
+    );
+    expect(prisma.sagaGenerationJob.create).not.toHaveBeenCalled();
+  });
+
+  it('reserves before queueing when enforcement is enabled', async () => {
+    enforcementEnabled = true;
+    jest.mocked(credits.reserve).mockResolvedValue({
+      bypassed: false,
+      reason: null,
+      reservation: {
+        id: 'reservation-1',
+        userId: 'user-1',
+        sagaGenerationJobId: 'job-1',
+        amount: 1,
+        status: 'ACTIVE',
+      },
+    });
+    jest.mocked(prisma.sagaGenerationJob.findUnique).mockResolvedValue(null);
+
+    await service.start('game-1', undefined, {
+      id: 'user-1',
+      email: 'reader@example.com',
+      displayName: 'Reader',
+      avatarUrl: null,
+    });
+
+    expect(credits.reserve).toHaveBeenCalledWith('user-1', 'job-1');
+    expect(jobUpdate).toHaveBeenCalledWith({
+      where: { id: 'job-1' },
+      data: {
+        status: 'QUEUED',
+        error: null,
+        billingState: GenerationBillingState.RESERVED,
+      },
+    });
+  });
+
+  it('does not reserve when another request wins the job creation race', async () => {
+    enforcementEnabled = true;
+    jest.mocked(prisma.sagaGenerationJob.create).mockRejectedValueOnce({
+      code: 'P2002',
+    });
+    jest
+      .mocked(prisma.sagaGenerationJob.findUnique)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        status: 'FAILED',
+        currentStage: 'NARRATIVE_ANALYSIS',
+        error: 'Awaiting credit authorization',
+        billingState: GenerationBillingState.AUTHORIZING,
+      } as never);
+
+    await service.start('game-1', undefined, {
+      id: 'user-2',
+      email: 'second@example.com',
+      displayName: 'Second',
+      avatarUrl: null,
+    });
+
+    expect(credits.reserve).not.toHaveBeenCalled();
+  });
+
+  it('consumes a reserved credit after saga persistence succeeds', async () => {
+    jest
+      .mocked(prisma.sagaGenerationJob.findUnique)
+      .mockResolvedValueOnce({ requestedByUserId: 'user-1' } as never)
+      .mockResolvedValueOnce({ billingState: 'RESERVED' } as never);
+
+    await (
+      service as unknown as {
+        execute(jobId: string, gameId: string): Promise<void>;
+      }
+    ).execute('job-1', 'game-1');
+
+    expect(prisma.saga.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ creatorId: 'user-1' }),
+    });
+    expect(credits.consumeForJob).toHaveBeenCalledWith('job-1');
+    expect(jobUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: 'COMPLETED',
+          billingState: GenerationBillingState.CONSUMED,
+        }),
+      }),
+    );
+  });
+
+  it('releases a reservation after terminal generation failure', async () => {
+    jest.mocked(analysis.generate).mockRejectedValueOnce(new Error('failed'));
+    jest
+      .mocked(prisma.sagaGenerationJob.findUnique)
+      .mockResolvedValueOnce({ billingState: 'RESERVED' } as never)
+      .mockResolvedValueOnce({ pushSubscriptions: [] } as never);
+
+    await (
+      service as unknown as {
+        execute(jobId: string, gameId: string): Promise<void>;
+      }
+    ).execute('job-1', 'game-1');
+
+    expect(credits.releaseForJob).toHaveBeenCalledWith('job-1');
+    expect(jobUpdate).toHaveBeenCalledWith({
+      where: { id: 'job-1' },
+      data: { billingState: GenerationBillingState.RELEASED },
+    });
   });
 });
 

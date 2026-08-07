@@ -192,6 +192,52 @@ describe('CreditService', () => {
     expect(transaction.creditReservation.update).toHaveBeenCalledTimes(1);
   });
 
+  it('consumes a reservation by generation job id', async () => {
+    prisma.creditReservation.findUnique.mockResolvedValue({
+      id: 'reservation-1',
+    });
+    transaction.creditReservation.findUnique.mockResolvedValue({
+      id: 'reservation-1',
+      userId: 'user-1',
+      sagaGenerationJobId: 'job-1',
+      amount: 1,
+      status: CreditReservationStatus.ACTIVE,
+    });
+    transaction.creditLedgerEntry.upsert.mockResolvedValue({});
+    transaction.creditReservation.update.mockResolvedValue({});
+    const service = new CreditService(prisma as never);
+
+    await expect(service.consumeForJob('job-1')).resolves.toBe(true);
+    expect(prisma.creditReservation.findUnique).toHaveBeenCalledWith({
+      where: { sagaGenerationJobId: 'job-1' },
+      select: { id: true },
+    });
+    expect(transaction.creditLedgerEntry.upsert).toHaveBeenCalledTimes(1);
+  });
+
+  it('releases a reservation by generation job id', async () => {
+    prisma.creditReservation.findUnique
+      .mockResolvedValueOnce({ id: 'reservation-1' })
+      .mockResolvedValueOnce({
+        id: 'reservation-1',
+        status: CreditReservationStatus.ACTIVE,
+      });
+    prisma.creditReservation.updateMany.mockResolvedValue({ count: 1 });
+    const service = new CreditService(prisma as never);
+
+    await expect(service.releaseForJob('job-1')).resolves.toBe(true);
+    expect(prisma.creditReservation.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'reservation-1',
+        status: CreditReservationStatus.ACTIVE,
+      },
+      data: {
+        status: CreditReservationStatus.RELEASED,
+        resolvedAt: expect.any(Date),
+      },
+    });
+  });
+
   it('releases only old terminal or orphaned reservations during cleanup', async () => {
     process.env.CREDIT_RESERVATION_STALE_MINUTES = '45';
     prisma.creditReservation.findMany.mockResolvedValue([

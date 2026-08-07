@@ -519,6 +519,13 @@ export class FullStoryService {
               data: breakdownData,
             },
           },
+          saga: {
+            create: {
+              game: { connect: { id: gameId } },
+              visibility: 'PUBLIC',
+              storyVersion: FULL_STORY_PROMPT_VERSION,
+            },
+          },
         },
         include: { generatedStory: true, sceneBreakdown: true },
       });

@@ -28,6 +28,28 @@ enum GenerationStage {
   SCENE_BREAKDOWN
 }
 
+enum SagaVisibility {
+  PUBLIC
+  UNLISTED
+  PRIVATE
+}
+
+enum CreditLedgerEntryType {
+  INTRODUCTORY_GRANT
+  ONE_TIME_PURCHASE
+  SUBSCRIPTION_GRANT
+  GENERATION_CONSUMPTION
+  GENERATION_REFUND
+  PURCHASE_REFUND
+  ADMINISTRATIVE_ADJUSTMENT
+}
+
+enum CreditReservationStatus {
+  ACTIVE
+  CONSUMED
+  RELEASED
+}
+
 model Game {
   id             String             @id @default(cuid())
   ownerId        String?
@@ -41,6 +63,7 @@ model Game {
   ledger         GameLedger?
   generationRuns GenerationRun[]
   sagaJob        SagaGenerationJob?
+  sagas          Saga[]
   owner          User?              @relation(fields: [ownerId], references: [id], onDelete: SetNull)
 
   @@index([ownerId, createdAt])
@@ -48,16 +71,37 @@ model Game {
 }
 
 model User {
-  id          String        @id @default(cuid())
-  googleSub   String?       @unique
-  appleSub    String?       @unique
-  email       String        @unique
-  displayName String
-  avatarUrl   String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  sessions    AuthSession[]
-  games       Game[]
+  id                 String              @id @default(cuid())
+  googleSub          String?             @unique
+  appleSub           String?             @unique
+  email              String              @unique
+  displayName        String
+  avatarUrl          String?
+  stripeCustomerId   String?             @unique
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  sessions           AuthSession[]
+  games              Game[]
+  publicProfile      PublicProfile?
+  sagas              Saga[]              @relation("SagaCreator")
+  sagaBookmarks      SagaBookmark[]
+  creditEntries      CreditLedgerEntry[]
+  creditReservations CreditReservation[]
+}
+
+model PublicProfile {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  handle            String   @unique
+  displayName       String
+  avatarUrl         String?
+  bio               String?  @db.VarChar(500)
+  showCreatorCredit Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
 }
 
 model AuthSession {
@@ -73,19 +117,20 @@ model AuthSession {
 }
 
 model SagaGenerationJob {
-  id                String           @id @default(cuid())
-  gameId            String           @unique
-  status            GenerationStatus @default(QUEUED)
-  currentStage      GenerationStage  @default(NARRATIVE_ANALYSIS)
-  error             String?          @db.Text
-  workerId          String?
-  lockedUntil       DateTime?
-  heartbeatAt       DateTime?
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-  completedAt       DateTime?
-  pushSubscriptions Json?
-  game              Game             @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  id                 String              @id @default(cuid())
+  gameId             String              @unique
+  status             GenerationStatus    @default(QUEUED)
+  currentStage       GenerationStage     @default(NARRATIVE_ANALYSIS)
+  error              String?             @db.Text
+  workerId           String?
+  lockedUntil        DateTime?
+  heartbeatAt        DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  completedAt        DateTime?
+  pushSubscriptions  Json?
+  game               Game                @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  creditReservations CreditReservation[]
 
   @@index([status, lockedUntil])
 }
@@ -119,9 +164,98 @@ model GenerationRun {
   generatedStory    GeneratedStory?
   storyValidation   StoryValidation?
   sceneBreakdown    SceneBreakdown?
+  saga              Saga?
 
   @@index([gameId, createdAt])
   @@index([status, createdAt])
+}
+
+model Saga {
+  id              String         @id @default(cuid())
+  gameId          String
+  generationRunId String         @unique
+  creatorId       String?
+  visibility      SagaVisibility @default(PUBLIC)
+  storyVersion    String?
+  parentSagaId    String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  game            Game           @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  generationRun   GenerationRun  @relation(fields: [generationRunId], references: [id], onDelete: Cascade)
+  creator         User?          @relation("SagaCreator", fields: [creatorId], references: [id], onDelete: SetNull)
+  parentSaga      Saga?          @relation("AlternateTellings", fields: [parentSagaId], references: [id], onDelete: SetNull)
+  alternateSagas  Saga[]         @relation("AlternateTellings")
+  bookmarks       SagaBookmark[]
+
+  @@index([visibility, createdAt])
+  @@index([creatorId, createdAt])
+  @@index([gameId, createdAt])
+  @@index([parentSagaId])
+}
+
+model SagaBookmark {
+  userId    String
+  sagaId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  saga      Saga     @relation(fields: [sagaId], references: [id], onDelete: Cascade)
+
+  @@id([userId, sagaId])
+  @@index([sagaId])
+  @@index([userId, createdAt])
+}
+
+model CreditLedgerEntry {
+  id             String                @id @default(cuid())
+  userId         String
+  amount         Int
+  type           CreditLedgerEntryType
+  idempotencyKey String                @unique
+  stripeEventId  String?
+  referenceId    String?
+  description    String?               @db.VarChar(500)
+  expiresAt      DateTime?
+  createdAt      DateTime              @default(now())
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeEvent    StripeEvent?          @relation(fields: [stripeEventId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([referenceId])
+  @@index([stripeEventId])
+  @@index([userId, expiresAt])
+}
+
+model CreditReservation {
+  id                  String                  @id @default(cuid())
+  userId              String
+  sagaGenerationJobId String?
+  amount              Int                     @default(1)
+  status              CreditReservationStatus @default(ACTIVE)
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  resolvedAt          DateTime?
+  user                User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sagaGenerationJob   SagaGenerationJob?      @relation(fields: [sagaGenerationJobId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([sagaGenerationJobId])
+}
+
+model StripeEvent {
+  id              String              @id
+  type            String
+  objectId        String?
+  livemode        Boolean
+  apiVersion      String?
+  payload         Json?
+  receivedAt      DateTime            @default(now())
+  processedAt     DateTime?
+  processingError String?             @db.Text
+  creditEntries   CreditLedgerEntry[]
+
+  @@index([type, receivedAt])
+  @@index([objectId])
+  @@index([processedAt])
 }
 
 model SceneBreakdown {

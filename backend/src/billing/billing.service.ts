@@ -5,15 +5,11 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import {
-  BillingPlan,
-  CreditLedgerEntryType,
-  CreditReservationStatus,
-  Prisma,
-} from '@prisma/client';
+import { BillingPlan, CreditLedgerEntryType, Prisma } from '@prisma/client';
 import Stripe from 'stripe';
 import { PrismaService } from '../database/prisma.service';
 import type { BillingProduct } from './dto/create-checkout.dto';
+import { CreditService } from './credit.service';
 
 type ProductDefinition = {
   mode: 'payment' | 'subscription';
@@ -31,38 +27,26 @@ export class BillingService {
     process.env.PUBLIC_APP_URL ?? 'http://localhost:4200'
   ).replace(/\/$/, '');
 
-  constructor(private readonly prisma: PrismaService) {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly credits: CreditService,
+  ) {
     const secretKey = process.env.STRIPE_SECRET_KEY?.trim();
     this.stripe = secretKey ? new Stripe(secretKey) : null;
   }
 
   async status(userId: string) {
-    const now = new Date();
-    const [credits, reservations, subscription] = await Promise.all([
-      this.prisma.creditLedgerEntry.aggregate({
-        where: {
-          userId,
-          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
-        },
-        _sum: { amount: true },
-      }),
-      this.prisma.creditReservation.aggregate({
-        where: { userId, status: CreditReservationStatus.ACTIVE },
-        _sum: { amount: true },
-      }),
+    const [creditState, subscription] = await Promise.all([
+      this.credits.state(userId),
       this.prisma.billingSubscription.findFirst({
         where: { userId },
         orderBy: { updatedAt: 'desc' },
       }),
     ]);
-    const balance = credits._sum.amount ?? 0;
-    const reserved = reservations._sum.amount ?? 0;
 
     return {
       configured: this.isConfigured(),
-      balance,
-      reserved,
-      available: balance - reserved,
+      ...creditState,
       subscription,
     };
   }

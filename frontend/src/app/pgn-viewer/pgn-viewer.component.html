@@ -236,7 +236,7 @@
                 [attr.aria-expanded]="fallenRosterOpen"
                 aria-controls="fallen-roster"
               >
-                Warhost Ledger
+                Book of Heroes
               </button>
             </div>
           </div>
@@ -267,7 +267,7 @@
                   [attr.aria-expanded]="fallenRosterOpen"
                   aria-controls="fallen-roster"
                 >
-                  Warhost Ledger
+                  Book of Heroes
                 </button>
               </div>
               @if (sagaGenerating) {
@@ -328,7 +328,7 @@
                   [attr.aria-expanded]="fallenRosterOpen"
                   aria-controls="fallen-roster"
                 >
-                  Warhost Ledger
+                  Book of Heroes
                 </button>
               </div>
             </div>
@@ -397,20 +397,20 @@
               type="button"
               class="fallen-close"
               (click)="closeFallenRoster()"
-              aria-label="Close Warhost Ledger"
+              aria-label="Close Book of Heroes"
             >
               ×
             </button>
             <p class="fallen-kicker">Lives bound to the final battle</p>
-            <h3 id="fallen-roster-title">Warhost Ledger</h3>
+            <h3 id="fallen-roster-title">Book of Heroes</h3>
             <p class="fallen-intro">
               Health and deeds recorded through beat {{ currentPly }}. Select a
               character to reveal their history. Future fates remain veiled.
             </p>
 
             <div class="fallen-columns">
-              <section>
-                <h4>Light Kingdom</h4>
+              <details open>
+                <summary>Light Kingdom</summary>
                 <ol>
                   @for (piece of lightKingdomRoster; track piece.id) {
                     <li [class.roster-expanded]="rosterPieceId === piece.id">
@@ -464,10 +464,10 @@
                     </li>
                   }
                 </ol>
-              </section>
+              </details>
 
-              <section>
-                <h4>Dark Kingdom</h4>
+              <details open>
+                <summary>Dark Kingdom</summary>
                 <ol>
                   @for (piece of darkKingdomRoster; track piece.id) {
                     <li [class.roster-expanded]="rosterPieceId === piece.id">
@@ -521,7 +521,7 @@
                     </li>
                   }
                 </ol>
-              </section>
+              </details>
             </div>
           </section>
         </div>

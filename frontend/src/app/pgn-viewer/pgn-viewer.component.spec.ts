@@ -331,7 +331,7 @@ describe('PgnViewerComponent character inspection', () => {
     expect(component.fallenRosterOpen).toBeFalse();
   });
 
-  it('lists every character in the Warhost Ledger with current health', () => {
+  it('lists every character in the Book of Heroes with current health', () => {
     component.currentPly = 2;
 
     expect(component.lightKingdomRoster).toHaveSize(1);

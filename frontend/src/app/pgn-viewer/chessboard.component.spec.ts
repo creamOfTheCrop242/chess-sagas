@@ -86,6 +86,62 @@ describe('ChessboardComponent character interaction', () => {
     expect(selected).toEqual([piece.cgKey]);
   });
 
+  it('does not duplicate a touch selection with its compatibility click', () => {
+    const piece = fixture.nativeElement.querySelector('piece') as KeyedNode;
+    const selected: string[] = [];
+    component.pieceSelected.subscribe((square) => selected.push(square));
+
+    piece.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        bubbles: true,
+        pointerId: 9,
+        pointerType: 'touch',
+        clientX: 40,
+        clientY: 60,
+      }),
+    );
+    piece.dispatchEvent(
+      new PointerEvent('pointerup', {
+        bubbles: true,
+        pointerId: 9,
+        pointerType: 'touch',
+        clientX: 42,
+        clientY: 61,
+      }),
+    );
+    piece.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(selected).toEqual([piece.cgKey]);
+  });
+
+  it('keeps a tap on its starting piece when the finger drifts slightly', () => {
+    const piece = fixture.nativeElement.querySelector('piece') as KeyedNode;
+    const board = fixture.nativeElement.querySelector('.board') as HTMLElement;
+    const selected: string[] = [];
+    component.pieceSelected.subscribe((square) => selected.push(square));
+
+    piece.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        bubbles: true,
+        pointerId: 10,
+        pointerType: 'touch',
+        clientX: 40,
+        clientY: 60,
+      }),
+    );
+    board.dispatchEvent(
+      new PointerEvent('pointerup', {
+        bubbles: true,
+        pointerId: 10,
+        pointerType: 'touch',
+        clientX: 51,
+        clientY: 67,
+      }),
+    );
+
+    expect(selected).toEqual([piece.cgKey]);
+  });
+
   it('does not select a piece when the touch gesture is a scroll', () => {
     const piece = fixture.nativeElement.querySelector('piece') as KeyedNode;
     const selected: string[] = [];

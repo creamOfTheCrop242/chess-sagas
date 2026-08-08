@@ -10,6 +10,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin, map, of, switchMap } from 'rxjs';
 import { BillingClientService } from '../billing/billing.service';
+import { AuthService } from '../auth/auth.service';
 import { ChessboardComponent } from './chessboard.component';
 import { PgnApiService } from './pgn-api.service';
 import {
@@ -98,6 +99,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
     private readonly pgnApi: PgnApiService,
     @Optional() private readonly route?: ActivatedRoute,
     @Optional() private readonly billing?: BillingClientService,
+    @Optional() private readonly auth?: AuthService,
   ) {}
 
   ngOnInit(): void {
@@ -485,13 +487,15 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
         !billing.unlimited &&
         (billing.available ?? 0) < 1,
     );
+    const needsSignIn = Boolean(this.auth && !this.auth.user());
+    const needsAccessCheck = needsCredit || needsSignIn;
     forkJoin({
       parsed: this.pgnApi.parse(this.pgnText),
       saved: this.pgnApi.createGame(this.pgnText),
     })
       .pipe(
         switchMap(({ parsed, saved }) =>
-          needsCredit
+          needsAccessCheck
             ? this.pgnApi.getGenerationStatus(saved.id).pipe(
                 map((status) => ({
                   parsed,
@@ -504,9 +508,9 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
       )
       .subscribe({
       next: ({ parsed, saved, reusable }) => {
-        if (needsCredit && !reusable) {
+        if (needsAccessCheck && !reusable) {
           this.loading = false;
-          this.billingFailure = 'credits';
+          this.billingFailure = needsSignIn ? 'signin' : 'credits';
           return;
         }
         this.game = { ...parsed, ledger: saved.ledger.data };

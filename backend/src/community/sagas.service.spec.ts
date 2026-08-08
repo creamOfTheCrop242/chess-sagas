@@ -37,11 +37,14 @@ function sagaRow(showCreatorCredit = true) {
 
 describe('SagasService', () => {
   const prisma = {
-    saga: { findMany: jest.fn(), findFirst: jest.fn() },
+    saga: { findMany: jest.fn(), findFirst: jest.fn(), count: jest.fn() },
     sagaBookmark: { upsert: jest.fn(), deleteMany: jest.fn() },
   };
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    prisma.saga.count.mockResolvedValue(2);
+  });
 
   it('lists public sagas with cursor pagination and creator attribution', async () => {
     prisma.saga.findMany.mockResolvedValue([
@@ -59,6 +62,10 @@ describe('SagasService', () => {
       avatarUrl: null,
     });
     expect(result.nextCursor).toBe('saga-1');
+    expect(result.total).toBe(2);
+    expect(prisma.saga.count).toHaveBeenCalledWith({
+      where: { visibility: 'PUBLIC' },
+    });
     expect(prisma.saga.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { visibility: 'PUBLIC' },

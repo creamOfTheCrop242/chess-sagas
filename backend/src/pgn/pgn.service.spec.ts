@@ -213,6 +213,27 @@ describe('PgnService deterministic ledger', () => {
     expect(histories(pgn).every(Boolean)).toBe(true);
   });
 
+  it('assigns binary character pronouns and avoids singular they in personal backstories', () => {
+    const pieces = service.parse('[Result "*"]\n\n1. e4 e5 *').ledger.pieces;
+    const individuallyNarrated = pieces.filter((piece) =>
+      ['p', 'r', 'b', 'n'].includes(piece.chessType),
+    );
+
+    expect(
+      pieces.every((piece) => ['he/him', 'she/her'].includes(piece.pronouns!)),
+    ).toBe(true);
+    for (const piece of individuallyNarrated) {
+      expect(piece.backstory).not.toMatch(
+        /\b(?:they|them|their|themselves)\b/i,
+      );
+      expect(piece.backstory).toMatch(
+        piece.pronouns === 'she/her'
+          ? /\b(?:she|her)\b/i
+          : /\b(?:he|him|his)\b/i,
+      );
+    }
+  });
+
   it('composes broad backstory variety across different battle records', () => {
     const ledgers = Array.from(
       { length: 12 },

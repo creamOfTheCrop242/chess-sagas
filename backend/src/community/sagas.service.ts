@@ -185,18 +185,23 @@ export class SagasService {
           ],
         }
       : {};
-    const rows = await this.prisma.saga.findMany({
-      where: { ...where, ...search },
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
-      take: query.limit + 1,
-      include: sagaInclude,
-    });
+    const combinedWhere = { ...where, ...search };
+    const [rows, total] = await Promise.all([
+      this.prisma.saga.findMany({
+        where: combinedWhere,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
+        take: query.limit + 1,
+        include: sagaInclude,
+      }),
+      this.prisma.saga.count({ where: combinedWhere }),
+    ]);
     const hasMore = rows.length > query.limit;
     const page = hasMore ? rows.slice(0, query.limit) : rows;
     return {
       items: page.map((saga) => this.mapSummary(saga)),
       nextCursor: hasMore ? (page.at(-1)?.id ?? null) : null,
+      total,
     };
   }
 

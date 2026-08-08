@@ -33,7 +33,7 @@ describe('HallOfRecordsComponent', () => {
                   storyVersion: 'v1',
                   creator: null,
                 },
-              ], nextCursor: null }),
+              ], nextCursor: null, total: 7 }),
           },
         },
         {
@@ -58,5 +58,11 @@ describe('HallOfRecordsComponent', () => {
         .querySelector('a[href="/records/record-1"]')
         .textContent.trim(),
     ).toBe('Replay saga →');
+  });
+
+  it('numbers the newest record from the collection total', () => {
+    expect(
+      fixture.nativeElement.querySelector('.record-number').textContent.trim(),
+    ).toBe('07');
   });
 });

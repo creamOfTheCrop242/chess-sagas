@@ -28,6 +28,20 @@ describe('PgnViewerComponent character inspection', () => {
     expect(component.boardOrientation).toBe('white');
   });
 
+  it('opens and closes the battlefield description', () => {
+    component.battlefieldEnvironment = {
+      id: 'glasswind',
+      name: 'The Glasswind Expanse',
+      description: 'Mirrored dunes scatter hostile light across the field.',
+    };
+
+    component.openBattlefieldDescription();
+    expect(component.battlefieldDescriptionOpen).toBeTrue();
+
+    component.closeBattlefieldDescription();
+    expect(component.battlefieldDescriptionOpen).toBeFalse();
+  });
+
   it('keeps a tapped piece pinned instead of letting stale hover override it', () => {
     component.currentPly = 2;
     component.inspectPieceAt('d5');

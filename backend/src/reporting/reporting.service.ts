@@ -67,6 +67,7 @@ export class ReportingService {
         where: { createdAt },
         select: {
           id: true,
+          gameId: true,
           status: true,
           billingState: true,
           error: true,
@@ -87,7 +88,7 @@ export class ReportingService {
 
     const ai = aggregateAiCalls(calls);
     const pipeline = aggregatePipeline(runs);
-    const generation = aggregateJobs(jobs);
+    const generation = aggregateJobs(jobs, runs);
     const billing = aggregateBilling(creditEntries, stripeEvents);
     const errors = aggregateErrors(calls, runs, jobs);
 
@@ -307,6 +308,7 @@ function aggregatePipeline(runs: RunRow[]) {
 }
 
 type JobRow = {
+  gameId: string;
   status: GenerationStatus;
   billingState: GenerationBillingState;
   error: string | null;
@@ -315,10 +317,23 @@ type JobRow = {
   requestedBy: { email: string } | null;
 };
 
-function aggregateJobs(jobs: JobRow[]) {
+function aggregateJobs(jobs: JobRow[], runs: RunRow[]) {
   const completed = jobs.filter((job) => job.status === 'COMPLETED').length;
   const failed = jobs.filter((job) => job.status === 'FAILED').length;
-  const terminal = jobs.filter((job) => job.completedAt);
+  const activeDurationByGame = new Map<string, number>();
+  for (const run of runs) {
+    activeDurationByGame.set(
+      run.gameId,
+      (activeDurationByGame.get(run.gameId) ?? 0) +
+        elapsedMs(run.createdAt, run.completedAt),
+    );
+  }
+  const completedDurations = jobs
+    .filter(
+      (job) => job.status === 'COMPLETED' && job.billingState !== 'REUSED',
+    )
+    .map((job) => activeDurationByGame.get(job.gameId) ?? 0)
+    .filter((durationMs) => durationMs > 0);
   const byBillingState = countBy(jobs, (job) => job.billingState);
   const unlimitedAccounts = new Map<
     string,
@@ -343,12 +358,12 @@ function aggregateJobs(jobs: JobRow[]) {
     completed,
     failed,
     active: jobs.length - completed - failed,
-    averageSeconds: terminal.length
-      ? terminal.reduce(
-          (total, job) => total + elapsedMs(job.createdAt, job.completedAt),
+    averageSeconds: completedDurations.length
+      ? completedDurations.reduce(
+          (total, durationMs) => total + durationMs,
           0,
         ) /
-        terminal.length /
+        completedDurations.length /
         1000
       : 0,
     byBillingState,

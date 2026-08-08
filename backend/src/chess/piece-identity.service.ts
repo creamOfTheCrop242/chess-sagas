@@ -107,6 +107,34 @@ const PAWN_VIEWPOINT_ROLES = {
   ],
 } as const;
 
+const FEMININE_NAMES = new Set([
+  'Aveline',
+  'Brienne',
+  'Catrin',
+  'Elara',
+  'Elowen',
+  'Fiora',
+  'Gwendolyn',
+  'Isolde',
+  'Jessamine',
+  'Kerra',
+  'Lyra',
+  'Maela',
+  'Mara',
+  'Mirelle',
+  'Nerys',
+  'Nessa',
+  'Odette',
+  'Rhiannon',
+  'Sabine',
+  'Sera',
+  'Tamsin',
+  'Veyra',
+  'Wren',
+  'Ysolde',
+  'Zara',
+]);
+
 @Injectable()
 export class PieceIdentityService {
   create(chess: Chess): {
@@ -194,6 +222,10 @@ export class PieceIdentityService {
       type === 'p'
         ? pawnNarrativeProfile(side, square, pawnName, pawnRole)
         : undefined;
+    const permanentName =
+      pawnProfile?.viewpointName ?? this.name(side, type, square);
+    const characterName =
+      type === 'r' ? fortressOperatorName : pawnProfile?.viewpointName;
     return {
       id,
       chessColor: color,
@@ -202,12 +234,12 @@ export class PieceIdentityService {
       chessType: type,
       currentChessType: type,
       fantasyType: this.fantasyType(type),
-      permanentName:
-        pawnProfile?.viewpointName ?? this.name(side, type, square),
+      permanentName,
       companyName: pawnProfile?.companyName,
       viewpointName: pawnProfile?.viewpointName,
       viewpointRole: pawnProfile?.viewpointRole,
       operatorName: type === 'r' ? fortressOperatorName : undefined,
+      pronouns: characterPronouns(type, characterName, id),
       alive: true,
     };
   }
@@ -280,6 +312,8 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
   const name = piece.operatorName ?? piece.permanentName;
   const choice = (values: readonly string[], key: string): string =>
     values[hashSeed(`${seed}:${piece.id}:${key}`) % values.length];
+  const personalize = (text: string): string =>
+    applyCharacterPronouns(text, piece.pronouns ?? 'he/him');
 
   if (piece.chessType === 'p') {
     const origins = [
@@ -373,7 +407,9 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       ],
       'role-history',
     );
-    return `${piece.permanentName} came from ${choice(origins, 'origin')}. ${choice(formativeEvents, 'formative')}. They ${choice(motives, 'motive')}. ${roleHistory} of ${company}. ${choice(temperaments, 'temperament')}.`;
+    return personalize(
+      `${piece.permanentName} came from ${choice(origins, 'origin')}. ${choice(formativeEvents, 'formative')}. They ${choice(motives, 'motive')}. ${roleHistory} of ${company}. ${choice(temperaments, 'temperament')}.`,
+    );
   }
 
   if (piece.chessType === 'r') {
@@ -403,7 +439,9 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       'They conceal recurring panic beneath precise commands and meticulous maintenance rituals',
       'They consider every shot a debt because the machine consumes magic civilians also need',
     ];
-    return `${name} once served as ${choice(formerDuties, 'former-duty')} and ${choice(injuries, 'injury')}. With death otherwise certain, the kingdom’s Archwizards placed the soldier’s living body inside ${piece.permanentName}; its magical cradle now sustains the pilot, who cannot survive apart from the Moving Fortress. ${choice(attitudes, 'attitude')}.`;
+    return personalize(
+      `${name} once served as ${choice(formerDuties, 'former-duty')} and ${choice(injuries, 'injury')}. With death otherwise certain, the kingdom’s Archwizards placed the soldier’s living body inside ${piece.permanentName}; its magical cradle now sustains the pilot, who cannot survive apart from the Moving Fortress. ${choice(attitudes, 'attitude')}.`,
+    );
   }
 
   if (piece.chessType === 'k') {
@@ -491,7 +529,9 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       'They are brilliant in crisis and notoriously impatient with court ceremony',
       'They keep meticulous records because reality itself can no longer be trusted to remember correctly',
     ];
-    return `${piece.permanentName} first drew royal notice after they ${choice(awakenings, 'awakening')}. Decades in the royal colleges made the Archwizard a master of ${choice(specialties, 'specialty')}, alongside the broad disciplines expected of their rank. Teleportation lets them cross the battlefield almost instantly. ${choice(convictions, 'conviction')}.`;
+    return personalize(
+      `${piece.permanentName} first drew royal notice after they ${choice(awakenings, 'awakening')}. Decades in the royal colleges made the Archwizard a master of ${choice(specialties, 'specialty')}, alongside the broad disciplines expected of their rank. Teleportation lets them cross the battlefield almost instantly. ${choice(convictions, 'conviction')}.`,
+    );
   }
 
   if (piece.chessType === 'n') {
@@ -523,10 +563,82 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       'They believe surprise is valuable only when it protects slower formations',
       'They are intensely loyal to their riders and openly skeptical of distant royal strategy',
     ];
-    return `${piece.permanentName} ${choice(origins, 'order-origin')} and ${choice(feats, 'command-feat')}. The crown rewarded that judgment with command of one of the kingdom’s fastest and most unpredictable striking forces. ${choice(styles, 'command-style')}.`;
+    return personalize(
+      `${piece.permanentName} ${choice(origins, 'order-origin')} and ${choice(feats, 'command-feat')}. The crown rewarded that judgment with command of one of the kingdom’s fastest and most unpredictable striking forces. ${choice(styles, 'command-style')}.`,
+    );
   }
 
   return `${piece.permanentName} has served the ${kingdom} through years of preparation for this final battle.`;
+}
+
+function characterPronouns(
+  type: ChessPieceType,
+  characterName: string | undefined,
+  stableId: string,
+): 'he/him' | 'she/her' {
+  if (type === 'q') return 'she/her';
+  if (type === 'k') return 'he/him';
+  if (characterName) {
+    return FEMININE_NAMES.has(characterName) ? 'she/her' : 'he/him';
+  }
+  return hashSeed(`${stableId}:pronouns`) % 2 === 0 ? 'he/him' : 'she/her';
+}
+
+function applyCharacterPronouns(
+  text: string,
+  pronouns: 'he/him' | 'she/her',
+): string {
+  const feminine = pronouns === 'she/her';
+  const subject = feminine ? 'she' : 'he';
+  const object = feminine ? 'her' : 'him';
+  const possessive = feminine ? 'her' : 'his';
+  const reflexive = feminine ? 'herself' : 'himself';
+  const presentVerbs: Record<string, string> = {
+    carry: 'carries',
+    conceal: 'conceals',
+    consider: 'considers',
+    crave: 'craves',
+    cultivate: 'cultivates',
+    demand: 'demands',
+    distrust: 'distrusts',
+    endure: 'endures',
+    hide: 'hides',
+    keep: 'keeps',
+    meet: 'meets',
+    plan: 'plans',
+    prize: 'prizes',
+    pursue: 'pursues',
+    regard: 'regards',
+    speak: 'speaks',
+    teach: 'teaches',
+  };
+
+  let result = text
+    .replace(/\bthemselves\b/gi, reflexive)
+    .replace(/\bTheir\b/g, capitalize(possessive))
+    .replace(/\btheir\b/g, possessive)
+    .replace(/\bthem\b/gi, object)
+    .replace(/\bThey are\b/g, `${capitalize(subject)} is`)
+    .replace(/\bthey are\b/g, `${subject} is`)
+    .replace(/\bThey have\b/g, `${capitalize(subject)} has`)
+    .replace(/\bthey have\b/g, `${subject} has`)
+    .replace(/\bThey were\b/g, `${capitalize(subject)} was`)
+    .replace(/\bthey were\b/g, `${subject} was`);
+  for (const [verb, singular] of Object.entries(presentVerbs)) {
+    result = result
+      .replace(
+        new RegExp(`\\bThey ${verb}\\b`, 'g'),
+        `${capitalize(subject)} ${singular}`,
+      )
+      .replace(new RegExp(`\\bthey ${verb}\\b`, 'g'), `${subject} ${singular}`);
+  }
+  return result
+    .replace(/\bThey\b/g, capitalize(subject))
+    .replace(/\bthey\b/g, subject);
+}
+
+function capitalize(value: string): string {
+  return `${value[0].toUpperCase()}${value.slice(1)}`;
 }
 
 function shuffledCharacterNames(seed: string): string[] {

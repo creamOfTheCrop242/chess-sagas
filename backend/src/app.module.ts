@@ -16,6 +16,8 @@ import { SagaGenerationModule } from './generation/saga-generation.module';
 import { AuthModule } from './auth/auth.module';
 import { BillingModule } from './billing/billing.module';
 import { CommunityModule } from './community/community.module';
+import { OpenAiModule } from './openai/openai.module';
+import { ReportingModule } from './reporting/reporting.module';
 
 @Module({
   imports: [
@@ -24,6 +26,7 @@ import { CommunityModule } from './community/community.module';
       envFilePath: '.env',
     }),
     DatabaseModule,
+    OpenAiModule,
     GenerationModule,
     GamesModule,
     PgnModule,
@@ -37,6 +40,7 @@ import { CommunityModule } from './community/community.module';
     AuthModule,
     BillingModule,
     CommunityModule,
+    ReportingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -14,6 +14,7 @@ import {
   logOpenAiGenerationFailure,
   promptCacheOptions,
 } from '../openai/openai-generation';
+import { OpenAiTelemetryService } from '../openai/openai-telemetry.service';
 import type {
   NarrativeAnalysisProvider,
   NarrativeAnalysisRequest,
@@ -30,7 +31,10 @@ export class OpenAiNarrativeAnalysisProvider implements NarrativeAnalysisProvide
   private readonly logger = new Logger(OpenAiNarrativeAnalysisProvider.name);
   private readonly client: OpenAI | null;
 
-  constructor(config: ConfigService) {
+  constructor(
+    config: ConfigService,
+    private readonly telemetryRecorder: OpenAiTelemetryService,
+  ) {
     const apiKey = config.get<string>('OPENAI_API_KEY');
     this.model =
       config.get<string>('NARRATIVE_ANALYSIS_MODEL') || 'gpt-5.6-luna';
@@ -81,6 +85,7 @@ export class OpenAiNarrativeAnalysisProvider implements NarrativeAnalysisProvide
         startedAt,
         response,
         callTelemetry,
+        this.telemetryRecorder,
       );
       return analysis;
     } catch (error) {
@@ -91,6 +96,7 @@ export class OpenAiNarrativeAnalysisProvider implements NarrativeAnalysisProvide
         startedAt,
         error,
         callTelemetry,
+        this.telemetryRecorder,
       );
       if (
         error instanceof ServiceUnavailableException ||

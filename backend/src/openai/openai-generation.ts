@@ -19,6 +19,24 @@ interface GenerationCallTelemetry extends GenerationTelemetryContext {
   payloadBytes: number;
 }
 
+export type OpenAiCallRecord = GenerationCallTelemetry & {
+  timestamp: string;
+  stage: string;
+  model: string;
+  status: 'SUCCEEDED' | 'FAILED';
+  durationMs: number;
+  inputTokens: number;
+  cachedInputTokens: number;
+  cacheWriteTokens: number;
+  reasoningTokens: number;
+  outputTokens: number;
+  error?: string;
+};
+
+export interface OpenAiTelemetryRecorder {
+  record(entry: OpenAiCallRecord): void;
+}
+
 export function createOpenAiGenerationClient(
   apiKey: string,
   config: ConfigService,
@@ -128,6 +146,7 @@ export function logOpenAiGeneration(
     } | null;
   },
   telemetry: GenerationCallTelemetry,
+  recorder?: OpenAiTelemetryRecorder,
 ): void {
   const usage = response.usage;
   const durationMs = Date.now() - startedAt;
@@ -146,7 +165,7 @@ export function logOpenAiGeneration(
       `attempt=${telemetry.attempt}`,
     ].join(' '),
   );
-  appendOpenAiCallLog({
+  const entry: OpenAiCallRecord = {
     timestamp: new Date().toISOString(),
     stage,
     model,
@@ -158,7 +177,9 @@ export function logOpenAiGeneration(
     reasoningTokens: usage?.output_tokens_details?.reasoning_tokens ?? 0,
     outputTokens: usage?.output_tokens ?? 0,
     ...telemetry,
-  });
+  };
+  appendOpenAiCallLog(entry);
+  recorder?.record(entry);
 }
 
 export function logOpenAiGenerationFailure(
@@ -168,6 +189,7 @@ export function logOpenAiGenerationFailure(
   startedAt: number,
   error: unknown,
   telemetry: GenerationCallTelemetry,
+  recorder?: OpenAiTelemetryRecorder,
 ): void {
   const durationMs = Date.now() - startedAt;
   const message =
@@ -175,7 +197,7 @@ export function logOpenAiGenerationFailure(
   logger.error(
     `OpenAI ${stage} failed model=${model} durationMs=${durationMs} error=${message}`,
   );
-  appendOpenAiCallLog({
+  const entry: OpenAiCallRecord = {
     timestamp: new Date().toISOString(),
     stage,
     model,
@@ -188,10 +210,40 @@ export function logOpenAiGenerationFailure(
     outputTokens: 0,
     error: message,
     ...telemetry,
-  });
+  };
+  appendOpenAiCallLog(entry);
+  recorder?.record(entry);
 }
 
-function appendOpenAiCallLog(entry: Record<string, unknown>): void {
+export function estimateOpenAiCostMicros(
+  entry: Pick<
+    OpenAiCallRecord,
+    | 'model'
+    | 'inputTokens'
+    | 'cachedInputTokens'
+    | 'cacheWriteTokens'
+    | 'outputTokens'
+  >,
+): number {
+  const rates = {
+    'gpt-5.6-luna': { input: 1, cached: 0.1, write: 1.25, output: 6 },
+    'gpt-5.6-terra': { input: 2.5, cached: 0.25, write: 3.125, output: 15 },
+    'gpt-5.6-sol': { input: 5, cached: 0.5, write: 6.25, output: 30 },
+  }[entry.model];
+  if (!rates) return 0;
+  const cached = entry.cachedInputTokens || 0;
+  const write = entry.cacheWriteTokens || 0;
+  const uncached = Math.max(0, entry.inputTokens - cached - write);
+  const dollars =
+    (uncached * rates.input +
+      cached * rates.cached +
+      write * rates.write +
+      entry.outputTokens * rates.output) /
+    1_000_000;
+  return Math.round(dollars * 1_000_000);
+}
+
+function appendOpenAiCallLog(entry: { timestamp: string }): void {
   try {
     const directory =
       process.env.AI_CALL_LOG_DIR || join(process.cwd(), 'logs');

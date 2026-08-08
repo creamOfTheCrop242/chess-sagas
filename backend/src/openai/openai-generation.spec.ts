@@ -3,6 +3,7 @@ import { PieceIdentityService } from '../chess/piece-identity.service';
 import { PgnService } from '../pgn/pgn.service';
 import {
   compactGameLedgerForModel,
+  estimateOpenAiCostMicros,
   serializeRequestWithoutTelemetry,
   serializeRequestWithCharacterRegistry,
 } from './openai-generation';
@@ -117,6 +118,32 @@ describe('OpenAI generation request serialization', () => {
       JSON.stringify(ledger).length,
     );
     expect(compact.events).toHaveLength(ledger.events.length);
+  });
+});
+
+describe('OpenAI generation cost estimation', () => {
+  it('separates uncached, cached, cache-write, and output tokens', () => {
+    expect(
+      estimateOpenAiCostMicros({
+        model: 'gpt-5.6-terra',
+        inputTokens: 10_000,
+        cachedInputTokens: 2_000,
+        cacheWriteTokens: 3_000,
+        outputTokens: 4_000,
+      }),
+    ).toBe(82_375);
+  });
+
+  it('returns zero for an unpriced model', () => {
+    expect(
+      estimateOpenAiCostMicros({
+        model: 'unknown',
+        inputTokens: 100,
+        cachedInputTokens: 0,
+        cacheWriteTokens: 0,
+        outputTokens: 100,
+      }),
+    ).toBe(0);
   });
 });
 

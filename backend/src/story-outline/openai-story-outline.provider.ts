@@ -14,6 +14,7 @@ import {
   promptCacheOptions,
   serializeRequestWithCharacterRegistry,
 } from '../openai/openai-generation';
+import { OpenAiTelemetryService } from '../openai/openai-telemetry.service';
 import type {
   StoryOutlineProvider,
   StoryOutlineRequest,
@@ -27,7 +28,10 @@ export class OpenAiStoryOutlineProvider implements StoryOutlineProvider {
   private readonly logger = new Logger(OpenAiStoryOutlineProvider.name);
   private readonly client: OpenAI | null;
 
-  constructor(config: ConfigService) {
+  constructor(
+    config: ConfigService,
+    private readonly telemetryRecorder: OpenAiTelemetryService,
+  ) {
     const apiKey = config.get<string>('OPENAI_API_KEY');
     this.model = config.get<string>('STORY_OUTLINE_MODEL') || 'gpt-5.6-luna';
     this.client = apiKey ? createOpenAiGenerationClient(apiKey, config) : null;
@@ -65,6 +69,7 @@ export class OpenAiStoryOutlineProvider implements StoryOutlineProvider {
         startedAt,
         response,
         callTelemetry,
+        this.telemetryRecorder,
       );
       return outline;
     } catch (error) {
@@ -75,6 +80,7 @@ export class OpenAiStoryOutlineProvider implements StoryOutlineProvider {
         startedAt,
         error,
         callTelemetry,
+        this.telemetryRecorder,
       );
       if (
         error instanceof ServiceUnavailableException ||

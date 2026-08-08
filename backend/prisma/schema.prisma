@@ -70,6 +70,11 @@ enum GenerationBillingState {
   RELEASED
 }
 
+enum AiCallStatus {
+  SUCCEEDED
+  FAILED
+}
+
 model Game {
   id             String             @id @default(cuid())
   ownerId        String?
@@ -84,6 +89,7 @@ model Game {
   generationRuns GenerationRun[]
   sagaJob        SagaGenerationJob?
   sagas          Saga[]
+  aiCalls        AiCall[]
   owner          User?              @relation(fields: [ownerId], references: [id], onDelete: SetNull)
 
   @@index([ownerId, createdAt])
@@ -192,9 +198,38 @@ model GenerationRun {
   storyValidation   StoryValidation?
   sceneBreakdown    SceneBreakdown?
   saga              Saga?
+  aiCalls           AiCall[]
 
   @@index([gameId, createdAt])
   @@index([status, createdAt])
+}
+
+model AiCall {
+  id                  String        @id @default(cuid())
+  gameId              String
+  generationRunId     String
+  stage               String
+  model               String
+  status              AiCallStatus
+  attempt             Int           @default(1)
+  repairMode          String?
+  durationMs          Int
+  payloadBytes        Int
+  inputTokens         Int
+  cachedInputTokens   Int
+  cacheWriteTokens    Int
+  reasoningTokens     Int
+  outputTokens        Int
+  estimatedCostMicros Int
+  error               String?       @db.Text
+  createdAt           DateTime      @default(now())
+  game                Game          @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  generationRun       GenerationRun @relation(fields: [generationRunId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([gameId, createdAt])
+  @@index([generationRunId])
+  @@index([stage, model, status, createdAt])
 }
 
 model Saga {

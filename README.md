@@ -332,3 +332,33 @@ List responses use cursor pagination and cap `limit` at 50. Public endpoints
 never expose account IDs or email addresses. When a creator disables
 `showCreatorCredit`, their identity is removed from saga responses and their
 profile does not enumerate their sagas.
+
+### Administrative reporting (Phase 1)
+
+OpenAI usage is persisted to Postgres for every successful or failed model
+call. The record includes stage, model, retry/repair type, duration, payload
+size, token categories, error text, and estimated cost. Telemetry persistence
+is best-effort and can never fail saga generation.
+
+Grant access with a comma-separated allowlist of authenticated account emails:
+
+```text
+REPORTING_ADMIN_EMAILS=dhudson0242@gmail.com
+```
+
+The private endpoint `GET /admin/reports/overview` requires an authenticated
+session whose normalized email is in that allowlist. It accepts either
+`?days=30` (the default) or ISO `from` and `to` parameters, with a maximum
+range of 366 days. The response aggregates:
+
+- completed, failed, active, reused, and billed generation jobs
+- first-pass, retry-recovered, and exhausted pipeline stages
+- AI calls, failures, duration, tokens, retries, and estimated cost
+- customer, unlimited-account, anonymous, and reused cost attribution
+- credits granted, purchased, consumed, and refunded
+- gross Stripe revenue, refunds, net revenue, and estimated customer margin
+- grouped AI, pipeline, and terminal generation errors
+
+Apply the accompanying Prisma migration before expecting AI calls to be
+recorded. Existing JSONL logs are not imported automatically; reporting begins
+with calls made after this migration and backend version are running.

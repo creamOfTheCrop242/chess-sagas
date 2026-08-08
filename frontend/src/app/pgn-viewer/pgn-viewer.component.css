@@ -258,6 +258,21 @@ button:disabled {
   font-style: italic;
 }
 
+.battle-location {
+  margin: -0.15rem 0 0.65rem;
+  color: var(--ink-muted);
+  text-align: center;
+}
+
+.battle-location span {
+  margin-right: 0.35rem;
+  color: var(--seal);
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 .board-frame {
   margin: 0 auto;
   max-width: 480px;

@@ -71,6 +71,12 @@
         >
       }
       <h2>{{ gameTitle }}</h2>
+      @if (battlefieldEnvironment; as battlefield) {
+        <p class="battle-location">
+          <span>Battlefield</span>
+          {{ battlefield.name }}
+        </p>
+      }
       @if (game.headers["Event"] && game.headers["Event"] !== "?") {
         <p class="event">{{ game.headers["Event"] }}</p>
       }

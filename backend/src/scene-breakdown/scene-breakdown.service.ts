@@ -136,26 +136,46 @@ export class SceneBreakdownService {
   }
 
   async findLatest(gameId: string) {
-    const run = await this.prisma.generationRun.findFirst({
-      where: {
-        gameId,
-        status: 'COMPLETED',
-        OR: [
-          {
-            currentStage: 'STORY',
-            promptVersion: FULL_STORY_PROMPT_VERSION,
-          },
-          {
-            currentStage: 'SCENE_BREAKDOWN',
-            promptVersion: SCENE_BREAKDOWN_PROMPT_VERSION,
-          },
-        ],
-      },
-      orderBy: { createdAt: 'desc' },
-      include: { sceneBreakdown: true },
-    });
+    const [run, analysisRun] = await Promise.all([
+      this.prisma.generationRun.findFirst({
+        where: {
+          gameId,
+          status: 'COMPLETED',
+          OR: [
+            {
+              currentStage: 'STORY',
+              promptVersion: FULL_STORY_PROMPT_VERSION,
+            },
+            {
+              currentStage: 'SCENE_BREAKDOWN',
+              promptVersion: SCENE_BREAKDOWN_PROMPT_VERSION,
+            },
+          ],
+        },
+        orderBy: { createdAt: 'desc' },
+        include: { sceneBreakdown: true },
+      }),
+      this.prisma.generationRun.findFirst({
+        where: {
+          gameId,
+          status: 'COMPLETED',
+          currentStage: 'NARRATIVE_ANALYSIS',
+          narrativeAnalysis: { isNot: null },
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { narrativeAnalysis: { select: { data: true } } },
+      }),
+    ]);
     if (!run)
       throw new NotFoundException('No completed scene breakdown exists');
-    return run;
+    const analysis = analysisRun?.narrativeAnalysis?.data;
+    return {
+      ...run,
+      battlefieldEnvironment:
+        analysis && typeof analysis === 'object'
+          ? ((analysis as { battlefieldEnvironment?: unknown })
+              .battlefieldEnvironment ?? null)
+          : null,
+    };
   }
 }

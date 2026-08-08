@@ -109,6 +109,18 @@ export class SagasService {
           select: {
             ...sagaInclude.game.select,
             rawPgn: true,
+            generationRuns: {
+              where: {
+                status: 'COMPLETED',
+                currentStage: 'NARRATIVE_ANALYSIS',
+                narrativeAnalysis: { isNot: null },
+              },
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+              select: {
+                narrativeAnalysis: { select: { data: true } },
+              },
+            },
           },
         },
         generationRun: {
@@ -132,6 +144,10 @@ export class SagasService {
       ledger: saga.game.ledger?.data ?? null,
       storyMarkdown: saga.generationRun.generatedStory?.storyMarkdown ?? null,
       sceneBreakdown: saga.generationRun.sceneBreakdown?.data ?? null,
+      battlefieldEnvironment:
+        battlefieldEnvironmentFrom(
+          saga.game.generationRuns[0]?.narrativeAnalysis?.data,
+        ) ?? null,
     };
   }
 
@@ -215,4 +231,9 @@ export class SagasService {
         saga.createdAt,
     };
   }
+}
+
+function battlefieldEnvironmentFrom(value: unknown): unknown {
+  if (!value || typeof value !== 'object') return null;
+  return (value as { battlefieldEnvironment?: unknown }).battlefieldEnvironment;
 }

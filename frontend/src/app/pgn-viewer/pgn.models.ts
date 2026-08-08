@@ -163,8 +163,15 @@ export type StoryWound = {
   recoveryPly: number | null;
 };
 
+export type BattlefieldEnvironment = {
+  id: string;
+  name: string;
+  description: string;
+};
+
 export type SceneBreakdownResponse = {
   status: 'COMPLETED';
+  battlefieldEnvironment?: BattlefieldEnvironment | null;
   sceneBreakdown: {
     data: {
       scenes: PlaybackScene[];
@@ -207,6 +214,7 @@ export type ArchivedRecord = {
   completedAt: string;
   ledger: { data: GameLedger };
   sceneBreakdown: SceneBreakdownResponse['sceneBreakdown'];
+  battlefieldEnvironment?: BattlefieldEnvironment | null;
 };
 
 export type SagaStage =

@@ -15,6 +15,7 @@ import { GenerationModule } from './generation/generation.module';
 import { SagaGenerationModule } from './generation/saga-generation.module';
 import { AuthModule } from './auth/auth.module';
 import { BillingModule } from './billing/billing.module';
+import { CommunityModule } from './community/community.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { BillingModule } from './billing/billing.module';
     SagaGenerationModule,
     AuthModule,
     BillingModule,
+    CommunityModule,
   ],
   controllers: [AppController],
   providers: [AppService],

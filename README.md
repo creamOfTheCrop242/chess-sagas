@@ -308,3 +308,24 @@ Response:
 ```
 
 Returns `503` if `OPENAI_API_KEY` is missing.
+
+### Public sagas and profiles
+
+The community API provides the backend foundation for the public Hall of
+Records and creator pages:
+
+- `GET /sagas?limit=20&cursor=...&q=...&creator=handle` lists public sagas.
+- `GET /sagas/:id` returns one public saga with its PGN, ledger, story, and
+  aligned scenes for replay.
+- `GET /sagas/mine` lists the signed-in user's sagas, including non-public
+  entries.
+- `GET /profiles/:handle` returns a public creator profile.
+- `GET /profiles/:handle/sagas` lists that creator's attributed public sagas.
+- `GET /profiles/me` creates or returns the signed-in user's profile.
+- `PATCH /profiles/me` edits `handle`, `displayName`, `bio`, and
+  `showCreatorCredit`.
+
+List responses use cursor pagination and cap `limit` at 50. Public endpoints
+never expose account IDs or email addresses. When a creator disables
+`showCreatorCredit`, their identity is removed from saga responses and their
+profile does not enumerate their sagas.

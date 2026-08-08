@@ -8,7 +8,8 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { forkJoin, of, switchMap } from 'rxjs';
+import { forkJoin, map, of, switchMap } from 'rxjs';
+import { BillingClientService } from '../billing/billing.service';
 import { ChessboardComponent } from './chessboard.component';
 import { PgnApiService } from './pgn-api.service';
 import {
@@ -96,15 +97,26 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
   constructor(
     private readonly pgnApi: PgnApiService,
     @Optional() private readonly route?: ActivatedRoute,
+    @Optional() private readonly billing?: BillingClientService,
   ) {}
 
   ngOnInit(): void {
     const recordId = this.route?.snapshot.paramMap.get('id');
     if (recordId) {
       this.loadArchivedRecord(recordId);
+    } else if (this.isPageReload()) {
+      this.pgnText = '';
+      this.pgnApi.forgetRecentGeneration();
     } else {
       this.restoreRecentGeneration();
     }
+  }
+
+  private isPageReload(): boolean {
+    const navigation = performance.getEntriesByType?.('navigation')[0] as
+      | PerformanceNavigationTiming
+      | undefined;
+    return navigation?.type === 'reload';
   }
 
   get currentFen(): string {
@@ -466,11 +478,37 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.error = null;
     this.storyError = null;
+    this.billingFailure = null;
+    const billing = this.billing?.status();
+    const needsCredit = Boolean(
+      billing?.enforcementEnabled &&
+        !billing.unlimited &&
+        (billing.available ?? 0) < 1,
+    );
     forkJoin({
       parsed: this.pgnApi.parse(this.pgnText),
       saved: this.pgnApi.createGame(this.pgnText),
-    }).subscribe({
-      next: ({ parsed, saved }) => {
+    })
+      .pipe(
+        switchMap(({ parsed, saved }) =>
+          needsCredit
+            ? this.pgnApi.getGenerationStatus(saved.id).pipe(
+                map((status) => ({
+                  parsed,
+                  saved,
+                  reusable: status.stages.scenes,
+                })),
+              )
+            : of({ parsed, saved, reusable: false }),
+        ),
+      )
+      .subscribe({
+      next: ({ parsed, saved, reusable }) => {
+        if (needsCredit && !reusable) {
+          this.loading = false;
+          this.billingFailure = 'credits';
+          return;
+        }
         this.game = { ...parsed, ledger: saved.ledger.data };
         this.gameId = saved.id;
         this.currentPly = 0;
@@ -493,7 +531,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
         this.loading = false;
         this.error = this.extractError(error, 'Failed to prepare game');
       },
-    });
+      });
   }
 
   private loadArchivedRecord(recordId: string): void {
@@ -556,10 +594,12 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
           this.applySagaResponse(response);
           this.sagaGenerating = false;
           this.stopGenerationTimer();
+          this.billing?.refresh();
         },
         error: (error: unknown) => {
           this.sagaGenerating = false;
           this.stopGenerationTimer();
+          this.billing?.refresh();
           if (error instanceof HttpErrorResponse && error.status === 401) {
             this.billingFailure = 'signin';
             this.storyError = 'Sign in to forge a new saga.';

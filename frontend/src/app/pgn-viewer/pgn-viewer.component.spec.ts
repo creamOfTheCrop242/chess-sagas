@@ -2,6 +2,7 @@ import { PgnApiService } from './pgn-api.service';
 import { PgnViewerComponent } from './pgn-viewer.component';
 import type { ParsedPgn } from './pgn.models';
 import { of } from 'rxjs';
+import { BillingClientService } from '../billing/billing.service';
 
 describe('PgnViewerComponent character inspection', () => {
   let component: PgnViewerComponent;
@@ -458,6 +459,126 @@ describe('PgnViewerComponent character inspection', () => {
 
     expect(submitted.gameId).toBe('saved-game');
     expect(submitted.game?.ledger.pieces[0].permanentName).toBe('Saved Mara');
+  });
+
+  it('stops a zero-credit user at Begin the Saga for a new PGN', () => {
+    const api = {
+      parse: () => of(structuredClone(game)),
+      createGame: () =>
+        of({ id: 'new-game', ledger: { data: structuredClone(game.ledger) } }),
+      getGenerationStatus: () =>
+        of({
+          state: 'idle',
+          currentStage: 'analysis',
+          error: null,
+          stages: {
+            analysis: false,
+            outline: false,
+            story: false,
+            validation: false,
+            scenes: false,
+          },
+        }),
+    } as unknown as PgnApiService;
+    const billing = {
+      status: () => ({
+        configured: true,
+        enforcementEnabled: true,
+        unlimited: false,
+        balance: 0,
+        reserved: 0,
+        available: 0,
+        subscription: null,
+      }),
+    } as unknown as BillingClientService;
+    const viewer = new PgnViewerComponent(api, undefined, billing);
+    viewer.pgnText = '1. e4 e5';
+
+    viewer.submit();
+
+    expect(viewer.game).toBeNull();
+    expect(viewer.billingFailure).toBe('credits');
+    expect(viewer.loading).toBeFalse();
+  });
+
+  it('lets a zero-credit user open a completed reusable saga', () => {
+    const api = {
+      parse: () => of(structuredClone(game)),
+      createGame: () =>
+        of({
+          id: 'reusable-game',
+          ledger: { data: structuredClone(game.ledger) },
+        }),
+      getGenerationStatus: () =>
+        of({
+          state: 'completed',
+          currentStage: 'scenes',
+          error: null,
+          stages: {
+            analysis: true,
+            outline: true,
+            story: true,
+            validation: true,
+            scenes: true,
+          },
+        }),
+    } as unknown as PgnApiService;
+    const billing = {
+      status: () => ({
+        configured: true,
+        enforcementEnabled: true,
+        unlimited: false,
+        balance: 0,
+        reserved: 0,
+        available: 0,
+        subscription: null,
+      }),
+    } as unknown as BillingClientService;
+    const viewer = new PgnViewerComponent(api, undefined, billing);
+    viewer.pgnText = '1. e4 e5';
+
+    viewer.submit();
+
+    expect(viewer.gameId).toBe('reusable-game');
+    expect(viewer.billingFailure).toBeNull();
+  });
+
+  it('refreshes the displayed credit balance when saga generation completes', () => {
+    const api = {
+      generateSaga: () =>
+        of({
+          sceneBreakdown: {
+            data: { scenes: [] },
+          },
+        }),
+    } as unknown as PgnApiService;
+    const billing = {
+      refresh: jasmine.createSpy('refresh'),
+    } as unknown as BillingClientService;
+    const viewer = new PgnViewerComponent(api, undefined, billing);
+    viewer.gameId = 'generated-game';
+
+    viewer.generateSaga();
+
+    expect(billing.refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears the PGN and does not restore generation after a page refresh', () => {
+    spyOn(performance, 'getEntriesByType').and.returnValue([
+      { type: 'reload' } as unknown as PerformanceNavigationTiming,
+    ]);
+    const api = {
+      forgetRecentGeneration: jasmine.createSpy('forgetRecentGeneration'),
+      recentGenerationGameId: jasmine.createSpy('recentGenerationGameId'),
+    } as unknown as PgnApiService;
+    const viewer = new PgnViewerComponent(api);
+    viewer.pgnText = 'stale PGN';
+
+    viewer.ngOnInit();
+
+    expect(viewer.pgnText).toBe('');
+    expect(api.forgetRecentGeneration).toHaveBeenCalledTimes(1);
+    expect(api.recentGenerationGameId).not.toHaveBeenCalled();
   });
 
   it('uses the archived saved ledger when replaying a Hall record', () => {

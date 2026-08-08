@@ -22,6 +22,8 @@ import {
   SagaStage,
   SagaStageState,
   StoryWound,
+  BattlefieldEnvironment,
+  SceneBreakdownResponse,
 } from './pgn.models';
 
 type FallenPiece = {
@@ -78,6 +80,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
   defeatedKingDeathDescription = '';
   defeatedKingFate = '';
   defeatedSealFate: 'destroyed' | 'intact' | '' = '';
+  battlefieldEnvironment: BattlefieldEnvironment | null = null;
   sagaGenerating = false;
   storyError: string | null = null;
   recordReplay = false;
@@ -116,8 +119,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
 
   private isPageReload(): boolean {
     const navigation = performance.getEntriesByType?.('navigation')[0] as
-      | PerformanceNavigationTiming
-      | undefined;
+      PerformanceNavigationTiming | undefined;
     return navigation?.type === 'reload';
   }
 
@@ -151,10 +153,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
   }
   get gameTitle(): string {
     if (!this.game) return '';
-    const title = `${this.game.realms.white} vs ${this.game.realms.black}`;
-    return this.game.headers['Result']
-      ? `${title} (${this.game.headers['Result']})`
-      : title;
+    return `${this.game.realms.white} vs ${this.game.realms.black}`;
   }
   get canGoBack(): boolean {
     return !!this.game && this.currentPly > 0;
@@ -297,9 +296,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
     const visibleWounds = this.visibleWoundsFor(piece);
     const kingStrain = this.kingStrainFor(piece);
     if (!visibleWounds.length) {
-      return (
-        kingStrain ?? { label: 'Unharmed', detail: null, tone: 'healthy' }
-      );
+      return kingStrain ?? { label: 'Unharmed', detail: null, tone: 'healthy' };
     }
     const activeWounds = visibleWounds.filter(
       (wound) =>
@@ -406,17 +403,17 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
     const piece = this.inspectedPiece;
     if (!piece) return [];
     const woundHistory = this.visibleWoundsFor(piece).map((wound) => ({
-        inflictedAtPly: wound.inflictedAtPly,
-        injury: this.safeWoundInjury(wound, piece),
-        effects: wound.lastingEffects.filter((effect) =>
-          this.isSafeWoundStatusText(effect, piece),
-        ),
-        state:
-          wound.recoveryPly !== null && this.currentPly >= wound.recoveryPly
-            ? ('recovered' as const)
-            : ('active' as const),
-        recoveryPly: wound.recoveryPly,
-      }));
+      inflictedAtPly: wound.inflictedAtPly,
+      injury: this.safeWoundInjury(wound, piece),
+      effects: wound.lastingEffects.filter((effect) =>
+        this.isSafeWoundStatusText(effect, piece),
+      ),
+      state:
+        wound.recoveryPly !== null && this.currentPly >= wound.recoveryPly
+          ? ('recovered' as const)
+          : ('active' as const),
+      recoveryPly: wound.recoveryPly,
+    }));
     const strainHistory = this.kingCheckEvents(piece).map((event, index) => ({
       inflictedAtPly: event.ply,
       injury: this.kingStrainLabel(index + 1),
@@ -484,8 +481,8 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
     const billing = this.billing?.status();
     const needsCredit = Boolean(
       billing?.enforcementEnabled &&
-        !billing.unlimited &&
-        (billing.available ?? 0) < 1,
+      !billing.unlimited &&
+      (billing.available ?? 0) < 1,
     );
     const needsSignIn = Boolean(this.auth && !this.auth.user());
     const needsAccessCheck = needsCredit || needsSignIn;
@@ -507,34 +504,35 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
         ),
       )
       .subscribe({
-      next: ({ parsed, saved, reusable }) => {
-        if (needsAccessCheck && !reusable) {
+        next: ({ parsed, saved, reusable }) => {
+          if (needsAccessCheck && !reusable) {
+            this.loading = false;
+            this.billingFailure = needsSignIn ? 'signin' : 'credits';
+            return;
+          }
+          this.game = { ...parsed, ledger: saved.ledger.data };
+          this.gameId = saved.id;
+          this.currentPly = 0;
+          this.hoveredPieceId = null;
+          this.selectedPieceId = null;
+          this.fallenRosterOpen = false;
+          this.scenes = [];
+          this.wounds = [];
+          this.epilogue = '';
+          this.laterEpilogueHeading = '';
+          this.laterEpilogue = '';
+          this.defeatedKingDeathDescription = '';
+          this.defeatedKingFate = '';
+          this.defeatedSealFate = '';
+          this.battlefieldEnvironment = null;
+          this.pipelineState = this.initialPipelineState();
+          this.resetGenerationTimer();
           this.loading = false;
-          this.billingFailure = needsSignIn ? 'signin' : 'credits';
-          return;
-        }
-        this.game = { ...parsed, ledger: saved.ledger.data };
-        this.gameId = saved.id;
-        this.currentPly = 0;
-        this.hoveredPieceId = null;
-        this.selectedPieceId = null;
-        this.fallenRosterOpen = false;
-        this.scenes = [];
-        this.wounds = [];
-        this.epilogue = '';
-        this.laterEpilogueHeading = '';
-        this.laterEpilogue = '';
-        this.defeatedKingDeathDescription = '';
-        this.defeatedKingFate = '';
-        this.defeatedSealFate = '';
-        this.pipelineState = this.initialPipelineState();
-        this.resetGenerationTimer();
-        this.loading = false;
-      },
-      error: (error: unknown) => {
-        this.loading = false;
-        this.error = this.extractError(error, 'Failed to prepare game');
-      },
+        },
+        error: (error: unknown) => {
+          this.loading = false;
+          this.error = this.extractError(error, 'Failed to prepare game');
+        },
       });
   }
 
@@ -560,6 +558,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
           this.gameId = record.id;
           this.currentPly = 0;
           this.scenes = playback.scenes;
+          this.battlefieldEnvironment = record.battlefieldEnvironment ?? null;
           this.wounds = playback.wounds ?? [];
           this.epilogue = playback.epilogue ?? '';
           this.laterEpilogueHeading = playback.laterEpilogueHeading ?? '';
@@ -611,7 +610,8 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
           }
           if (error instanceof HttpErrorResponse && error.status === 402) {
             this.billingFailure = 'credits';
-            this.storyError = 'A saga credit is required to begin this chronicle.';
+            this.storyError =
+              'A saga credit is required to begin this chronicle.';
             return;
           }
           this.storyError = `Saga generation could not finish. Select “Retry saga generation” to try again. ${this.extractError(
@@ -651,20 +651,8 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
       });
   }
 
-  private applySagaResponse(response: {
-    sceneBreakdown: {
-      data: {
-        scenes: PlaybackScene[];
-        wounds?: StoryWound[];
-        epilogue?: string | null;
-        laterEpilogueHeading?: string | null;
-        laterEpilogue?: string | null;
-        defeatedKingDeathDescription?: string | null;
-        defeatedKingFate?: string;
-        defeatedSealFate?: 'destroyed' | 'intact';
-      };
-    };
-  }): void {
+  private applySagaResponse(response: SceneBreakdownResponse): void {
+    this.battlefieldEnvironment = response.battlefieldEnvironment ?? null;
     this.scenes = response.sceneBreakdown.data.scenes;
     this.wounds = response.sceneBreakdown.data.wounds ?? [];
     this.epilogue = response.sceneBreakdown.data.epilogue ?? '';
@@ -937,12 +925,14 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
   private kingStrainLabel(count: number): string {
     if (count === 1) return 'The Royal Seal wards absorbed a damaging impact.';
     if (count === 2) return 'A second assault battered the Royal Seal wards.';
-    if (count === 3) return 'Repeated attacks wounded the King through the Seal bond.';
+    if (count === 3)
+      return 'Repeated attacks wounded the King through the Seal bond.';
     return 'Another direct assault deepened the King’s accumulated damage.';
   }
   private kingStrainEffect(count: number): string {
     if (count === 1) return 'The inter-universal connection begins to falter.';
-    if (count === 2) return 'Maintaining the realm’s magic demands visible effort.';
+    if (count === 2)
+      return 'Maintaining the realm’s magic demands visible effort.';
     if (count === 3) return 'Pain and magical exhaustion hinder concentration.';
     return 'The failing wards and cumulative strain leave the King near collapse.';
   }

@@ -170,6 +170,7 @@ export class PgnApiService {
         completedAt: string;
         ledger: ArchivedRecord['ledger']['data'];
         sceneBreakdown: ArchivedRecord['sceneBreakdown']['data'];
+        battlefieldEnvironment: ArchivedRecord['battlefieldEnvironment'];
       }>(`${this.apiBase}/sagas/${gameId}`, { withCredentials: true })
       .pipe(
         map((record) => ({
@@ -182,6 +183,7 @@ export class PgnApiService {
           completedAt: record.completedAt,
           ledger: { data: record.ledger },
           sceneBreakdown: { data: record.sceneBreakdown },
+          battlefieldEnvironment: record.battlefieldEnvironment,
         })),
       );
   }

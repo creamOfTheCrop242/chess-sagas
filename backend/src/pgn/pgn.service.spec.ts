@@ -213,6 +213,45 @@ describe('PgnService deterministic ledger', () => {
     expect(histories(pgn).every(Boolean)).toBe(true);
   });
 
+  it('composes broad backstory variety across different battle records', () => {
+    const ledgers = Array.from(
+      { length: 12 },
+      (_, index) =>
+        service.parse(
+          `[White "Ada"]\n[Black "Turing"]\n[Date "2026.08.${String(index + 1).padStart(2, '0')}"]\n[Result "*"]\n\n1. e4 e5 *`,
+        ).ledger,
+    );
+    const types = [
+      'grunt',
+      'moving-fortress',
+      'knight-commander',
+      'archwizard',
+      'queen',
+      'king',
+    ] as const;
+
+    for (const type of types) {
+      const histories = ledgers.flatMap((ledger) =>
+        ledger.pieces
+          .filter((piece) => piece.fantasyType === type)
+          .map((piece) => piece.backstory),
+      );
+      expect(new Set(histories).size).toBeGreaterThan(histories.length / 2);
+    }
+  });
+
+  it('preserves the established lore inside composed elite backstories', () => {
+    const pieces = service.parse('[Result "*"]\n\n1. e4 e5 *').ledger.pieces;
+    const story = (type: (typeof pieces)[number]['fantasyType']) =>
+      pieces.find((piece) => piece.fantasyType === type)?.backstory ?? '';
+
+    expect(story('king')).toContain('Royal Seal');
+    expect(story('queen')).toContain('fortress-grade armor');
+    expect(story('archwizard')).toContain('Teleportation');
+    expect(story('moving-fortress')).toContain('cannot survive apart');
+    expect(story('knight-commander')).toContain('striking forces');
+  });
+
   it('reverses east and west for commanders, Archwizards, and Fortresses', () => {
     const parsed = service.parse(
       '[White "Ada"]\n[Black "Turing"]\n[Result "*"]\n\n1. e4 *',

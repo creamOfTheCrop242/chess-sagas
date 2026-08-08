@@ -13,6 +13,13 @@ describe('PgnViewerComponent character inspection', () => {
     component.game = structuredClone(game);
   });
 
+  it('does not reveal the PGN result in the saga title', () => {
+    component.game!.headers['Result'] = '0-1';
+
+    expect(component.gameTitle).toBe('Light Kingdom vs Dark Kingdom');
+    expect(component.gameTitle).not.toContain('0-1');
+  });
+
   it('puts White at the top by default and flips on request', () => {
     expect(component.boardOrientation).toBe('black');
 
@@ -506,7 +513,10 @@ describe('PgnViewerComponent character inspection', () => {
     const api = {
       parse: () => of(structuredClone(game)),
       createGame: () =>
-        of({ id: 'anonymous-game', ledger: { data: structuredClone(game.ledger) } }),
+        of({
+          id: 'anonymous-game',
+          ledger: { data: structuredClone(game.ledger) },
+        }),
       getGenerationStatus: () =>
         of({
           state: 'idle',

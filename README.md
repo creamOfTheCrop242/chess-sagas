@@ -319,6 +319,9 @@ Records and creator pages:
   aligned scenes for replay.
 - `GET /sagas/mine` lists the signed-in user's sagas, including non-public
   entries.
+- `GET /sagas/saved` lists the signed-in user's bookmarked public sagas.
+- `POST /sagas/:id/bookmark` and `DELETE /sagas/:id/bookmark` add or remove a
+  saved saga.
 - `GET /profiles/:handle` returns a public creator profile.
 - `GET /profiles/:handle/sagas` lists that creator's attributed public sagas.
 - `GET /profiles/me` creates or returns the signed-in user's profile.

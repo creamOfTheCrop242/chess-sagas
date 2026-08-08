@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import {
   filter,
   finalize,
+  map,
   Observable,
   shareReplay,
   switchMap,
@@ -157,9 +158,32 @@ export class PgnApiService {
   }
 
   getRecord(gameId: string): Observable<ArchivedRecord> {
-    return this.http.get<ArchivedRecord>(
-      `${this.apiBase}/games/records/${gameId}`,
-    );
+    return this.http
+      .get<{
+        id: string;
+        gameId: string;
+        rawPgn: string;
+        whitePlayer: string;
+        blackPlayer: string;
+        result: string;
+        createdAt: string;
+        completedAt: string;
+        ledger: ArchivedRecord['ledger']['data'];
+        sceneBreakdown: ArchivedRecord['sceneBreakdown']['data'];
+      }>(`${this.apiBase}/sagas/${gameId}`, { withCredentials: true })
+      .pipe(
+        map((record) => ({
+          id: record.gameId,
+          rawPgn: record.rawPgn,
+          whitePlayer: record.whitePlayer,
+          blackPlayer: record.blackPlayer,
+          result: record.result,
+          createdAt: record.createdAt,
+          completedAt: record.completedAt,
+          ledger: { data: record.ledger },
+          sceneBreakdown: { data: record.sceneBreakdown },
+        })),
+      );
   }
 
   private syncGenerationStatus(

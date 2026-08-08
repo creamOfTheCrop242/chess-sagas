@@ -1,34 +1,110 @@
 import { DatePipe } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { ArchiveRecordSummary } from '../pgn-viewer/pgn.models';
-import { PgnApiService } from '../pgn-viewer/pgn-api.service';
+import { Observable } from 'rxjs';
+import { AuthService } from '../auth/auth.service';
+import { CommunitySagaSummary } from '../community/community.models';
+import { CommunityService } from '../community/community.service';
+
+type RecordView = 'public' | 'mine' | 'saved';
 
 @Component({
   selector: 'app-hall-of-records',
   standalone: true,
-  imports: [DatePipe, RouterLink],
+  imports: [DatePipe, FormsModule, RouterLink],
   templateUrl: './hall-of-records.component.html',
   styleUrl: './hall-of-records.component.css',
 })
 export class HallOfRecordsComponent implements OnInit {
-  records: ArchiveRecordSummary[] = [];
-  loading = true;
-  error: string | null = null;
+  private readonly community = inject(CommunityService);
+  readonly auth = inject(AuthService);
 
-  constructor(private readonly api: PgnApiService) {}
+  records: CommunitySagaSummary[] = [];
+  view: RecordView = 'public';
+  query = '';
+  nextCursor: string | null = null;
+  loading = true;
+  loadingMore = false;
+  error: string | null = null;
+  readonly savedIds = new Set<string>();
 
   ngOnInit(): void {
-    this.api.getRecords().subscribe({
-      next: (records) => {
-        this.records = records;
+    this.load();
+  }
+
+  selectView(view: RecordView): void {
+    if (view !== 'public' && !this.auth.user()) return;
+    this.view = view;
+    this.load();
+  }
+
+  search(): void {
+    this.load();
+  }
+
+  loadMore(): void {
+    if (!this.nextCursor || this.loadingMore) return;
+    this.fetch(this.nextCursor, true);
+  }
+
+  toggleSaved(record: CommunitySagaSummary): void {
+    if (!this.auth.user()) return;
+    const saved = this.savedIds.has(record.id) || this.view === 'saved';
+    const request: Observable<unknown> = saved
+      ? this.community.unsave(record.id)
+      : this.community.save(record.id);
+    request.subscribe({
+      next: () => {
+        if (saved) {
+          this.savedIds.delete(record.id);
+          if (this.view === 'saved') {
+            this.records = this.records.filter((item) => item.id !== record.id);
+          }
+        } else {
+          this.savedIds.add(record.id);
+        }
+      },
+      error: () => (this.error = 'The archive mark could not be changed.'),
+    });
+  }
+
+  isSaved(record: CommunitySagaSummary): boolean {
+    return this.view === 'saved' || this.savedIds.has(record.id);
+  }
+
+  private load(): void {
+    this.records = [];
+    this.nextCursor = null;
+    this.error = null;
+    this.loading = true;
+    this.fetch(undefined, false);
+  }
+
+  private fetch(cursor: string | undefined, append: boolean): void {
+    if (append) this.loadingMore = true;
+    const options = { limit: 20, cursor, q: this.query.trim() || undefined };
+    const request =
+      this.view === 'mine'
+        ? this.community.mine(options)
+        : this.view === 'saved'
+          ? this.community.saved(options)
+          : this.community.list(options);
+    request.subscribe({
+      next: (page) => {
+        this.records = append ? [...this.records, ...page.items] : page.items;
+        this.nextCursor = page.nextCursor;
+        if (this.view === 'saved') {
+          page.items.forEach((record) => this.savedIds.add(record.id));
+        }
         this.loading = false;
+        this.loadingMore = false;
       },
       error: () => {
         this.error = 'The records could not be opened.';
         this.loading = false;
+        this.loadingMore = false;
       },
     });
   }
-
 }

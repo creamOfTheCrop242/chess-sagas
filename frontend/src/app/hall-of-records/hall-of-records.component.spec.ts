@@ -1,7 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
-import { PgnApiService } from '../pgn-viewer/pgn-api.service';
+import { signal } from '@angular/core';
+import { AuthService } from '../auth/auth.service';
+import { CommunityService } from '../community/community.service';
 import { HallOfRecordsComponent } from './hall-of-records.component';
 
 describe('HallOfRecordsComponent', () => {
@@ -13,10 +15,10 @@ describe('HallOfRecordsComponent', () => {
       providers: [
         provideRouter([]),
         {
-          provide: PgnApiService,
+          provide: CommunityService,
           useValue: {
-            getRecords: () =>
-              of([
+            list: () =>
+              of({ items: [
                 {
                   id: 'record-1',
                   title: 'The Spear That Broke a Crown',
@@ -25,9 +27,18 @@ describe('HallOfRecordsComponent', () => {
                   createdAt: '2026-07-01T00:00:00.000Z',
                   updatedAt: '2026-07-01T00:00:00.000Z',
                   completedAt: '2026-07-02T00:00:00.000Z',
+                  gameId: 'game-1',
+                  result: '1-0',
+                  visibility: 'PUBLIC',
+                  storyVersion: 'v1',
+                  creator: null,
                 },
-              ]),
+              ], nextCursor: null }),
           },
+        },
+        {
+          provide: AuthService,
+          useValue: { user: signal(null), loading: signal(false) },
         },
       ],
     }).compileComponents();

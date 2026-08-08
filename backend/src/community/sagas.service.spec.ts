@@ -38,6 +38,7 @@ function sagaRow(showCreatorCredit = true) {
 describe('SagasService', () => {
   const prisma = {
     saga: { findMany: jest.fn(), findFirst: jest.fn() },
+    sagaBookmark: { upsert: jest.fn(), deleteMany: jest.fn() },
   };
 
   beforeEach(() => jest.clearAllMocks());
@@ -79,7 +80,7 @@ describe('SagasService', () => {
     prisma.saga.findFirst.mockResolvedValue(null);
     const service = new SagasService(prisma as never);
 
-    await expect(service.findPublic('private-saga')).rejects.toThrow(
+    await expect(service.findAccessible('private-saga')).rejects.toThrow(
       NotFoundException,
     );
     expect(prisma.saga.findFirst).toHaveBeenCalledWith(
@@ -87,5 +88,37 @@ describe('SagasService', () => {
         where: { id: 'private-saga', visibility: 'PUBLIC' },
       }),
     );
+  });
+
+  it('lets a creator open their own non-public saga', async () => {
+    prisma.saga.findFirst.mockResolvedValue(null);
+    const service = new SagasService(prisma as never);
+
+    await expect(
+      service.findAccessible('private-saga', 'creator-1'),
+    ).rejects.toThrow(NotFoundException);
+    expect(prisma.saga.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: 'private-saga',
+          OR: [{ visibility: 'PUBLIC' }, { creatorId: 'creator-1' }],
+        },
+      }),
+    );
+  });
+
+  it('only bookmarks sagas that are publicly visible', async () => {
+    prisma.saga.findFirst.mockResolvedValue({ id: 'saga-1' });
+    prisma.sagaBookmark.upsert.mockResolvedValue({});
+    const service = new SagasService(prisma as never);
+
+    await expect(service.bookmark('user-1', 'saga-1')).resolves.toEqual({
+      saved: true,
+    });
+    expect(prisma.sagaBookmark.upsert).toHaveBeenCalledWith({
+      where: { userId_sagaId: { userId: 'user-1', sagaId: 'saga-1' } },
+      create: { userId: 'user-1', sagaId: 'saga-1' },
+      update: {},
+    });
   });
 });

@@ -18,10 +18,15 @@ export class ReportingService {
   ) {}
 
   assertAdmin(email: string): void {
-    const admins = this.emailList('REPORTING_ADMIN_EMAILS');
-    if (!admins.has(email.trim().toLowerCase())) {
+    if (!this.isAdmin(email)) {
       throw new ForbiddenException('Reporting access is restricted');
     }
+  }
+
+  isAdmin(email: string): boolean {
+    return this.emailList('REPORTING_ADMIN_EMAILS').has(
+      email.trim().toLowerCase(),
+    );
   }
 
   async overview(range: DateRange) {

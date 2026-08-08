@@ -13,6 +13,8 @@ describe('ReportingService', () => {
   it('restricts reports to explicitly configured administrators', () => {
     const service = new ReportingService({} as never, config as never);
     expect(() => service.assertAdmin('OWNER@example.com')).not.toThrow();
+    expect(service.isAdmin('second@example.com')).toBe(true);
+    expect(service.isAdmin('reader@example.com')).toBe(false);
     expect(() => service.assertAdmin('reader@example.com')).toThrow(
       ForbiddenException,
     );

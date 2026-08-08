@@ -35,5 +35,12 @@ export const routes: Routes = [
   { path: 'guide', component: SagaGuideComponent },
   { path: 'login', component: LoginComponent },
   { path: 'pricing', component: PricingComponent },
+  {
+    path: 'admin/reports',
+    loadComponent: () =>
+      import('./reporting/reporting.component').then(
+        (module) => module.ReportingComponent,
+      ),
+  },
   { path: '**', redirectTo: '' },
 ];

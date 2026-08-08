@@ -14,6 +14,9 @@ import { BillingClientService } from './billing/billing.service';
     <nav class="account-bar" aria-label="Account navigation">
       <a class="home-link" routerLink="/">Chess Sagas</a>
       <div class="account-actions">
+        @if (auth.user()?.reportingAdmin) {
+          <a class="pricing-link" routerLink="/admin/reports">Reports</a>
+        }
         <a class="pricing-link" routerLink="/pricing">
           @if (billing.status(); as status) {
             {{ status.unlimited ? "Unlimited" : status.available + " credits" }}
@@ -244,8 +247,11 @@ export class AppComponent {
 
   constructor() {
     effect(() => {
-      if (this.auth.user()) this.billing.refresh();
-      else if (!this.auth.loading()) this.billing.clear();
+      if (this.auth.user()) {
+        this.billing.refresh();
+      } else if (!this.auth.loading()) {
+        this.billing.clear();
+      }
     });
 
     const billingResult = new URLSearchParams(window.location.search).get('billing');

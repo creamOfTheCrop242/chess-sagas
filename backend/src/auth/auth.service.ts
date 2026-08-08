@@ -17,6 +17,10 @@ export interface AuthenticatedUser {
   avatarUrl: string | null;
 }
 
+export interface AuthenticatedUserResponse extends AuthenticatedUser {
+  reportingAdmin: boolean;
+}
+
 interface GoogleTokenResponse {
   access_token?: string;
 }
@@ -230,6 +234,13 @@ export class AuthService {
     return session?.user ?? null;
   }
 
+  withAccessFlags(user: AuthenticatedUser): AuthenticatedUserResponse {
+    return {
+      ...user,
+      reportingAdmin: this.reportingAdminEmails.has(user.email.toLowerCase()),
+    };
+  }
+
   async logout(sessionToken: string | undefined): Promise<void> {
     if (!sessionToken) return;
     await this.prisma.authSession.deleteMany({
@@ -241,6 +252,15 @@ export class AuthService {
     return (
       this.config.get<string>('PUBLIC_APP_URL')?.replace(/\/$/, '') ||
       'http://localhost:4200'
+    );
+  }
+
+  private get reportingAdminEmails(): Set<string> {
+    return new Set(
+      (this.config.get<string>('REPORTING_ADMIN_EMAILS') ?? '')
+        .split(',')
+        .map((email) => email.trim().toLowerCase())
+        .filter(Boolean),
     );
   }
 

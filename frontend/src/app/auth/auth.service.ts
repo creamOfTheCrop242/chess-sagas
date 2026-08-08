@@ -7,6 +7,7 @@ export interface AuthUser {
   email: string;
   displayName: string;
   avatarUrl: string | null;
+  reportingAdmin: boolean;
 }
 
 @Injectable({ providedIn: 'root' })

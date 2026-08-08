@@ -70,9 +70,39 @@ export class SagasService {
     });
   }
 
-  async findPublic(id: string) {
+  async listSaved(userId: string, query: ParsedSagaListQuery) {
+    return this.list({
+      query,
+      where: {
+        visibility: 'PUBLIC',
+        bookmarks: { some: { userId } },
+      } satisfies Prisma.SagaWhereInput,
+    });
+  }
+
+  async bookmark(userId: string, sagaId: string) {
+    await this.requirePublicSaga(sagaId);
+    await this.prisma.sagaBookmark.upsert({
+      where: { userId_sagaId: { userId, sagaId } },
+      create: { userId, sagaId },
+      update: {},
+    });
+    return { saved: true };
+  }
+
+  async removeBookmark(userId: string, sagaId: string) {
+    await this.prisma.sagaBookmark.deleteMany({ where: { userId, sagaId } });
+    return { saved: false };
+  }
+
+  async findAccessible(id: string, userId?: string) {
     const saga = await this.prisma.saga.findFirst({
-      where: { id, visibility: 'PUBLIC' },
+      where: {
+        id,
+        ...(userId
+          ? { OR: [{ visibility: 'PUBLIC' }, { creatorId: userId }] }
+          : { visibility: 'PUBLIC' }),
+      },
       include: {
         ...sagaInclude,
         game: {
@@ -103,6 +133,14 @@ export class SagasService {
       storyMarkdown: saga.generationRun.generatedStory?.storyMarkdown ?? null,
       sceneBreakdown: saga.generationRun.sceneBreakdown?.data ?? null,
     };
+  }
+
+  private async requirePublicSaga(id: string): Promise<void> {
+    const saga = await this.prisma.saga.findFirst({
+      where: { id, visibility: 'PUBLIC' },
+      select: { id: true },
+    });
+    if (!saga) throw new NotFoundException(`Saga ${id} was not found`);
   }
 
   private async list({

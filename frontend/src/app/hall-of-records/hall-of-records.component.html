@@ -8,10 +8,30 @@
     <p class="eyebrow">The Chronicler’s Archive</p>
     <h1>Hall of Records</h1>
     <p>
-      Every completed saga is preserved here. Reopen a fractured reality and
-      replay its final battle without forging the story again.
+      Explore the final battles preserved across fractured realities and meet
+      the chroniclers who recorded them.
     </p>
   </header>
+
+  <section class="archive-tools" aria-label="Archive controls">
+    <div class="record-tabs" role="tablist" aria-label="Saga collection">
+      <button type="button" [class.active]="view === 'public'" (click)="selectView('public')">All sagas</button>
+      <button type="button" [class.active]="view === 'mine'" [disabled]="!auth.user()" (click)="selectView('mine')">My sagas</button>
+      <button type="button" [class.active]="view === 'saved'" [disabled]="!auth.user()" (click)="selectView('saved')">Saved</button>
+      @if (auth.user()) {
+        <a class="profile-link" routerLink="/profile">My chronicler profile</a>
+      } @else {
+        <a class="profile-link" routerLink="/login">Sign in for personal shelves</a>
+      }
+    </div>
+    <form class="record-search" (ngSubmit)="search()">
+      <label for="record-search">Search battles or players</label>
+      <div>
+        <input id="record-search" name="query" [(ngModel)]="query" maxlength="100" placeholder="A battle name or player" />
+        <button type="submit">Search</button>
+      </div>
+    </form>
+  </section>
 
   @if (loading) {
     <p class="records-state">Unsealing the archive…</p>
@@ -19,32 +39,38 @@
     <p class="records-state records-error" role="alert">{{ error }}</p>
   } @else if (!records.length) {
     <section class="empty-records">
-      <h2>No sagas have been preserved</h2>
-      <p>Complete a saga and its final battle will appear in this hall.</p>
-      <a routerLink="/">Forge the first saga</a>
+      <h2>No matching sagas were found</h2>
+      <p>{{ view === 'saved' ? 'Save a public saga to place it on this shelf.' : 'Try another search or forge a new saga.' }}</p>
+      <a routerLink="/">Forge a saga</a>
     </section>
   } @else {
     <ol class="record-list">
       @for (record of records; track record.id) {
         <li>
           <article>
-            <div class="record-number" aria-hidden="true">
-              {{ ($index + 1).toString().padStart(2, "0") }}
-            </div>
+            <div class="record-number" aria-hidden="true">{{ ($index + 1).toString().padStart(2, '0') }}</div>
             <div class="record-copy">
-              <p class="record-date">
-                Preserved
-                {{ record.completedAt | date: "longDate" }}
-              </p>
+              <p class="record-date">Preserved {{ record.completedAt | date: 'longDate' }}</p>
               <h2>{{ record.title }}</h2>
-              <p class="record-result">
-                {{ record.whitePlayer }} vs {{ record.blackPlayer }}
-              </p>
+              <p class="record-result">{{ record.whitePlayer }} vs {{ record.blackPlayer }}</p>
+              @if (record.creator; as creator) {
+                <a class="creator-link" [routerLink]="['/chroniclers', creator.handle]">Recorded by {{ creator.displayName }}</a>
+              } @else {
+                <span class="anonymous-creator">Anonymous chronicler</span>
+              }
             </div>
-            <a [routerLink]="['/records', record.id]">Replay saga →</a>
+            <div class="record-actions">
+              <a [routerLink]="['/records', record.id]">Replay saga →</a>
+              @if (auth.user()) {
+                <button type="button" (click)="toggleSaved(record)">{{ isSaved(record) ? 'Remove saved mark' : 'Save saga' }}</button>
+              }
+            </div>
           </article>
         </li>
       }
     </ol>
+    @if (nextCursor) {
+      <button class="load-more" type="button" [disabled]="loadingMore" (click)="loadMore()">{{ loadingMore ? 'Unsealing…' : 'Open more records' }}</button>
+    }
   }
 </main>

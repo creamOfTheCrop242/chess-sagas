@@ -63,6 +63,12 @@ export class PgnApiService {
     return this.http.post<SavedGame>(`${this.apiBase}/games`, { pgn });
   }
 
+  getGenerationStatus(gameId: string): Observable<SagaGenerationStatus> {
+    return this.http.get<SagaGenerationStatus>(
+      `${this.apiBase}/games/${gameId}/generation`,
+    );
+  }
+
   getGame(gameId: string): Observable<SavedGameRecord> {
     return this.http.get<SavedGameRecord>(`${this.apiBase}/games/${gameId}`);
   }
@@ -72,6 +78,14 @@ export class PgnApiService {
       return sessionStorage.getItem(this.recentGenerationKey);
     } catch {
       return null;
+    }
+  }
+
+  forgetRecentGeneration(): void {
+    try {
+      sessionStorage.removeItem(this.recentGenerationKey);
+    } catch {
+      // Session restoration is optional.
     }
   }
 

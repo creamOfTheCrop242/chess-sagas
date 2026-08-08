@@ -46,6 +46,12 @@
           {{ loading ? "Unsealing the record…" : "Begin the saga" }}
         </button>
       </div>
+      @if (billingFailure === "credits") {
+        <p class="billing-generation-message" role="alert">
+          A new saga requires one credit.
+          <a routerLink="/pricing">View credit options</a>
+        </p>
+      }
       @if (error) {
         <p class="error" role="alert">{{ error }}</p>
       }

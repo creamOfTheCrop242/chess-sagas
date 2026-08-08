@@ -14,6 +14,7 @@ import {
   promptCacheOptions,
   serializeRequestWithoutTelemetry,
 } from '../openai/openai-generation';
+import { OpenAiTelemetryService } from '../openai/openai-telemetry.service';
 import {
   sceneBreakdownSchema,
   type SceneBreakdown,
@@ -26,7 +27,10 @@ export class OpenAiSceneBreakdownProvider implements SceneBreakdownProvider {
   readonly model: string;
   private readonly logger = new Logger(OpenAiSceneBreakdownProvider.name);
   private readonly client: OpenAI | null;
-  constructor(config: ConfigService) {
+  constructor(
+    config: ConfigService,
+    private readonly telemetryRecorder: OpenAiTelemetryService,
+  ) {
     const key = config.get<string>('OPENAI_API_KEY');
     this.model = config.get<string>('SCENE_BREAKDOWN_MODEL') || 'gpt-5.6-sol';
     this.client = key ? createOpenAiGenerationClient(key, config) : null;
@@ -65,6 +69,7 @@ export class OpenAiSceneBreakdownProvider implements SceneBreakdownProvider {
         startedAt,
         response,
         callTelemetry,
+        this.telemetryRecorder,
       );
       return breakdown;
     } catch (error) {
@@ -75,6 +80,7 @@ export class OpenAiSceneBreakdownProvider implements SceneBreakdownProvider {
         startedAt,
         error,
         callTelemetry,
+        this.telemetryRecorder,
       );
       if (
         error instanceof ServiceUnavailableException ||

@@ -15,6 +15,7 @@ import {
   promptCacheOptions,
   serializeRequestWithCharacterRegistry,
 } from '../openai/openai-generation';
+import { OpenAiTelemetryService } from '../openai/openai-telemetry.service';
 import type {
   FullStoryProvider,
   FullStoryRequest,
@@ -37,7 +38,10 @@ export class OpenAiFullStoryProvider implements FullStoryProvider {
   private readonly logger = new Logger(OpenAiFullStoryProvider.name);
   private readonly client: OpenAI | null;
 
-  constructor(config: ConfigService) {
+  constructor(
+    config: ConfigService,
+    private readonly telemetryRecorder: OpenAiTelemetryService,
+  ) {
     const apiKey = config.get<string>('OPENAI_API_KEY');
     this.model = config.get<string>('FULL_STORY_MODEL') || 'gpt-5.6-terra';
     this.woundRepairModel =
@@ -96,6 +100,7 @@ ${EPILOGUE_INSTRUCTIONS}`,
         startedAt,
         response,
         callTelemetry,
+        this.telemetryRecorder,
       );
       return storyPackage;
     } catch (error) {
@@ -106,6 +111,7 @@ ${EPILOGUE_INSTRUCTIONS}`,
         startedAt,
         error,
         callTelemetry,
+        this.telemetryRecorder,
       );
       if (
         error instanceof ServiceUnavailableException ||
@@ -175,6 +181,7 @@ Return publishable replacement narration only. Do not explain the edit.`,
         startedAt,
         response,
         callTelemetry,
+        this.telemetryRecorder,
       );
       return result;
     } catch (error) {
@@ -185,6 +192,7 @@ Return publishable replacement narration only. Do not explain the edit.`,
         startedAt,
         error,
         callTelemetry,
+        this.telemetryRecorder,
       );
       throw error;
     }

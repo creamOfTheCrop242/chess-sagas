@@ -14,6 +14,7 @@ import {
   promptCacheOptions,
   serializeRequestWithoutTelemetry,
 } from '../openai/openai-generation';
+import { OpenAiTelemetryService } from '../openai/openai-telemetry.service';
 import {
   storyValidationResultSchema,
   type StoryValidationResult,
@@ -33,7 +34,10 @@ export class OpenAiStoryValidationProvider implements StoryValidationProvider {
   private readonly logger = new Logger(OpenAiStoryValidationProvider.name);
   private readonly client: OpenAI | null;
 
-  constructor(config: ConfigService) {
+  constructor(
+    config: ConfigService,
+    private readonly telemetryRecorder: OpenAiTelemetryService,
+  ) {
     const apiKey = config.get<string>('OPENAI_API_KEY');
     this.model = config.get<string>('STORY_VALIDATION_MODEL') || 'gpt-5.6-sol';
     this.client = apiKey ? createOpenAiGenerationClient(apiKey, config) : null;
@@ -79,6 +83,7 @@ ${PROHIBITED_PROSE_TERMS}`,
         startedAt,
         response,
         callTelemetry,
+        this.telemetryRecorder,
       );
       return validation;
     } catch (error) {
@@ -89,6 +94,7 @@ ${PROHIBITED_PROSE_TERMS}`,
         startedAt,
         error,
         callTelemetry,
+        this.telemetryRecorder,
       );
       if (
         error instanceof ServiceUnavailableException ||

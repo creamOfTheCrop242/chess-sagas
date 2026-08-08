@@ -1,0 +1,153 @@
+<main class="report-page">
+  <header class="report-header">
+    <div>
+      <a class="return-link" routerLink="/">← Return to the war table</a>
+      <p class="eyebrow">Private administration</p>
+      <h1>Chronicler’s Accounts</h1>
+      <p class="lede">
+        Generation reliability, model expense, credit movement, and customer
+        margin—kept separate from unlimited testing.
+      </p>
+    </div>
+    <form class="range-form" (ngSubmit)="load()">
+      <label for="report-days">Reporting window</label>
+      <select id="report-days" name="days" [(ngModel)]="days">
+        <option [ngValue]="1">Last 24 hours</option>
+        <option [ngValue]="7">Last 7 days</option>
+        <option [ngValue]="30">Last 30 days</option>
+        <option [ngValue]="90">Last 90 days</option>
+        <option [ngValue]="366">Last 366 days</option>
+      </select>
+      <button type="submit" [disabled]="loading">Refresh report</button>
+    </form>
+  </header>
+
+  @if (loading) {
+    <section class="state-card" aria-live="polite">Consulting the ledgers…</section>
+  } @else if (error === "signin") {
+    <section class="state-card error-card">
+      <h2>Authentication required</h2>
+      <p>Sign in with an authorized account to open these records.</p>
+      <a routerLink="/login">Sign in</a>
+    </section>
+  } @else if (error === "forbidden") {
+    <section class="state-card error-card">
+      <h2>The ledger is sealed</h2>
+      <p>Your account is not authorized to view administrative reporting.</p>
+    </section>
+  } @else if (error || !report) {
+    <section class="state-card error-card">
+      <h2>The accounts could not be opened</h2>
+      <p>Try refreshing the report after confirming the backend is available.</p>
+    </section>
+  } @else {
+    <p class="range-caption">
+      {{ report.range.from | date: "mediumDate" }}–{{ report.range.to | date: "mediumDate" }}
+    </p>
+
+    <section class="summary-grid" aria-label="Business summary">
+      <article>
+        <span>Completed sagas</span>
+        <strong>{{ report.summary.completedSagas }}</strong>
+        <small>{{ report.summary.sagaFailureRate | percent: "1.1-1" }} saga failure rate</small>
+      </article>
+      <article>
+        <span>Customer AI cost</span>
+        <strong>{{ report.ai.customer.estimatedCostUsd | currency: "USD" : "symbol" : "1.2-4" }}</strong>
+        <small>{{ report.ai.customer.calls }} customer calls</small>
+      </article>
+      <article class="unlimited-card">
+        <span>Unlimited testing</span>
+        <strong>{{ report.ai.unlimited.estimatedCostUsd | currency: "USD" : "symbol" : "1.2-4" }}</strong>
+        <small>excluded from customer margin</small>
+      </article>
+      <article>
+        <span>Net revenue</span>
+        <strong>{{ usdFromCents(report.summary.netRevenueCents) | currency: "USD" }}</strong>
+        <small>after recorded refunds</small>
+      </article>
+      <article [class.negative]="report.summary.estimatedGrossMarginCents < 0">
+        <span>Estimated gross margin</span>
+        <strong>{{ usdFromCents(report.summary.estimatedGrossMarginCents) | currency: "USD" }}</strong>
+        <small>revenue less customer AI expense</small>
+      </article>
+      <article>
+        <span>Average generation</span>
+        <strong>{{ minutes(report.summary.averageGenerationSeconds) | number: "1.1-1" }}m</strong>
+        <small>{{ report.summary.retryCalls }} AI retry calls</small>
+      </article>
+    </section>
+
+    <section class="report-section">
+      <div class="section-heading">
+        <div><p class="eyebrow">Reliability</p><h2>Pipeline stages</h2></div>
+        <span>{{ report.summary.aiFailureRate | percent: "1.1-1" }} AI call failure rate</span>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Stage</th><th>Attempts</th><th>Failed</th><th>Failure rate</th><th>First pass</th><th>Recovered</th><th>Exhausted</th><th>Avg.</th></tr></thead>
+          <tbody>
+            @for (stage of report.pipeline; track stage.stage) {
+              <tr>
+                <th>{{ stageLabel(stage.stage) }}</th>
+                <td>{{ stage.attempts }}</td><td>{{ stage.failed }}</td>
+                <td>{{ stage.failureRate | percent: "1.1-1" }}</td>
+                <td>{{ stage.firstPassCompleted }}</td><td>{{ stage.recoveredAfterRetry }}</td>
+                <td>{{ stage.exhausted }}</td><td>{{ stage.averageAttemptSeconds | number: "1.0-1" }}s</td>
+              </tr>
+            } @empty { <tr><td colspan="8">No pipeline activity in this window.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section">
+      <div class="section-heading"><div><p class="eyebrow">Model usage</p><h2>AI expense by stage</h2></div><span>{{ report.summary.estimatedAiCostUsd | currency: "USD" : "symbol" : "1.2-4" }} total</span></div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Stage</th><th>Model</th><th>Calls</th><th>Retries</th><th>Failures</th><th>Avg.</th><th>Tokens out</th><th>Cost</th></tr></thead>
+          <tbody>
+            @for (group of report.ai.byStageModel; track group.stage + "|" + group.model) {
+              <tr><th>{{ stageLabel(group.stage || "") }}</th><td>{{ group.model }}</td><td>{{ group.calls }}</td><td>{{ group.retryCalls }}</td><td>{{ group.failureRate | percent: "1.1-1" }}</td><td>{{ group.averageSeconds | number: "1.0-1" }}s</td><td>{{ group.outputTokens | number }}</td><td>{{ group.estimatedCostUsd | currency: "USD" : "symbol" : "1.2-4" }}</td></tr>
+            } @empty { <tr><td colspan="8">No durable AI calls recorded yet.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="split-grid">
+      <section class="report-section">
+        <div class="section-heading"><div><p class="eyebrow">Billing</p><h2>Credits and revenue</h2></div></div>
+        <dl class="metric-list">
+          <div><dt>Purchased credits</dt><dd>{{ report.billing.purchasedCredits }}</dd></div>
+          <div><dt>Consumed credits</dt><dd>{{ report.billing.consumedCredits }}</dd></div>
+          <div><dt>Refunded credits</dt><dd>{{ report.billing.refundedCredits }}</dd></div>
+          <div><dt>Gross revenue</dt><dd>{{ usdFromCents(report.billing.grossRevenueCents) | currency: "USD" }}</dd></div>
+          <div><dt>Cash refunds</dt><dd>{{ usdFromCents(report.billing.refundedCents) | currency: "USD" }}</dd></div>
+        </dl>
+        <h3>Generation billing states</h3>
+        <dl class="metric-list compact">
+          @for (entry of entries(report.generation.byBillingState); track entry[0]) {
+            <div><dt>{{ billingLabel(entry[0]) }}</dt><dd>{{ entry[1] }}</dd></div>
+          } @empty { <div><dt>No generation jobs</dt><dd>0</dd></div> }
+        </dl>
+      </section>
+
+      <section class="report-section unlimited-section">
+        <div class="section-heading"><div><p class="eyebrow">Separated expense</p><h2>Unlimited accounts</h2></div></div>
+        @for (account of report.ai.unlimitedAccounts; track account.email) {
+          <article class="account-expense"><strong>{{ account.email }}</strong><span>{{ account.estimatedCostUsd | currency: "USD" : "symbol" : "1.2-4" }}</span><small>{{ account.calls }} calls · {{ account.retryCalls }} retries</small></article>
+        } @empty { <p class="empty">No unlimited-account calls in this window.</p> }
+      </section>
+    </div>
+
+    <section class="report-section">
+      <div class="section-heading"><div><p class="eyebrow">Investigation</p><h2>Grouped failures</h2></div><span>{{ report.errors.length }} distinct errors</span></div>
+      <div class="error-list">
+        @for (item of report.errors; track item.source + item.stage + item.message) {
+          <article><span class="error-count">{{ item.count }}</span><div><small>{{ item.source }} · {{ stageLabel(item.stage) }}</small><p>{{ item.message }}</p></div></article>
+        } @empty { <p class="empty">No failures were recorded in this window.</p> }
+      </div>
+    </section>
+  }
+</main>

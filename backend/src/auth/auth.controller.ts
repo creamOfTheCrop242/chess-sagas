@@ -118,9 +118,12 @@ export class AuthController {
   @Header('Cache-Control', 'no-store')
   async me(
     @Req() request: Request,
-  ): Promise<{ user: Awaited<ReturnType<AuthService['currentUser']>> }> {
+  ): Promise<{ user: ReturnType<AuthService['withAccessFlags']> | null }> {
+    const user = await this.auth.currentUser(
+      readCookie(request, SESSION_COOKIE),
+    );
     return {
-      user: await this.auth.currentUser(readCookie(request, SESSION_COOKIE)),
+      user: user ? this.auth.withAccessFlags(user) : null,
     };
   }
 

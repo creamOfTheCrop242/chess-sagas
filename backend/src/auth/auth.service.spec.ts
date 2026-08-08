@@ -9,6 +9,7 @@ describe('AuthService', () => {
     APPLE_CLIENT_ID: 'com.example.chesssagas.web',
     APPLE_CALLBACK_URL: 'https://chesssagas.com/api/auth/apple/callback',
     PUBLIC_APP_URL: 'http://localhost:4200/',
+    REPORTING_ADMIN_EMAILS: 'owner@example.com, second@example.com ',
   };
   const config = {
     get: jest.fn((name: string) => configValues[name]),
@@ -166,5 +167,22 @@ describe('AuthService', () => {
 
   it('normalizes the configured public app URL', () => {
     expect(service.appUrl).toBe('http://localhost:4200');
+  });
+
+  it('adds the reporting permission without exposing the allowlist', () => {
+    const user = {
+      id: 'user-1',
+      email: 'OWNER@example.com',
+      displayName: 'Owner',
+      avatarUrl: null,
+    };
+
+    expect(service.withAccessFlags(user)).toEqual({
+      ...user,
+      reportingAdmin: true,
+    });
+    expect(
+      service.withAccessFlags({ ...user, email: 'reader@example.com' }),
+    ).toEqual({ ...user, email: 'reader@example.com', reportingAdmin: false });
   });
 });

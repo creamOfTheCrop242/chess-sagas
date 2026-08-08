@@ -128,7 +128,7 @@ export class SagaGenerationService
           }),
         },
       });
-      await this.persistSaga(gameId, null);
+      await this.persistSaga(gameId, user?.id ?? null);
       const status = await this.status(gameId);
       return { ...status, billing: { ...status.billing, reused: true } };
     }
@@ -527,9 +527,17 @@ export class SagaGenerationService
     if (!run) return;
     const existing = await this.prisma.saga.findUnique({
       where: { generationRunId: run.id },
-      select: { id: true },
+      select: { id: true, creatorId: true },
     });
-    if (existing) return;
+    if (existing) {
+      if (!existing.creatorId && creatorId) {
+        await this.prisma.saga.updateMany({
+          where: { id: existing.id, creatorId: null },
+          data: { creatorId },
+        });
+      }
+      return;
+    }
     await this.prisma.saga.create({
       data: {
         gameId,

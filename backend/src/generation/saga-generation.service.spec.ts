@@ -27,6 +27,7 @@ describe('SagaGenerationService', () => {
     saga: {
       findUnique: jest.fn().mockResolvedValue(null),
       create: jest.fn().mockResolvedValue({ id: 'saga-1' }),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     sagaGenerationJob: {
       findUnique: jest.fn().mockResolvedValue(null),
@@ -313,9 +314,31 @@ describe('SagaGenerationService', () => {
       data: expect.objectContaining({
         gameId: 'game-1',
         generationRunId: 'scene-run-1',
-        creatorId: null,
+        creatorId: 'user-1',
       }),
     });
+  });
+
+  it('claims an existing unowned saga for its authenticated requester', async () => {
+    runs.push(...completedRuns());
+    jest.mocked(prisma.sagaGenerationJob.findUnique).mockResolvedValue(null);
+    jest.mocked(prisma.saga.findUnique).mockResolvedValue({
+      id: 'saga-1',
+      creatorId: null,
+    } as never);
+
+    await service.start('game-1', undefined, {
+      id: 'user-1',
+      email: 'reader@example.com',
+      displayName: 'Reader',
+      avatarUrl: null,
+    });
+
+    expect(prisma.saga.updateMany).toHaveBeenCalledWith({
+      where: { id: 'saga-1', creatorId: null },
+      data: { creatorId: 'user-1' },
+    });
+    expect(prisma.saga.create).not.toHaveBeenCalled();
   });
 
   it('finishes consuming an existing reservation before treating scenes as reused', async () => {

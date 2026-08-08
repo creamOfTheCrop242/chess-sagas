@@ -3,6 +3,7 @@ import { PgnViewerComponent } from './pgn-viewer.component';
 import type { ParsedPgn } from './pgn.models';
 import { of } from 'rxjs';
 import { BillingClientService } from '../billing/billing.service';
+import { AuthService } from '../auth/auth.service';
 
 describe('PgnViewerComponent character inspection', () => {
   let component: PgnViewerComponent;
@@ -498,6 +499,38 @@ describe('PgnViewerComponent character inspection', () => {
 
     expect(viewer.game).toBeNull();
     expect(viewer.billingFailure).toBe('credits');
+    expect(viewer.loading).toBeFalse();
+  });
+
+  it('stops a signed-out user at Begin the Saga for a new PGN', () => {
+    const api = {
+      parse: () => of(structuredClone(game)),
+      createGame: () =>
+        of({ id: 'anonymous-game', ledger: { data: structuredClone(game.ledger) } }),
+      getGenerationStatus: () =>
+        of({
+          state: 'idle',
+          currentStage: 'analysis',
+          error: null,
+          stages: {
+            analysis: false,
+            outline: false,
+            story: false,
+            validation: false,
+            scenes: false,
+          },
+        }),
+    } as unknown as PgnApiService;
+    const auth = {
+      user: () => null,
+    } as unknown as AuthService;
+    const viewer = new PgnViewerComponent(api, undefined, undefined, auth);
+    viewer.pgnText = '1. e4 e5';
+
+    viewer.submit();
+
+    expect(viewer.game).toBeNull();
+    expect(viewer.billingFailure).toBe('signin');
     expect(viewer.loading).toBeFalse();
   });
 

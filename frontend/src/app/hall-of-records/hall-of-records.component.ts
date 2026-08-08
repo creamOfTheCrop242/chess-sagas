@@ -24,6 +24,7 @@ export class HallOfRecordsComponent implements OnInit {
   view: RecordView = 'public';
   query = '';
   nextCursor: string | null = null;
+  totalRecords = 0;
   loading = true;
   loadingMore = false;
   error: string | null = null;
@@ -76,6 +77,7 @@ export class HallOfRecordsComponent implements OnInit {
   private load(): void {
     this.records = [];
     this.nextCursor = null;
+    this.totalRecords = 0;
     this.error = null;
     this.loading = true;
     this.fetch(undefined, false);
@@ -94,6 +96,7 @@ export class HallOfRecordsComponent implements OnInit {
       next: (page) => {
         this.records = append ? [...this.records, ...page.items] : page.items;
         this.nextCursor = page.nextCursor;
+        this.totalRecords = page.total;
         if (this.view === 'saved') {
           page.items.forEach((record) => this.savedIds.add(record.id));
         }

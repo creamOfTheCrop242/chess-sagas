@@ -72,10 +72,26 @@
       }
       <h2>{{ gameTitle }}</h2>
       @if (battlefieldEnvironment; as battlefield) {
-        <p class="battle-location">
-          <span>Battlefield</span>
-          {{ battlefield.name }}
-        </p>
+        <div class="battle-location">
+          <button
+            type="button"
+            class="battle-location-trigger"
+            (click)="openBattlefieldDescription()"
+            [attr.aria-expanded]="battlefieldDescriptionOpen"
+            aria-describedby="battlefield-hover-description"
+          >
+            <span>Battlefield</span>
+            {{ battlefield.name }}
+          </button>
+          <div
+            id="battlefield-hover-description"
+            class="battle-location-preview"
+            role="tooltip"
+          >
+            <strong>{{ battlefield.name }}</strong>
+            <p>{{ battlefield.description }}</p>
+          </div>
+        </div>
       }
       @if (game.headers["Event"] && game.headers["Event"] !== "?") {
         <p class="event">{{ game.headers["Event"] }}</p>
@@ -406,6 +422,34 @@
           }
         </aside>
       </div>
+
+      @if (battlefieldDescriptionOpen && battlefieldEnvironment; as battlefield) {
+        <div
+          class="battlefield-backdrop"
+          (click)="closeBattlefieldDescription()"
+          role="presentation"
+        >
+          <section
+            class="battlefield-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="battlefield-dialog-title"
+            (click)="$event.stopPropagation()"
+          >
+            <button
+              type="button"
+              class="battlefield-close"
+              (click)="closeBattlefieldDescription()"
+              aria-label="Close battlefield description"
+            >
+              ×
+            </button>
+            <p class="battlefield-kicker">Battlefield</p>
+            <h3 id="battlefield-dialog-title">{{ battlefield.name }}</h3>
+            <p>{{ battlefield.description }}</p>
+          </section>
+        </div>
+      }
 
       @if (fallenRosterOpen) {
         <div

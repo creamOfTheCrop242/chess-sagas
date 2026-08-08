@@ -22,6 +22,7 @@ export interface CommunitySagaSummary {
 export interface SagaPage {
   items: CommunitySagaSummary[];
   nextCursor: string | null;
+  total: number;
 }
 
 export interface PublicProfile {

@@ -81,6 +81,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
   defeatedKingFate = '';
   defeatedSealFate: 'destroyed' | 'intact' | '' = '';
   battlefieldEnvironment: BattlefieldEnvironment | null = null;
+  battlefieldDescriptionOpen = false;
   sagaGenerating = false;
   storyError: string | null = null;
   recordReplay = false;
@@ -516,6 +517,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
           this.hoveredPieceId = null;
           this.selectedPieceId = null;
           this.fallenRosterOpen = false;
+          this.battlefieldDescriptionOpen = false;
           this.scenes = [];
           this.wounds = [];
           this.epilogue = '';
@@ -652,6 +654,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
   }
 
   private applySagaResponse(response: SceneBreakdownResponse): void {
+    this.battlefieldDescriptionOpen = false;
     this.battlefieldEnvironment = response.battlefieldEnvironment ?? null;
     this.scenes = response.sceneBreakdown.data.scenes;
     this.wounds = response.sceneBreakdown.data.wounds ?? [];
@@ -693,6 +696,12 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
   clearSelectedPiece(): void {
     this.selectedPieceId = null;
     this.hoveredPieceId = null;
+  }
+  openBattlefieldDescription(): void {
+    this.battlefieldDescriptionOpen = true;
+  }
+  closeBattlefieldDescription(): void {
+    this.battlefieldDescriptionOpen = false;
   }
   toggleFallenRoster(): void {
     this.fallenRosterOpen = !this.fallenRosterOpen;
@@ -752,6 +761,11 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
   @HostListener('window:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
     if (!this.game) return;
+    if (event.key === 'Escape' && this.battlefieldDescriptionOpen) {
+      event.preventDefault();
+      this.closeBattlefieldDescription();
+      return;
+    }
     if (event.key === 'Escape' && this.fallenRosterOpen) {
       event.preventDefault();
       this.closeFallenRoster();

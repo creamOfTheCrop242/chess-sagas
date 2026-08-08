@@ -18,6 +18,7 @@ The complete ledger is factual source of truth. The narrative analysis supplies 
 - Establish important characters and promoting soldiers before their payoff.
 - Treat every Moving Fortress as a colossal wheeled war engine powered by magic. Its permanent living pilot in operatorName is physically embedded within a life-sustaining armored command cradle and cannot simply dismount. Track that pilot's viewpoint, orders, fear, injuries, and relationships whenever the Fortress acts; never give the structure independent thoughts, dialogue, or decisions.
 - The characterRegistry backstories are established personal canon. Use relevant histories to strengthen motivations and relationships for featured characters without forcing every history into the outline or contradicting any origin.
+- Preserve each characterRegistry entry's he/him or she/her pronouns. Never use singular they/them for an individual character; plural companies and groups may still use they/them.
 - When a Moving Fortress captures, its operator directs the killing action through the machine. When one is captured, plan the machine's destruction and the operator's death or final fate as the same ledger-confirmed loss.
 - Copy every narrative-analysis woundPlan into woundBeats exactly. Do not add, remove, move, rename, intensify, or heal a planned injury.
 - When one character has multiple woundBeats, accumulate them: each later scene must preserve the combined limitations of every active injury. A new wound never replaces an old one.

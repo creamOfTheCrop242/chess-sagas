@@ -72,9 +72,9 @@
         <small>revenue less customer AI expense</small>
       </article>
       <article>
-        <span>Average generation</span>
+        <span>Average active generation</span>
         <strong>{{ minutes(report.summary.averageGenerationSeconds) | number: "1.1-1" }}m</strong>
-        <small>{{ report.summary.retryCalls }} AI retry calls</small>
+        <small>stage execution only · {{ report.summary.retryCalls }} AI retry calls</small>
       </article>
     </section>
 

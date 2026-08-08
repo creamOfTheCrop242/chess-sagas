@@ -48,7 +48,7 @@
       @for (record of records; track record.id) {
         <li>
           <article>
-            <div class="record-number" aria-hidden="true">{{ ($index + 1).toString().padStart(2, '0') }}</div>
+            <div class="record-number" aria-hidden="true">{{ (totalRecords - $index).toString().padStart(2, '0') }}</div>
             <div class="record-copy">
               <p class="record-date">Preserved {{ record.completedAt | date: 'longDate' }}</p>
               <h2>{{ record.title }}</h2>

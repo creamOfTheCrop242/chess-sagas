@@ -9,6 +9,8 @@ import {
 import { narrativeAnalysisSchema } from './models/narrative-analysis';
 import { NARRATIVE_ANALYSIS_PROMPT_VERSION } from './narrative-analysis.prompt';
 import { NarrativeAnalysisValidator } from './narrative-analysis.validator';
+import { buildEndingContract } from './ending-contract';
+import type { NarrativeAnalysis } from './models/narrative-analysis';
 
 @Injectable()
 export class NarrativeAnalysisService {
@@ -46,12 +48,14 @@ export class NarrativeAnalysisService {
         battlefieldEnvironment,
         surrenderContext,
       } = prepared;
-      const analysis = narrativeAnalysisSchema.parse(
+      const endingContract = buildEndingContract(ledger);
+      const generatedAnalysis = narrativeAnalysisSchema.parse(
         await this.provider.analyze({
           ledger,
           requiredWoundEvents,
           battlefieldEnvironment,
           surrenderContext,
+          endingContract,
           telemetry: {
             gameId,
             generationRunId: run.id,
@@ -59,6 +63,12 @@ export class NarrativeAnalysisService {
             repairMode: 'none',
           },
         }),
+      );
+      const analysis = normalizeDeterministicAnalysisFacts(
+        generatedAnalysis,
+        battlefieldEnvironment,
+        surrenderContext,
+        endingContract,
       );
       this.validator.validate(analysis, ledger);
       const data = JSON.parse(
@@ -125,4 +135,34 @@ export class NarrativeAnalysisService {
     }
     return run;
   }
+}
+
+function normalizeDeterministicAnalysisFacts(
+  analysis: NarrativeAnalysis,
+  battlefieldEnvironment: NarrativeAnalysis['battlefieldEnvironment'],
+  surrenderContext: NarrativeAnalysis['surrenderContext'],
+  endingContract: ReturnType<typeof buildEndingContract>,
+): NarrativeAnalysis {
+  const defeatedKingFate =
+    endingContract.termination === 'checkmate'
+      ? 'killed-after-checkmate'
+      : endingContract.termination === 'resignation'
+        ? analysis.endingPlan.defeatedKingFate
+        : 'survives';
+
+  return narrativeAnalysisSchema.parse({
+    ...analysis,
+    battlefieldEnvironment,
+    surrenderContext,
+    endingPlan: {
+      ...analysis.endingPlan,
+      winner: endingContract.winner,
+      termination: endingContract.termination,
+      surrenderAttempt: endingContract.termination === 'resignation',
+      defeatedKingFate,
+      aftermathFocus: endingContract.creativeDirection.aftermathFocus,
+      laterChronicleLens:
+        endingContract.creativeDirection.laterChronicleLens,
+    },
+  });
 }

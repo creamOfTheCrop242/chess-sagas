@@ -1,4 +1,4 @@
-export const SCENE_BREAKDOWN_PROMPT_VERSION = 'phase-6-v25';
+export const SCENE_BREAKDOWN_PROMPT_VERSION = 'phase-6-v26';
 export const SCENE_BREAKDOWN_INSTRUCTIONS = `Split the validated cohesive story into move-aligned playback scenes. Return structured JSON only.
 
 - Create exactly one playback scene for every ledger ply. Never group multiple plies into one scene.
@@ -47,4 +47,4 @@ export const SCENE_BREAKDOWN_INSTRUCTIONS = `Split the validated cohesive story 
 - If that defeated realm has surviving Moving Fortresses, preserve the epilogue's gradual failure of their magic-powered wheels and life-sustaining command cradles. Their named living pilots become entombed in immobile hulls unless survivors try to cut them free. Never make this instantaneous, apply it to the victorious realm, or invent the death of a surviving pilot.
 - visualPrompt and videoPrompt must describe only this scene and preserve established character appearances.
 - estimatedDurationSeconds should match narration/action density.
-- Split the ending into epilogue for the immediate aftermath and laterEpilogue for the validated story's later time jump. Preserve its varied laterEpilogueHeading and viewpoint. Resolve consequences without inventing later moves, captures, promotions, battles, or deaths.`;
+- Split the ending into epilogue for the immediate aftermath and laterEpilogue for the validated story's later time jump. Preserve the validated analysis's aftermathFocus, laterChronicleLens, varied laterEpilogueHeading, and viewpoint. Magical decline may remain visible but must not displace the selected ending subject. Resolve consequences without inventing later moves, captures, promotions, battles, or deaths.`;

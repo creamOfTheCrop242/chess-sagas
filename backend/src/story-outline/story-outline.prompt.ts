@@ -1,4 +1,4 @@
-export const STORY_OUTLINE_PROMPT_VERSION = 'phase-3-v30';
+export const STORY_OUTLINE_PROMPT_VERSION = 'phase-3-v31';
 
 export const STORY_OUTLINE_INSTRUCTIONS = `Create a structured outline for one cohesive dark-fantasy story. Return planning JSON only; do not write story prose.
 
@@ -40,6 +40,7 @@ The complete ledger is factual source of truth. The narrative analysis supplies 
 - Never reduce a named victim to a passive body or describe only the killer's experience. For instantaneous deaths, show the victim's final fraction of recognition or reflex without making them think or speak after death.
 - Keep gore ledger-accurate. Only the captured character is confirmed killed; do not add unnamed deaths, kill survivors, or describe bloodshed during quiet moves.
 - Make the ending sequence arise from the actual result and termination.
+- Treat narrativeAnalysis.endingPlan.aftermathFocus and laterChronicleLens as binding creative direction. Build the immediate aftermath around the selected human, political, civic, military, environmental, or memorial consequence, and build the time-jump around its selected viewpoint. Do not replace either with a generic inventory of failing enchantments.
 - For checkmate, outline the defeated King's on-page death as the final consequence of the mating attack or Royal Seal's destruction, even though the King is not recorded as a captured piece.
 - For checkmate, the defeated Royal Seal must also be destroyed.
 - For checkmate, make the final scenes explicitly stage every relevant constraint in the ledger's checkmateExplanation: the checking attacker, protected attacker, sealed escape routes, friendly obstructions, controlled routes, and inability to capture, block, or receive aid. The King must understand why no legal physical or magical escape remains before the fatal culmination.
@@ -47,7 +48,7 @@ The complete ledger is factual source of truth. The narrative analysis supplies 
 - Preserve narrativeAnalysis.surrenderContext as the factual moral and military context of the surrender. Necessary and reasonable surrender must not be portrayed as cowardice; questionable and premature surrender must produce proportionate distrust, disgrace, political fracture, or anger without changing the validated fate.
 - If the fate is executed-after-rejected-surrender, outline the offer, explicit rejection, named surviving executioner from the victorious army, and an established character-specific motive. For all other surrender fates, the King survives.
 - Match the Royal Seal consequence to the selected fate: refusal leaves it intact under contested control; breaking, abandonment, shattering, spending, or execution destroys, extinguishes, or exhausts it and begins the defeated kingdom's magical, civic, and political decline.
-- Treat each King as the living conduit who siphons magic from his kingdom's lost home universe and feeds it into the Royal Seal. The Seal distributes that energy to all surviving magic in the realm; it did not create the original magic. Plan the defeated realm's gradual decline as stored magic runs out: wards fail, enchanted infrastructure decays, harvests and healing suffer, political order fractures, and survivors must adapt.
+- Treat each King as the living conduit who siphons magic from his kingdom's lost home universe and feeds it into the Royal Seal. The Seal distributes that energy to all surviving magic in the realm; it did not create the original magic. When the Seal is lost, acknowledge gradual decline through a few concrete consequences relevant to the selected aftermath focus. Do not mechanically enumerate wards, infrastructure, harvests, healing, and political order in every ending.
 - When a destroyed Seal leaves surviving Moving Fortresses in the defeated realm, require the epilogue to show their magic-powered wheels gradually seizing and their life-sustaining command cradles failing. Their living embedded pilots become entombed within the immobile armored hulls unless other survivors attempt the dangerous work of cutting them free. Do not make this happen instantly at the Seal's destruction.
 - Draws, timeouts, and unknown terminations must not automatically kill either King.
 - Queens must use both swordplay and magic in later prose.

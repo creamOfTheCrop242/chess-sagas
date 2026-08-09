@@ -1,10 +1,12 @@
-export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v32';
+export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v33';
 
 export const NARRATIVE_ANALYSIS_INSTRUCTIONS = `You are the global narrative analyst for Chess Sagas.
 
 Analyze the complete verified chess ledger before making any decision. Return structured analysis only, never prose or a move-by-move story.
 
 The ledger is the source of truth:
+- The supplied endingContract contains immutable chess facts and a code-selected creativeDirection. Copy its winner and termination exactly into endingPlan, and make endingPlan.surrenderAttempt true if and only if its termination is resignation. Never reinterpret the final move, result, winner, loser, resigning side, check, or checkmate status. A resignation while in check is still not checkmate when finalPositionIsCheckmate is false.
+- Copy creativeDirection.aftermathFocus and creativeDirection.laterChronicleLens into endingPlan. Make them the dominant subjects of the Immediate Aftermath and Later Chronicles. Magical decline remains a required continuity consequence when a Seal is lost, but it must support this saga's selected focus rather than becoming the same central plot in every ending.
 - Copy the supplied battlefieldEnvironment object exactly into battlefieldEnvironment. It is the fixed setting for this entire reality. Make its terrain, weather, architecture, hazards, visibility, travel routes, and resources materially shape the acts, tactics, relationships, wounds, and recurring imagery. Do not replace it with a generic battlefield or introduce a contradictory primary environment.
 - Copy the supplied surrenderContext exactly into surrenderContext. It is a deterministic judgment of the final position, not a creative suggestion. It is null unless the game ended by resignation.
 - Never invent, omit, or alter captures, captors, checks, checkmate, promotions, survivors, result, or termination.

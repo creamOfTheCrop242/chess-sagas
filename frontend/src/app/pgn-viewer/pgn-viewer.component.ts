@@ -89,6 +89,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
   billingFailure: 'signin' | 'credits' | null = null;
   private generationStartedAt: number | null = null;
   private generationTimer: ReturnType<typeof setInterval> | null = null;
+  private ignorePieceBackdropUntil = 0;
   readonly pipelineSteps: Array<{ id: SagaStage; label: string }> = [
     { id: 'analysis', label: 'Narrative analysis' },
     { id: 'outline', label: 'Story outline' },
@@ -692,10 +693,19 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
     if (!pieceId) return;
     this.hoveredPieceId = null;
     this.selectedPieceId = pieceId;
+    // Mobile Safari can dispatch a compatibility click after pointerup. Once
+    // this selection renders the fixed backdrop, that same tap can otherwise
+    // land on the new backdrop and immediately dismiss the card.
+    this.ignorePieceBackdropUntil = performance.now() + 600;
+  }
+  dismissSelectedPieceFromBackdrop(): void {
+    if (performance.now() < this.ignorePieceBackdropUntil) return;
+    this.clearSelectedPiece();
   }
   clearSelectedPiece(): void {
     this.selectedPieceId = null;
     this.hoveredPieceId = null;
+    this.ignorePieceBackdropUntil = 0;
   }
   openBattlefieldDescription(): void {
     this.battlefieldDescriptionOpen = true;

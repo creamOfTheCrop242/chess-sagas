@@ -325,6 +325,8 @@ function makeAnalysis(ledger: GameLedger): NarrativeAnalysis {
       kingdomConsequence: 'The southern realm fractures.',
       defeatedKingFate: 'killed-after-checkmate',
       finalImage: 'Dark towers folding into a red horizon.',
+      aftermathFocus: 'survivor-grief-and-personal-reckoning',
+      laterChronicleLens: 'a-descendant-inheriting-an-unwanted-legacy',
     },
     continuityConstraints: ['The captured soldier cannot return after ply 7.'],
   };

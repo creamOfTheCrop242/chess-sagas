@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import { DEFEATED_KING_FATES } from '../../chess/models/story-ending';
 import { SURRENDER_JUDGMENTS } from '../../chess/surrender-context';
+import {
+  AFTERMATH_FOCUSES,
+  LATER_CHRONICLE_LENSES,
+} from '../ending-contract';
 export const battlefieldEnvironmentSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -113,8 +117,8 @@ const endingPlanSchema = z.object({
   kingdomConsequence: z.string().min(1),
   defeatedKingFate: z.enum(DEFEATED_KING_FATES),
   finalImage: z.string().min(1),
-  aftermathFocus: z.string().min(1).optional(),
-  laterChronicleLens: z.string().min(1).optional(),
+  aftermathFocus: z.enum(AFTERMATH_FOCUSES),
+  laterChronicleLens: z.enum(LATER_CHRONICLE_LENSES),
 });
 
 export const narrativeAnalysisSchema = z.object({

@@ -71,6 +71,21 @@ describe('PgnViewerComponent character inspection', () => {
     expect(component.inspectedPiece).toBeNull();
   });
 
+  it('ignores the compatibility backdrop click from the tap that opened a piece', () => {
+    component.currentPly = 1;
+
+    component.selectPieceAt('e4');
+    component.dismissSelectedPieceFromBackdrop();
+
+    expect(component.selectedPieceId).toBe('w-p-e2');
+
+    (
+      component as unknown as { ignorePieceBackdropUntil: number }
+    ).ignorePieceBackdropUntil = 0;
+    component.dismissSelectedPieceFromBackdrop();
+    expect(component.selectedPieceId).toBeNull();
+  });
+
   it('highlights only the acting piece on a move beat', () => {
     expect(component.currentBeatSquare).toBeNull();
 

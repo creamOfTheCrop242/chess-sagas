@@ -46,6 +46,7 @@ export class OpenAiNarrativeAnalysisProvider implements NarrativeAnalysisProvide
     requiredWoundEvents,
     battlefieldEnvironment,
     surrenderContext,
+    endingContract,
     telemetry,
   }: NarrativeAnalysisRequest): Promise<NarrativeAnalysis> {
     if (!this.client) {
@@ -58,6 +59,7 @@ export class OpenAiNarrativeAnalysisProvider implements NarrativeAnalysisProvide
       requiredWoundEvents,
       battlefieldEnvironment,
       surrenderContext,
+      endingContract,
     });
     const callTelemetry = {
       ...telemetry,

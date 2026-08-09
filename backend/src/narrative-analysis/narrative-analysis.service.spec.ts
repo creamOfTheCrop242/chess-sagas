@@ -12,6 +12,7 @@ import { NarrativeAnalysisValidator } from './narrative-analysis.validator';
 import { selectRequiredWoundEvents } from './wound-planning';
 import { selectBattlefieldEnvironment } from '../chess/battlefield-environment';
 import { classifySurrender } from '../chess/surrender-context';
+import { buildEndingContract } from './ending-contract';
 
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/unbound-method */
 
@@ -69,6 +70,7 @@ describe('NarrativeAnalysisService', () => {
 
   it('sends the complete ledger once and persists validated analysis', async () => {
     const analysis = makeAnalysis(ledger);
+    const endingContract = buildEndingContract(ledger);
     jest.mocked(provider.analyze).mockResolvedValue(analysis);
 
     await expect(service.generate('game-1')).resolves.toMatchObject({
@@ -82,6 +84,7 @@ describe('NarrativeAnalysisService', () => {
       requiredWoundEvents: selectRequiredWoundEvents(ledger),
       battlefieldEnvironment: selectBattlefieldEnvironment(ledger),
       surrenderContext: classifySurrender(ledger),
+      endingContract: buildEndingContract(ledger),
       telemetry: {
         gameId: 'game-1',
         generationRunId: 'run-1',
@@ -105,14 +108,23 @@ describe('NarrativeAnalysisService', () => {
         narrativeAnalysis: {
           create: {
             schemaVersion: 1,
-            data: analysis,
+            data: {
+              ...analysis,
+              endingPlan: {
+                ...analysis.endingPlan,
+                aftermathFocus:
+                  endingContract.creativeDirection.aftermathFocus,
+                laterChronicleLens:
+                  endingContract.creativeDirection.laterChronicleLens,
+              },
+            },
           },
         },
       }),
     });
   });
 
-  it('marks a run failed when analysis contradicts the ledger', async () => {
+  it('normalizes deterministic ending facts instead of failing or retrying', async () => {
     jest.mocked(provider.analyze).mockResolvedValue({
       ...makeAnalysis(ledger),
       endingPlan: {
@@ -121,14 +133,28 @@ describe('NarrativeAnalysisService', () => {
       },
     });
 
-    await expect(service.generate('game-1')).rejects.toBeInstanceOf(
-      BadGatewayException,
-    );
-    expect(runUpdate).toHaveBeenLastCalledWith({
-      where: { id: 'run-1' },
-      data: expect.objectContaining({ status: 'FAILED' }),
+    await expect(service.generate('game-1')).resolves.toMatchObject({
+      status: 'COMPLETED',
     });
-    expect(runUpdate).toHaveBeenCalledTimes(1);
+    expect(runUpdate).toHaveBeenCalledWith({
+      where: { id: 'run-1' },
+      data: expect.objectContaining({
+        status: 'COMPLETED',
+        narrativeAnalysis: {
+          create: {
+            schemaVersion: 1,
+            data: expect.objectContaining({
+              endingPlan: expect.objectContaining({
+                winner: 'north',
+                termination: 'checkmate',
+                surrenderAttempt: false,
+                defeatedKingFate: 'killed-after-checkmate',
+              }),
+            }),
+          },
+        },
+      }),
+    });
   });
 
   it('rejects a lasting wound that is not anchored to the character’s capture', () => {

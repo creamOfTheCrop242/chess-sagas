@@ -4,6 +4,7 @@ import type { RequiredWoundEvent } from './wound-planning';
 import type { BattlefieldEnvironment } from '../chess/battlefield-environment';
 import type { SurrenderContext } from '../chess/surrender-context';
 import type { GenerationTelemetryContext } from '../openai/openai-generation';
+import type { EndingContract } from './ending-contract';
 
 export const NARRATIVE_ANALYSIS_PROVIDER = Symbol(
   'NARRATIVE_ANALYSIS_PROVIDER',
@@ -14,6 +15,7 @@ export interface NarrativeAnalysisRequest {
   requiredWoundEvents: RequiredWoundEvent[];
   battlefieldEnvironment: BattlefieldEnvironment;
   surrenderContext: SurrenderContext | null;
+  endingContract: EndingContract;
   telemetry: GenerationTelemetryContext;
 }
 

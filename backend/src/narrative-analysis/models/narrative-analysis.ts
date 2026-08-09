@@ -113,6 +113,8 @@ const endingPlanSchema = z.object({
   kingdomConsequence: z.string().min(1),
   defeatedKingFate: z.enum(DEFEATED_KING_FATES),
   finalImage: z.string().min(1),
+  aftermathFocus: z.string().min(1).optional(),
+  laterChronicleLens: z.string().min(1).optional(),
 });
 
 export const narrativeAnalysisSchema = z.object({

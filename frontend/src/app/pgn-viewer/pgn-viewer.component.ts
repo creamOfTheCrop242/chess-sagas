@@ -53,6 +53,16 @@ type WoundHistoryEntry = {
   recoveryPly: number | null;
 };
 
+type SagaReadingBookmark =
+  | { page: 'move'; ply: number }
+  | { page: 'aftermath' }
+  | { page: 'later-chronicles' };
+
+type SagaPageOption = {
+  ply: number;
+  label: string;
+};
+
 @Component({
   selector: 'app-pgn-viewer',
   standalone: true,
@@ -90,6 +100,8 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
   private generationStartedAt: number | null = null;
   private generationTimer: ReturnType<typeof setInterval> | null = null;
   private ignorePieceBackdropUntil = 0;
+  private readingBookmarkId: string | null = null;
+  private readonly readingBookmarkPrefix = 'chess-sagas:reading-bookmark:v1:';
   readonly pipelineSteps: Array<{ id: SagaStage; label: string }> = [
     { id: 'analysis', label: 'Narrative analysis' },
     { id: 'outline', label: 'Story outline' },
@@ -152,6 +164,29 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
     if (!move) return 'Start position';
     const number = Math.ceil(move.ply / 2);
     return move.ply % 2 ? `${number}. ${move.san}` : `${number}... ${move.san}`;
+  }
+  get sagaPageOptions(): SagaPageOption[] {
+    if (!this.game) return [];
+    const options: SagaPageOption[] = [
+      { ply: 0, label: 'Start position' },
+      ...this.game.positions.map((position) => ({
+        ply: position.ply,
+        label: `Beat ${position.ply} · ${this.moveLabel(position)}`,
+      })),
+    ];
+    if (this.epilogue) {
+      options.push({
+        ply: this.game.positions.length + 1,
+        label: 'Immediate Aftermath',
+      });
+    }
+    if (this.laterEpilogue) {
+      options.push({
+        ply: this.game.positions.length + (this.epilogue ? 2 : 1),
+        label: 'Later Chronicles',
+      });
+    }
+    return options;
   }
   get gameTitle(): string {
     if (!this.game) return '';
@@ -514,6 +549,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
           }
           this.game = { ...parsed, ledger: saved.ledger.data };
           this.gameId = saved.id;
+          this.readingBookmarkId = saved.id;
           this.currentPly = 0;
           this.hoveredPieceId = null;
           this.selectedPieceId = null;
@@ -559,6 +595,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
           this.pgnText = record.rawPgn;
           this.game = { ...parsed, ledger: record.ledger.data };
           this.gameId = record.id;
+          this.readingBookmarkId = recordId;
           this.currentPly = 0;
           this.scenes = playback.scenes;
           this.battlefieldEnvironment = record.battlefieldEnvironment ?? null;
@@ -570,6 +607,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
             playback.defeatedKingDeathDescription ?? '';
           this.defeatedKingFate = playback.defeatedKingFate ?? '';
           this.defeatedSealFate = playback.defeatedSealFate ?? '';
+          this.restoreReadingBookmark();
           this.loading = false;
         },
         error: (error: unknown) => {
@@ -644,6 +682,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
           this.pgnText = saved.rawPgn;
           this.game = { ...parsed, ledger: saved.ledger.data };
           this.gameId = saved.id;
+          this.readingBookmarkId = saved.id;
           this.currentPly = 0;
           this.loading = false;
           this.watchSagaGeneration();
@@ -667,17 +706,31 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
       response.sceneBreakdown.data.defeatedKingDeathDescription ?? '';
     this.defeatedKingFate = response.sceneBreakdown.data.defeatedKingFate ?? '';
     this.defeatedSealFate = response.sceneBreakdown.data.defeatedSealFate ?? '';
+    this.restoreReadingBookmark();
   }
 
   ngOnDestroy(): void {
+    this.saveReadingBookmark();
     this.clearGenerationInterval();
   }
 
   back(): void {
-    if (this.canGoBack) this.currentPly -= 1;
+    if (this.canGoBack) {
+      this.currentPly -= 1;
+      this.saveReadingBookmark();
+    }
   }
   forward(): void {
-    if (this.canGoForward) this.currentPly += 1;
+    if (this.canGoForward) {
+      this.currentPly += 1;
+      this.saveReadingBookmark();
+    }
+  }
+  selectSagaPage(ply: number): void {
+    if (!this.game || !Number.isInteger(ply)) return;
+    this.currentPly = Math.max(0, Math.min(ply, this.finalPlaybackPly));
+    this.clearSelectedPiece();
+    this.saveReadingBookmark();
   }
   flipBoard(): void {
     this.boardOrientation =
@@ -796,6 +849,10 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
   private introStory(): string {
     return 'This battle record reveals the final battle of one fractured reality. An unknown age after the Calamity merged the Light Kingdom and Dark Kingdom onto one plane, each King fed his Royal Seal by siphoning magic from a different universe. The incompatible currents splintered reality itself, leaving this version of their armies to decide which realm will endure.';
   }
+  private moveLabel(move: ParsedPosition): string {
+    const number = Math.ceil(move.ply / 2);
+    return move.ply % 2 ? `${number}. ${move.san}` : `${number}... ${move.san}`;
+  }
   private get finalPlaybackPly(): number {
     if (!this.game) return 0;
     return (
@@ -803,6 +860,52 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
       (this.epilogue ? 1 : 0) +
       (this.laterEpilogue ? 1 : 0)
     );
+  }
+
+  private saveReadingBookmark(): void {
+    if (!this.game || !this.readingBookmarkId) return;
+    let bookmark: SagaReadingBookmark;
+    if (this.isLaterChroniclePage) {
+      bookmark = { page: 'later-chronicles' };
+    } else if (this.isAftermathPage) {
+      bookmark = { page: 'aftermath' };
+    } else {
+      bookmark = {
+        page: 'move',
+        ply: Math.max(0, Math.min(this.currentPly, this.game.positions.length)),
+      };
+    }
+    try {
+      localStorage.setItem(
+        `${this.readingBookmarkPrefix}${this.readingBookmarkId}`,
+        JSON.stringify(bookmark),
+      );
+    } catch {
+      // Reading progress is a convenience and must not block saga playback.
+    }
+  }
+
+  private restoreReadingBookmark(): void {
+    if (!this.game || !this.readingBookmarkId) return;
+    try {
+      const stored = localStorage.getItem(
+        `${this.readingBookmarkPrefix}${this.readingBookmarkId}`,
+      );
+      if (!stored) return;
+      const bookmark = JSON.parse(stored) as Partial<SagaReadingBookmark>;
+      if (bookmark.page === 'later-chronicles' && this.laterEpilogue) {
+        this.currentPly = this.game.positions.length + (this.epilogue ? 2 : 1);
+      } else if (bookmark.page === 'aftermath' && this.epilogue) {
+        this.currentPly = this.game.positions.length + 1;
+      } else if (bookmark.page === 'move' && Number.isInteger(bookmark.ply)) {
+        this.currentPly = Math.max(
+          0,
+          Math.min(bookmark.ply ?? 0, this.game.positions.length),
+        );
+      }
+    } catch {
+      // Ignore unavailable storage and malformed bookmarks.
+    }
   }
   private fallenPiecesFor(side: 'north' | 'south'): FallenPiece[] {
     if (!this.game) return [];

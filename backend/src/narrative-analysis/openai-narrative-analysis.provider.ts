@@ -20,6 +20,7 @@ import type {
   NarrativeAnalysisRequest,
 } from './llm-provider';
 import {
+  createLedgerConstrainedNarrativeAnalysisSchema,
   narrativeAnalysisSchema,
   type NarrativeAnalysis,
 } from './models/narrative-analysis';
@@ -54,6 +55,9 @@ export class OpenAiNarrativeAnalysisProvider implements NarrativeAnalysisProvide
     }
 
     const startedAt = Date.now();
+    const responseSchema = createLedgerConstrainedNarrativeAnalysisSchema(
+      ledger.pieces.map((piece) => piece.id),
+    );
     const input = JSON.stringify({
       completeLedger: compactGameLedgerForModel(ledger),
       requiredWoundEvents,
@@ -73,7 +77,7 @@ export class OpenAiNarrativeAnalysisProvider implements NarrativeAnalysisProvide
         instructions: NARRATIVE_ANALYSIS_INSTRUCTIONS,
         input,
         text: {
-          format: zodTextFormat(narrativeAnalysisSchema, 'narrative_analysis'),
+          format: zodTextFormat(responseSchema, 'narrative_analysis'),
         },
       });
       if (!response.output_parsed) {

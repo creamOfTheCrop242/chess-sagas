@@ -244,6 +244,18 @@
           </div>
 
           <div class="playback-controls">
+            <label class="page-selector">
+              <span>Go to saga page</span>
+              <select
+                aria-label="Go to saga page"
+                [ngModel]="currentPly"
+                (ngModelChange)="selectSagaPage($event)"
+              >
+                @for (page of sagaPageOptions; track page.ply) {
+                  <option [ngValue]="page.ply">{{ page.label }}</option>
+                }
+              </select>
+            </label>
             <div class="nav">
               <button
                 type="button"
@@ -423,7 +435,10 @@
         </aside>
       </div>
 
-      @if (battlefieldDescriptionOpen && battlefieldEnvironment; as battlefield) {
+      @if (
+        battlefieldDescriptionOpen && battlefieldEnvironment;
+        as battlefield
+      ) {
         <div
           class="battlefield-backdrop"
           (click)="closeBattlefieldDescription()"
@@ -527,7 +542,10 @@
                               </dl>
                               <p>{{ fate.account }}</p>
                               @if (fate.finalCondition) {
-                                <small>Final condition: {{ fate.finalCondition }}</small>
+                                <small
+                                  >Final condition:
+                                  {{ fate.finalCondition }}</small
+                                >
                               }
                             </section>
                           }
@@ -584,7 +602,10 @@
                               </dl>
                               <p>{{ fate.account }}</p>
                               @if (fate.finalCondition) {
-                                <small>Final condition: {{ fate.finalCondition }}</small>
+                                <small
+                                  >Final condition:
+                                  {{ fate.finalCondition }}</small
+                                >
                               }
                             </section>
                           }

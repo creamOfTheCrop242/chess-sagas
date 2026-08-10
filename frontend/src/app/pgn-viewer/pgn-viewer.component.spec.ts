@@ -480,6 +480,26 @@ describe('PgnViewerComponent character inspection', () => {
     expect(component.isEpiloguePage).toBeFalse();
   });
 
+  it('lists every saga page and jumps directly to the selected page', () => {
+    component.epilogue = 'The armies counted the cost.';
+    component.laterEpilogue = 'Years later, the battlefield was remembered.';
+
+    expect(component.sagaPageOptions).toEqual([
+      { ply: 0, label: 'Start position' },
+      { ply: 1, label: 'Beat 1 · 1. e4' },
+      { ply: 2, label: 'Beat 2 · 1... d5' },
+      { ply: 3, label: 'Beat 3 · 2. exd5' },
+      { ply: 4, label: 'Immediate Aftermath' },
+      { ply: 5, label: 'Later Chronicles' },
+    ]);
+
+    component.selectedPieceId = 'w-p-e2';
+    component.selectSagaPage(4);
+
+    expect(component.isAftermathPage).toBeTrue();
+    expect(component.selectedPieceId).toBeNull();
+  });
+
   it('uses saved identities instead of transient parse identities', () => {
     const parsed = structuredClone(game);
     parsed.ledger.pieces[0].permanentName = 'Transient Mara';
@@ -682,6 +702,94 @@ describe('PgnViewerComponent character inspection', () => {
 
     expect(replay.recordReplay).toBeTrue();
     expect(replay.game?.ledger.pieces[0].permanentName).toBe('Archived Mara');
+  });
+
+  it('restores the last viewed move when an archived saga is reopened', () => {
+    const bookmarkKey = 'chess-sagas:reading-bookmark:v1:record-bookmark';
+    localStorage.setItem(bookmarkKey, JSON.stringify({ page: 'move', ply: 2 }));
+    const api = {
+      getRecord: () =>
+        of({
+          id: 'record-bookmark',
+          rawPgn: '1. e4 d5 2. exd5',
+          whitePlayer: 'Ada',
+          blackPlayer: 'Turing',
+          result: '1-0',
+          createdAt: '2026-08-01',
+          completedAt: '2026-08-01',
+          ledger: { data: structuredClone(game.ledger) },
+          sceneBreakdown: { data: { scenes: [] } },
+        }),
+      parse: () => of(structuredClone(game)),
+    } as unknown as PgnApiService;
+    const route = {
+      snapshot: { paramMap: { get: () => 'record-bookmark' } },
+    } as never;
+
+    const replay = new PgnViewerComponent(api, route);
+    replay.ngOnInit();
+
+    expect(replay.currentPly).toBe(2);
+    localStorage.removeItem(bookmarkKey);
+  });
+
+  it('saves reading progress whenever playback advances', () => {
+    const bookmarkKey = 'chess-sagas:reading-bookmark:v1:saved-bookmark';
+    localStorage.removeItem(bookmarkKey);
+    const api = {
+      parse: () => of(structuredClone(game)),
+      createGame: () =>
+        of({
+          id: 'saved-bookmark',
+          ledger: { data: structuredClone(game.ledger) },
+        }),
+    } as unknown as PgnApiService;
+    const viewer = new PgnViewerComponent(api);
+    viewer.pgnText = '1. e4 d5 2. exd5';
+    viewer.submit();
+
+    viewer.forward();
+
+    expect(JSON.parse(localStorage.getItem(bookmarkKey) ?? '{}')).toEqual({
+      page: 'move',
+      ply: 1,
+    });
+    localStorage.removeItem(bookmarkKey);
+  });
+
+  it('restores an epilogue bookmark by page instead of a fragile ply number', () => {
+    const bookmarkKey = 'chess-sagas:reading-bookmark:v1:record-epilogue';
+    localStorage.setItem(bookmarkKey, JSON.stringify({ page: 'aftermath' }));
+    const api = {
+      getRecord: () =>
+        of({
+          id: 'record-epilogue',
+          rawPgn: '1. e4 d5 2. exd5',
+          whitePlayer: 'Ada',
+          blackPlayer: 'Turing',
+          result: '1-0',
+          createdAt: '2026-08-01',
+          completedAt: '2026-08-01',
+          ledger: { data: structuredClone(game.ledger) },
+          sceneBreakdown: {
+            data: {
+              scenes: [],
+              epilogue: 'The surviving armies counted the cost.',
+            },
+          },
+        }),
+      parse: () => of(structuredClone(game)),
+    } as unknown as PgnApiService;
+    const route = {
+      snapshot: { paramMap: { get: () => 'record-epilogue' } },
+    } as never;
+
+    const replay = new PgnViewerComponent(api, route);
+    replay.ngOnInit();
+
+    expect(replay.isAftermathPage).toBeTrue();
+    expect(replay.currentMoveLabel).toBe('Immediate Aftermath');
+    localStorage.removeItem(bookmarkKey);
   });
 });
 

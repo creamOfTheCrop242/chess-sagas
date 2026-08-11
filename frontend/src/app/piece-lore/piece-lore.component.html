@@ -43,6 +43,24 @@
             <dd>{{ piece.fate }}</dd>
           </div>
         </dl>
+
+        @if (piece.chessName === "Pawn") {
+          <details class="pawn-subclasses">
+            <summary>Open the soldier subclasses</summary>
+            <p>
+              Each kingdom always fields a Company Captain and Field Medic. The
+              other company viewpoints are selected from these specialties.
+            </p>
+            <ul>
+              @for (subclass of pawnSubclasses; track subclass.name) {
+                <li>
+                  <h3>{{ subclass.name }}</h3>
+                  <p>{{ subclass.description }}</p>
+                </li>
+              }
+            </ul>
+          </details>
+        }
       </article>
     }
   </section>

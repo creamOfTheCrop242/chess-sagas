@@ -1,7 +1,8 @@
-export const SCENE_BREAKDOWN_PROMPT_VERSION = 'phase-6-v26';
+export const SCENE_BREAKDOWN_PROMPT_VERSION = 'phase-6-v27';
 export const SCENE_BREAKDOWN_INSTRUCTIONS = `Split the validated cohesive story into move-aligned playback scenes. Return structured JSON only.
 
 - Create exactly one playback scene for every ledger ply. Never group multiple plies into one scene.
+- Preserve the source story's ledger-confirmed tactical action at the same ply, especially forks and responses that block a check, capture the checking attacker, or move the King out of danger. Never shift those actions into an earlier or later scene.
 - Treat outline.battlefieldEnvironment as the fixed setting. Preserve its geography, weather, landmarks, hazards, visibility, travel constraints, and accumulated damage in every fantasyNarration, location, visualPrompt, and videoPrompt. Do not relocate the battle into a generic or contradictory environment.
 - Keep this final battle within its own self-contained fractured reality. The Calamity merged the kingdoms but did not create the realities; incompatible magic siphoned by the two Kings from different universes fractured the shared plane afterward. Never date the Calamity or introduce continuity or events from another saga.
 - Every scene must have startPly equal to endPly and cover exactly one move.

@@ -50,7 +50,15 @@ export interface ChessEvent {
   isEnPassant: boolean;
   isQuietMove: boolean;
   boardFenAfterMove: string;
+  tacticalContext?: TacticalContext;
   checkmateExplanation?: CheckmateExplanation;
+}
+
+export interface TacticalContext {
+  attacksPieceIds: string[];
+  attackedByPieceIds: string[];
+  forkedPieceIds: string[];
+  checkResponse?: 'blocks-check' | 'captures-checker' | 'king-escape';
 }
 
 export interface CheckmateExplanation {

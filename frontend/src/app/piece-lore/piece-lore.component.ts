@@ -11,6 +11,11 @@ type PieceLore = {
   fate: string;
 };
 
+type PawnSubclass = {
+  name: string;
+  description: string;
+};
+
 @Component({
   selector: 'app-piece-lore',
   standalone: true,
@@ -19,6 +24,89 @@ type PieceLore = {
   styleUrl: './piece-lore.component.css',
 })
 export class PieceLoreComponent {
+  readonly pawnSubclasses: PawnSubclass[] = [
+    {
+      name: 'Company Captain',
+      description:
+        'The company’s commanding officer, responsible for its orders, discipline, and survival.',
+    },
+    {
+      name: 'Field Medic',
+      description:
+        'A battlefield healer who stabilizes the wounded with practical medicine and limited field remedies.',
+    },
+    {
+      name: 'Scout',
+      description:
+        'A forward observer trained to read terrain, locate enemies, and warn the company of ambushes.',
+    },
+    {
+      name: 'Shield-bearer',
+      description:
+        'A heavily protected line soldier trusted to anchor formations and shelter vulnerable companions.',
+    },
+    {
+      name: 'Spearman',
+      description:
+        'A disciplined formation fighter who holds enemies at reach and meets charges without yielding ground.',
+    },
+    {
+      name: 'Standard-bearer',
+      description:
+        'The keeper of the company banner, battlefield signals, and the symbol around which scattered soldiers rally.',
+    },
+    {
+      name: 'Sergeant',
+      description:
+        'An experienced junior officer who turns the captain’s commands into practical action among the ranks.',
+    },
+    {
+      name: 'Archer',
+      description:
+        'A ranged fighter trained to place arrows through poor visibility, spell-glare, and gaps in enemy protection.',
+    },
+    {
+      name: 'Sapper',
+      description:
+        'A specialist in traps, demolition, tunneling, breached walls, and rapidly constructed battlefield defenses.',
+    },
+    {
+      name: 'Outrider',
+      description:
+        'A mounted scout and messenger who patrols exposed flanks and carries urgent orders across dangerous ground.',
+    },
+    {
+      name: 'Quartermaster',
+      description:
+        'The soldier responsible for preserving food, medicine, weapons, and ammunition when supply lines collapse.',
+    },
+    {
+      name: 'Signaler',
+      description:
+        'A communications specialist who uses horns, flags, lamps, and codes to coordinate separated formations.',
+    },
+    {
+      name: 'Skirmisher',
+      description:
+        'A lightly equipped fighter who screens the formation, harasses enemies, and survives through speed and initiative.',
+    },
+    {
+      name: 'Siege Engineer',
+      description:
+        'A builder and battlefield mechanic trained to assess walls, reinforce gates, and operate or repair siege equipment.',
+    },
+    {
+      name: 'Mage Acolyte',
+      description:
+        'A soldier apprenticed in realm-magic whose unfinished spells are useful but limited and sometimes dangerous.',
+    },
+    {
+      name: 'Queen Candidate',
+      description:
+        'A potential future royal champion undergoing martial, magical, and company training without yet possessing a Queen’s full power or authority.',
+    },
+  ];
+
   readonly pieces: PieceLore[] = [
     {
       chessName: 'King',
@@ -79,7 +167,7 @@ export class PieceLoreComponent {
       chessName: 'Pawn',
       sagaName: 'Soldier Company',
       sigil: '♟',
-      oath: 'Each company carries its own name, history, and sworn specialist—captain, spearman, medic, or another soldier whose viewpoint gives the formation a human voice.',
+      oath: 'Each company carries its own name, history, and sworn specialist whose viewpoint gives the formation a human voice. Every kingdom fields a captain and medic, while its remaining specialists vary between realities.',
       movement:
         'Companies advance together and hold the kingdom’s front. Their first march may cover more ground, but afterward every step is hard won.',
       warfare:

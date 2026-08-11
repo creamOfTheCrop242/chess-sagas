@@ -46,6 +46,13 @@
           {{ loading ? "Unsealing the record…" : "Begin the saga" }}
         </button>
       </div>
+      <p class="billing-generation-message">
+        Sagas are AI-generated and may contain errors. New sagas are publicly
+        visible by default. By continuing, you agree to the
+        <a routerLink="/terms">Terms</a> and acknowledge the
+        <a routerLink="/privacy">Privacy Policy</a> and
+        <a routerLink="/refunds">Refund Policy</a>.
+      </p>
       @if (billingFailure === "signin") {
         <p class="billing-generation-message" role="alert">
           Sign in to forge a new saga.

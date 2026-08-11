@@ -52,4 +52,20 @@ describe('PieceLoreComponent', () => {
       'the same nearly indestructible material as a Moving Fortress',
     );
   });
+
+  it('provides a collapsible catalog of every pawn subclass', () => {
+    const details = fixture.nativeElement.querySelector(
+      '.pawn-subclasses',
+    ) as HTMLDetailsElement;
+    const subclasses = details.querySelectorAll('li');
+
+    expect(details.open).toBeFalse();
+    expect(subclasses).toHaveSize(16);
+    expect(details.textContent).toContain('Mage Acolyte');
+    expect(details.textContent).toContain('Queen Candidate');
+    expect(details.textContent).toContain('Outrider');
+
+    (details.querySelector('summary') as HTMLElement).click();
+    expect(details.open).toBeTrue();
+  });
 });

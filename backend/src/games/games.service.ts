@@ -10,7 +10,7 @@ import { STORY_OUTLINE_PROMPT_VERSION } from '../story-outline/story-outline.pro
 import { FULL_STORY_PROMPT_VERSION } from '../full-story/full-story.prompt';
 import { SCENE_BREAKDOWN_PROMPT_VERSION } from '../scene-breakdown/scene-breakdown.prompt';
 
-export const GAME_LEDGER_SCHEMA_VERSION = 5;
+export const GAME_LEDGER_SCHEMA_VERSION = 6;
 
 @Injectable()
 export class GamesService {

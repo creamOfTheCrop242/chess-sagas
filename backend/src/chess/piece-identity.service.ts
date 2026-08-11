@@ -107,6 +107,28 @@ const PAWN_VIEWPOINT_ROLES = {
   ],
 } as const;
 
+const REQUIRED_PAWN_VIEWPOINT_ROLES = [
+  'company captain',
+  'field medic',
+] as const;
+
+const PAWN_SPECIALTY_ROLES = [
+  'scout',
+  'shield-bearer',
+  'spearman',
+  'standard-bearer',
+  'sergeant',
+  'archer',
+  'sapper',
+  'outrider',
+  'quartermaster',
+  'signaler',
+  'skirmisher',
+  'siege engineer',
+  'mage acolyte',
+  'queen candidate',
+] as const;
+
 const FEMININE_NAMES = new Set([
   'Aveline',
   'Brienne',
@@ -397,6 +419,42 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
         'Their voice could rally scattered soldiers, so the company entrusted them with its standard',
         'They took up the standard when its former bearer fell and have never allowed it to touch earth',
       ],
+      archer: [
+        'A hunter’s patience and an uncanny sense for distance earned them a place among the company archers',
+        'They learned to loose arrows through storm and spell-glare while guarding isolated supply roads',
+      ],
+      sapper: [
+        'They became a sapper after learning to undermine walls, clear traps, and turn ruined streets into defenses',
+        'An apprenticeship in quarry blasting taught them how to break fortifications without burying their own soldiers',
+      ],
+      outrider: [
+        'Years carrying warnings between distant garrisons made them the company’s swift and watchful outrider',
+        'They earned an outrider’s saddle by crossing hostile ground with messages no spell could safely carry',
+      ],
+      quartermaster: [
+        'A gift for finding food, medicine, and ammunition in a collapsing supply chain made them quartermaster',
+        'They became quartermaster after proving that careful inventories could save more soldiers than reckless heroics',
+      ],
+      signaler: [
+        'They mastered horn, flag, and shutter-lamp codes until the company trusted them to carry orders through chaos',
+        'Their sharp eyes and flawless timing made them the signaler who kept scattered formations acting as one',
+      ],
+      skirmisher: [
+        'Quick judgment and a refusal to be pinned in formation made them a skirmisher on the company’s exposed edge',
+        'They became a skirmisher by surviving close reconnaissance where speed mattered more than armor',
+      ],
+      'siege engineer': [
+        'They trained to brace gates, measure walls, and keep siege engines working while enemy fire fell around them',
+        'A talent for timber, leverage, and field repairs made them the company’s siege engineer',
+      ],
+      'mage acolyte': [
+        'A rare sensitivity to realm-magic earned them battlefield apprenticeship under an Archwizard, though their unfinished spells remain dangerous to cast',
+        'They entered the ranks to complete the practical trials required before the Archwizards would accept them as a full initiate',
+      ],
+      'queen candidate': [
+        'The court marked them as a possible future royal champion and sent them into company service to learn war before receiving greater authority',
+        'They began the punishing martial and magical education reserved for potential Queens, but must still prove worthy while serving beside ordinary soldiers',
+      ],
     };
     const role = piece.viewpointRole ?? 'company soldier';
     const company = piece.companyName ?? `${kingdom} army`;
@@ -646,7 +704,14 @@ function shuffledCharacterNames(seed: string): string[] {
 }
 
 function shuffledPawnRoles(seed: string, side: Side): string[] {
-  return shuffledValues(PAWN_VIEWPOINT_ROLES[side], `${seed}:${side}:roles`);
+  const specialties = shuffledValues(
+    PAWN_SPECIALTY_ROLES,
+    `${seed}:${side}:specialties`,
+  ).slice(0, 6);
+  return shuffledValues(
+    [...REQUIRED_PAWN_VIEWPOINT_ROLES, ...specialties],
+    `${seed}:${side}:roles`,
+  );
 }
 
 function shuffledValues<T>(source: readonly T[], seed: string): T[] {

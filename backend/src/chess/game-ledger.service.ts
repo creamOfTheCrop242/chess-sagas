@@ -28,6 +28,17 @@ export class GameLedgerService {
 
     for (const historicalMove of history) {
       const ply = events.length + 1;
+      const wasInCheck = replay.isCheck();
+      const movingColor = replay.turn();
+      const defendingKingSquare = wasInCheck
+        ? replay.findPiece({ type: 'k', color: movingColor })[0]
+        : undefined;
+      const checkingPieceIds = defendingKingSquare
+        ? replay
+            .attackers(defendingKingSquare, movingColor === 'w' ? 'b' : 'w')
+            .map((square) => squareToId.get(square))
+            .filter((pieceId): pieceId is string => Boolean(pieceId))
+        : [];
       const moverId = squareToId.get(historicalMove.from);
       if (!moverId)
         throw new BadRequestException(
@@ -83,6 +94,14 @@ export class GameLedgerService {
       const checkmateExplanation = isCheckmate
         ? this.explainCheckmate(replay, squareToId)
         : undefined;
+      const tacticalContext = this.buildTacticalContext(
+        replay,
+        squareToId,
+        result,
+        capturedId,
+        wasInCheck,
+        checkingPieceIds,
+      );
       events.push({
         ply,
         moveNumber: Math.ceil(ply / 2),
@@ -106,6 +125,7 @@ export class GameLedgerService {
         isEnPassant,
         isQuietMove: !result.captured && !isCheck && !isCastle && !isPromotion,
         boardFenAfterMove: replay.fen(),
+        tacticalContext,
         checkmateExplanation,
       });
     }
@@ -121,6 +141,41 @@ export class GameLedgerService {
         .filter((piece) => !piece.alive)
         .map((piece) => piece.id),
       promotedPieces,
+    };
+  }
+
+  private buildTacticalContext(
+    chess: Chess,
+    squareToId: Map<string, string>,
+    move: Move,
+    capturedId: string | undefined,
+    wasInCheck: boolean,
+    checkingPieceIds: string[],
+  ): NonNullable<GameLedger['events'][number]['tacticalContext']> {
+    const enemyColor: Color = move.color === 'w' ? 'b' : 'w';
+    const enemySquares = (['p', 'n', 'b', 'r', 'q', 'k'] as const).flatMap(
+      (type) => chess.findPiece({ type, color: enemyColor }),
+    );
+    const attacksPieceIds = enemySquares
+      .filter((square) => chess.attackers(square, move.color).includes(move.to))
+      .map((square) => squareToId.get(square))
+      .filter((pieceId): pieceId is string => Boolean(pieceId));
+    const attackedByPieceIds = chess
+      .attackers(move.to, enemyColor)
+      .map((square) => squareToId.get(square))
+      .filter((pieceId): pieceId is string => Boolean(pieceId));
+    const checkResponse = !wasInCheck
+      ? undefined
+      : capturedId && checkingPieceIds.includes(capturedId)
+        ? ('captures-checker' as const)
+        : move.piece === 'k'
+          ? ('king-escape' as const)
+          : ('blocks-check' as const);
+    return {
+      attacksPieceIds,
+      attackedByPieceIds,
+      forkedPieceIds: attacksPieceIds.length >= 2 ? attacksPieceIds : [],
+      checkResponse,
     };
   }
 

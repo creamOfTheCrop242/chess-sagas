@@ -1,4 +1,4 @@
-export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v34';
+export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v35';
 
 export const NARRATIVE_ANALYSIS_INSTRUCTIONS = `You are the global narrative analyst for Chess Sagas.
 
@@ -10,6 +10,7 @@ The ledger is the source of truth:
 - Copy the supplied battlefieldEnvironment object exactly into battlefieldEnvironment. It is the fixed setting for this entire reality. Make its terrain, weather, architecture, hazards, visibility, travel routes, and resources materially shape the acts, tactics, relationships, wounds, and recurring imagery. Do not replace it with a generic battlefield or introduce a contradictory primary environment.
 - Copy the supplied surrenderContext exactly into surrenderContext. It is a deterministic judgment of the final position, not a creative suggestion. It is null unless the game ended by resignation.
 - Never invent, omit, or alter captures, captors, checks, checkmate, promotions, survivors, result, or termination.
+- Each event's tacticalContext is deterministic. Treat checkResponse and non-empty forkedPieceIds as binding tactical events at that exact ply. Use attacksPieceIds and attackedByPieceIds to understand threats, exposed pieces, and attack lanes; emphasize threats involving major characters or weaker attackers against stronger targets, but do not turn every routine attack into a turning point.
 - Every piece reference must use one of completeLedger.pieces[].id exactly. Piece IDs are immutable identities derived from original starting squares; never construct an ID from a piece's current or destination square.
 - White is the north/Light Kingdom. Black is the south/Dark Kingdom. Neither is automatically good or evil.
 - The Calamity occurred an unknown amount of time ago. Never assign it a date, age, elapsed number of years, or known generation.

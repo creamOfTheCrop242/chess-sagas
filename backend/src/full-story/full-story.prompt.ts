@@ -1,4 +1,4 @@
-export const FULL_STORY_PROMPT_VERSION = 'story-package-v43';
+export const FULL_STORY_PROMPT_VERSION = 'story-package-v44';
 
 export const FULL_STORY_INSTRUCTIONS = `Write one cohesive dark-fantasy war story package from the supplied complete ledger, validated narrative analysis, validated outline, and character registry.
 
@@ -87,6 +87,7 @@ Story rules:
 - Use piece IDs only in the structured characters field. Preserve established names in fantasyNarration.
 - For every capture, the prose must give the ledger event's exact pieceId character credit for the decisive action.
 - In every capture scene, the ledger actor kills the capturedPieceId victim. Never reverse their roles, let the victim kill the captor, or describe the captor's death unless a later ledger capture actually kills that character.
+- Honor each event's deterministic tacticalContext. Explicitly portray every checkResponse and every non-empty forkedPieceIds event at its exact ply. A blocks-check response must show the moving character physically or magically interrupting the checking lane; captures-checker must remove the attacker; king-escape must show the King leaving danger. Use attacksPieceIds and attackedByPieceIds when they create a consequential threat, expose a major character, or place a weaker fighter against a stronger one. Routine attack coverage may remain implicit so the saga does not become mechanical commentary.
 - locations must use stable fantasy place names and preserve established geography.
 - Make total story length proportional to the game while giving decisive scenes more room than transitional scenes.
 - Before returning the package, audit every scene against its ledger event and the preceding scenes. Verify ply coverage, actor identity, captures, captors, deaths, promotions, checks, termination, names, injuries, locations, dialogue continuity, and survivor state. Correct every mismatch in the returned package.

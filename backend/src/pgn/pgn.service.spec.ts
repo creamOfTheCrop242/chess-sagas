@@ -70,6 +70,27 @@ describe('PgnService deterministic ledger', () => {
     });
   });
 
+  it('records when a move blocks an existing check', () => {
+    const game = service.parse(
+      '[SetUp "1"]\n[FEN "4r2k/8/8/8/8/8/3B4/4K3 w - - 0 1"]\n[Result "*"]\n\n1. Be3 *',
+    );
+
+    expect(game.ledger.events[0].tacticalContext).toMatchObject({
+      checkResponse: 'blocks-check',
+    });
+  });
+
+  it('records forks and pieces attacking the mover on its destination', () => {
+    const game = service.parse(
+      '[SetUp "1"]\n[FEN "k7/8/8/4r2b/7r/8/3N4/K7 w - - 0 1"]\n[Result "*"]\n\n1. Nf3 *',
+    );
+    const tactics = game.ledger.events[0].tacticalContext;
+
+    expect(tactics?.forkedPieceIds).toEqual(['b-r-e5', 'b-r-h4']);
+    expect(tactics?.attacksPieceIds).toEqual(['b-r-e5', 'b-r-h4']);
+    expect(tactics?.attackedByPieceIds).toContain('b-b-h5');
+  });
+
   it('preserves the source pawn identity through promotion', () => {
     const game = service.parse(
       '[SetUp "1"]\n[FEN "7k/P7/8/8/8/8/8/7K w - - 0 1"]\n[Result "*"]\n\n1. a8=Q+ *',
@@ -131,24 +152,51 @@ describe('PgnService deterministic ledger', () => {
           left.originalSquare.localeCompare(right.originalSquare),
         )
         .map((piece) => piece.viewpointRole);
-    const expectedRoles = [
-      'company captain',
-      'company captain',
-      'field medic',
+    const requiredRoles = ['company captain', 'field medic'];
+    const expandedRoles = new Set([
+      ...requiredRoles,
       'scout',
-      'sergeant',
       'shield-bearer',
       'spearman',
       'standard-bearer',
-    ];
+      'sergeant',
+      'archer',
+      'sapper',
+      'outrider',
+      'quartermaster',
+      'signaler',
+      'skirmisher',
+      'siege engineer',
+      'mage acolyte',
+      'queen candidate',
+    ]);
 
     const northRoles = roles(pgn, 'north');
     const southRoles = roles(pgn, 'south');
 
     expect(roles(pgn, 'north')).toEqual(northRoles);
     expect(roles(pgn, 'south')).toEqual(southRoles);
-    expect([...northRoles].sort()).toEqual(expectedRoles);
-    expect([...southRoles].sort()).toEqual(expectedRoles);
+    for (const sideRoles of [northRoles, southRoles]) {
+      expect(sideRoles).toHaveLength(8);
+      expect(new Set(sideRoles).size).toBe(8);
+      expect(sideRoles.every((role) => expandedRoles.has(role!))).toBe(true);
+      requiredRoles.forEach((role) => expect(sideRoles).toContain(role));
+    }
+    expect(
+      [...northRoles, ...southRoles].some((role) =>
+        [
+          'archer',
+          'sapper',
+          'outrider',
+          'quartermaster',
+          'signaler',
+          'skirmisher',
+          'siege engineer',
+          'mage acolyte',
+          'queen candidate',
+        ].includes(role!),
+      ),
+    ).toBe(true);
     expect(roles(pgn.replace('1. e4 e5', '1. d4 d5'), 'north')).not.toEqual(
       northRoles,
     );

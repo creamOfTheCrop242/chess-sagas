@@ -67,7 +67,7 @@ export class ContactComponent {
           this.error.set(
             response.status === 429
               ? 'Too many messages were sent from this connection. Please try again later.'
-              : 'The message could not be delivered. Please try again or email support@creamofthecrop.tech.',
+              : 'The message could not be delivered. Please try again or email don@creamofthecrop.tech.',
           );
         },
       });

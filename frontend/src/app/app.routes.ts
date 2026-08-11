@@ -36,6 +36,24 @@ export const routes: Routes = [
   { path: 'login', component: LoginComponent },
   { path: 'pricing', component: PricingComponent },
   {
+    path: 'terms',
+    loadComponent: () =>
+      import('./legal/legal.component').then((module) => module.LegalComponent),
+    data: { legalPage: 'terms' },
+  },
+  {
+    path: 'privacy',
+    loadComponent: () =>
+      import('./legal/legal.component').then((module) => module.LegalComponent),
+    data: { legalPage: 'privacy' },
+  },
+  {
+    path: 'refunds',
+    loadComponent: () =>
+      import('./legal/legal.component').then((module) => module.LegalComponent),
+    data: { legalPage: 'refunds' },
+  },
+  {
     path: 'contact',
     loadComponent: () =>
       import('./contact/contact.component').then(

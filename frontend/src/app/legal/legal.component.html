@@ -1,0 +1,48 @@
+<main class="legal-page">
+  <header>
+    <p class="eyebrow">{{ page.eyebrow }}</p>
+    <h1>{{ page.title }}</h1>
+    <p class="effective">Effective and last updated: {{ effectiveDate }}</p>
+    <p class="introduction">{{ page.introduction }}</p>
+    @if (page.notice) {
+      <p class="legal-notice"><strong>Important:</strong> {{ page.notice }}</p>
+    }
+  </header>
+
+  <nav class="legal-nav" aria-label="Legal policies">
+    <a routerLink="/terms">Terms of Service</a>
+    <a routerLink="/privacy">Privacy Policy</a>
+    <a routerLink="/refunds">Refunds & cancellations</a>
+  </nav>
+
+  <article>
+    @for (section of page.sections; track section.heading) {
+      <section [attr.id]="section.id || null">
+        <h2>{{ section.heading }}</h2>
+        @for (paragraph of section.paragraphs; track $index) {
+          <p>{{ paragraph }}</p>
+        }
+        @if (section.bullets) {
+          <ul>
+            @for (bullet of section.bullets; track $index) {
+              <li>{{ bullet }}</li>
+            }
+          </ul>
+        }
+        @if (section.id === 'deletion') {
+          <a class="support-action" routerLink="/contact">Open Contact Support</a>
+        }
+      </section>
+    }
+  </article>
+
+  <aside class="review-note" aria-label="Legal review notice">
+    <h2>Legal review required</h2>
+    <p>
+      These policies must be reviewed and approved by a qualified attorney for
+      the jurisdictions where Chess Sagas operates and serves customers.
+    </p>
+  </aside>
+
+  <a class="return-link" routerLink="/">Return to Chess Sagas</a>
+</main>

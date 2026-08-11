@@ -46,6 +46,14 @@ import { BillingClientService } from './billing/billing.service';
       </div>
     </nav>
     <router-outlet />
+    <footer class="site-footer">
+      <a routerLink="/terms">Terms</a>
+      <a routerLink="/privacy">Privacy</a>
+      <a routerLink="/refunds">Refunds & cancellations</a>
+      <a routerLink="/privacy" fragment="deletion">Delete account or data</a>
+      <a routerLink="/contact">Contact</a>
+      <span>© 2026 Chess Sagas</span>
+    </footer>
     @if (billingNotice(); as notice) {
       <section class="billing-notice" role="status">
         <span>{{ notice }}</span>
@@ -145,6 +153,30 @@ import { BillingClientService } from './billing/billing.service';
       .account-loading {
         color: var(--ink-dim);
         font-size: 0.72rem;
+      }
+
+      .site-footer {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.65rem 1.1rem;
+        padding: 1.4rem max(1rem, env(safe-area-inset-right))
+          max(1.4rem, env(safe-area-inset-bottom))
+          max(1rem, env(safe-area-inset-left));
+        border-top: 1px solid rgba(196, 168, 98, 0.22);
+        color: var(--ink-dim);
+        background: rgba(7, 12, 19, 0.88);
+        font-size: 0.68rem;
+      }
+
+      .site-footer a {
+        color: var(--ink-muted);
+        text-decoration: none;
+      }
+
+      .site-footer a:hover,
+      .site-footer a:focus-visible {
+        color: var(--gold-bright);
       }
 
       .update-prompt {

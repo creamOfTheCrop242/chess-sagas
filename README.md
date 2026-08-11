@@ -47,6 +47,25 @@ Production uses `https://chesssagas.com/api/auth/google/callback` for
 `GOOGLE_CALLBACK_URL` and `https://chesssagas.com` for `PUBLIC_APP_URL`.
 Never place `GOOGLE_CLIENT_SECRET` in the frontend or commit it to Git.
 
+### Contact and support email
+
+The public `/contact` page sends bug reports, suggestions, billing questions,
+and general support requests through SMTP2GO. Configure these backend values:
+
+```text
+SMTP2GO_HOST=mail.smtp2go.com
+SMTP2GO_PORT=2525
+SMTP2GO_USER=creamofthecrop.tech
+SMTP2GO_PASSWORD=YOUR_SMTP2GO_PASSWORD
+MAIL_FROM=support@creamofthecrop.tech
+CONTACT_TO=don@creamofthecrop.tech
+```
+
+`SMTP2GO_PASSWORD` is secret and belongs only in the local backend `.env` and
+the Heroku Config Vars. The endpoint validates and limits submissions, uses a
+honeypot field for simple bots, and permits at most five accepted attempts per
+IP address per hour. The sender's address is used only as the email `Reply-To`.
+
 ### Stripe billing (Phase 2)
 
 The backend can create hosted Stripe Checkout sessions for individual saga

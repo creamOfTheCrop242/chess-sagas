@@ -18,6 +18,7 @@ import { BillingModule } from './billing/billing.module';
 import { CommunityModule } from './community/community.module';
 import { OpenAiModule } from './openai/openai.module';
 import { ReportingModule } from './reporting/reporting.module';
+import { SupportModule } from './support/support.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { ReportingModule } from './reporting/reporting.module';
     BillingModule,
     CommunityModule,
     ReportingModule,
+    SupportModule,
   ],
   controllers: [AppController],
   providers: [AppService],

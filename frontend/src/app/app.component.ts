@@ -14,12 +14,13 @@ import { BillingClientService } from './billing/billing.service';
     <nav class="account-bar" aria-label="Account navigation">
       <a class="home-link" routerLink="/">Chess Sagas</a>
       <div class="account-actions">
+        <a class="pricing-link support-link" routerLink="/contact">Support</a>
         @if (auth.user()?.reportingAdmin) {
           <a class="pricing-link" routerLink="/admin/reports">Reports</a>
         }
         <a class="pricing-link" routerLink="/pricing">
           @if (billing.status(); as status) {
-            {{ status.unlimited ? "Unlimited" : status.available + " credits" }}
+            {{ status.unlimited ? 'Unlimited' : status.available + ' credits' }}
           } @else {
             Saga credits
           }
@@ -30,7 +31,11 @@ import { BillingClientService } from './billing/billing.service';
           @if (auth.user(); as user) {
             <a class="account-link" routerLink="/login">
               @if (user.avatarUrl) {
-                <img [src]="user.avatarUrl" alt="" referrerpolicy="no-referrer" />
+                <img
+                  [src]="user.avatarUrl"
+                  alt=""
+                  referrerpolicy="no-referrer"
+                />
               }
               <span>{{ user.displayName }}</span>
             </a>
@@ -45,7 +50,13 @@ import { BillingClientService } from './billing/billing.service';
       <section class="billing-notice" role="status">
         <span>{{ notice }}</span>
         <a routerLink="/pricing">View saga credits</a>
-        <button type="button" (click)="billingNotice.set(null)" aria-label="Dismiss">×</button>
+        <button
+          type="button"
+          (click)="billingNotice.set(null)"
+          aria-label="Dismiss"
+        >
+          ×
+        </button>
       </section>
     }
     @if (updateReady()) {
@@ -167,14 +178,32 @@ import { BillingClientService } from './billing/billing.service';
         transform: translateX(-50%);
       }
 
-      .billing-notice a { color: var(--seal); }
-      .billing-notice button { margin-left: auto; border: 0; color: var(--gold-bright); background: transparent; font-size: 1.4rem; cursor: pointer; }
+      .billing-notice a {
+        color: var(--seal);
+      }
+      .billing-notice button {
+        margin-left: auto;
+        border: 0;
+        color: var(--gold-bright);
+        background: transparent;
+        font-size: 1.4rem;
+        cursor: pointer;
+      }
 
       @media (max-width: 520px) {
-        .account-actions { gap: 0.6rem; }
-        .account-link span { display: none; }
-        .pricing-link { font-size: 0.58rem; }
-        .billing-notice { align-items: flex-start; flex-wrap: wrap; }
+        .account-actions {
+          gap: 0.6rem;
+        }
+        .account-link span {
+          display: none;
+        }
+        .pricing-link {
+          font-size: 0.58rem;
+        }
+        .billing-notice {
+          align-items: flex-start;
+          flex-wrap: wrap;
+        }
       }
 
       .update-kicker,
@@ -254,9 +283,13 @@ export class AppComponent {
       }
     });
 
-    const billingResult = new URLSearchParams(window.location.search).get('billing');
+    const billingResult = new URLSearchParams(window.location.search).get(
+      'billing',
+    );
     if (billingResult === 'success') {
-      this.billingNotice.set('Payment received. Your saga credits are being added.');
+      this.billingNotice.set(
+        'Payment received. Your saga credits are being added.',
+      );
       [0, 1500, 4000].forEach((delay) =>
         window.setTimeout(() => this.billing.refresh(), delay),
       );

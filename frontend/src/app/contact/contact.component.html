@@ -1,0 +1,108 @@
+<main class="contact-page">
+  <header>
+    <p class="eyebrow">Send word to the Chronicler</p>
+    <h1>Contact & Support</h1>
+    <p>
+      Report a bug, suggest an improvement, ask about billing, or send any other
+      question about Chess Sagas.
+    </p>
+  </header>
+
+  <section class="contact-panel" aria-labelledby="contact-form-title">
+    <div class="contact-intro">
+      <h2 id="contact-form-title">How can we help?</h2>
+      <p>
+        Include the saga title or relevant PGN when reporting a story problem.
+        Never include passwords, private keys, or payment-card information.
+      </p>
+    </div>
+
+    @if (sent()) {
+      <p class="success" role="status">
+        Your message has reached the archive. We will reply by email.
+      </p>
+    }
+    @if (error(); as errorMessage) {
+      <p class="error" role="alert">{{ errorMessage }}</p>
+    }
+
+    <form #supportForm="ngForm" (ngSubmit)="submit(supportForm)">
+      <label>
+        Reason for writing
+        <select name="category" [(ngModel)]="category" required>
+          <option value="bug">Bug report</option>
+          <option value="suggestion">Suggestion</option>
+          <option value="billing">Billing question</option>
+          <option value="account">Account help</option>
+          <option value="other">Something else</option>
+        </select>
+      </label>
+
+      <div class="field-row">
+        <label>
+          Your name
+          <input
+            name="name"
+            [(ngModel)]="name"
+            required
+            minlength="2"
+            maxlength="80"
+            autocomplete="name"
+          />
+        </label>
+        <label>
+          Reply email
+          <input
+            type="email"
+            name="email"
+            [(ngModel)]="email"
+            required
+            maxlength="254"
+            autocomplete="email"
+          />
+        </label>
+      </div>
+
+      <label>
+        Subject
+        <input
+          name="subject"
+          [(ngModel)]="subject"
+          required
+          minlength="3"
+          maxlength="120"
+        />
+      </label>
+
+      <label>
+        Message
+        <textarea
+          name="message"
+          [(ngModel)]="message"
+          required
+          minlength="10"
+          maxlength="5000"
+          rows="10"
+        ></textarea>
+        <small>{{ message.length }} / 5000 characters</small>
+      </label>
+
+      <label class="ward-field" aria-hidden="true">
+        Website
+        <input
+          name="website"
+          [(ngModel)]="website"
+          tabindex="-1"
+          autocomplete="off"
+        />
+      </label>
+
+      <div class="actions">
+        <button type="submit" [disabled]="supportForm.invalid || sending()">
+          {{ sending() ? "Sending…" : "Send message" }}
+        </button>
+        <a routerLink="/">Return to the battlefield</a>
+      </div>
+    </form>
+  </section>
+</main>

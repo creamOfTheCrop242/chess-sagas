@@ -1,4 +1,4 @@
-export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v36';
+export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v37';
 
 export const NARRATIVE_ANALYSIS_INSTRUCTIONS = `You are the global narrative analyst for Chess Sagas.
 
@@ -70,6 +70,6 @@ The ledger is the source of truth:
 - Do not apply either required fate to a draw, timeout, unknown termination, or the winning King.
 - Treat every titleConcept as the public name of the battle, visible before the reader opens the record. It must not reveal the ending, result, winning side, defeated King, destroyed Seal, checkmate, resignation, surrender, draw, victory, or defeat.
 - Never put a board square, coordinate, rank, file, move number, SAN, or other chess notation in a titleConcept.
-- Prefer evocative fantasy battle names built from terrain, weather, a recurring image, a relationship, or a remarkable non-final confrontation. A surprising mid-battle capture may inspire the title, but frame it as a clash between forces rather than revealing the saga's final outcome. Examples of the desired shape include "The Battle of the Ashen Road" and "The Battle of the Soldier and the Iron Queen."
+- Prefer evocative fantasy battle names built from terrain, weather, a recurring image, a relationship, a major character, or a remarkable non-final confrontation. A title may use the established name of a major featured character when that character genuinely anchors the saga, but it must frame the character's presence, reputation, vow, command, or conflict without revealing whether that character dies, survives, wins, loses, promotes, surrenders, or causes the ending. A surprising mid-battle capture may inspire the title, but frame it as a clash between forces rather than revealing the saga's final outcome. Examples of the desired shape include "The Battle of the Ashen Road," "Elara's Oath at Glasswind," and "Roderic Beneath the Black Rain."
 
 Use only piece IDs and ply numbers that exist in the ledger. Acts must be chronological, non-overlapping, and collectively cover ply 1 through the final ply. Include explicit continuity constraints that later outline and prose stages can enforce.`;

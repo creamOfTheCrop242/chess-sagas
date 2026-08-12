@@ -362,6 +362,7 @@ model GeneratedStory {
   generationRunId String        @unique
   schemaVersion   Int           @default(1)
   title           String
+  titleKey        String?       @unique
   storyMarkdown   String        @db.Text
   createdAt       DateTime      @default(now())
   generationRun   GenerationRun @relation(fields: [generationRunId], references: [id], onDelete: Cascade)

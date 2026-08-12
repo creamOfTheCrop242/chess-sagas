@@ -20,6 +20,7 @@ import { SceneBreakdownValidator } from '../scene-breakdown/scene-breakdown.vali
 import type { SceneBreakdown } from '../scene-breakdown/models/scene-breakdown';
 import { storyOutlineSchema } from '../story-outline/models/story-outline';
 import { STORY_OUTLINE_PROMPT_VERSION } from '../story-outline/story-outline.prompt';
+import { canonicalTitleKey } from '../story-outline/story-title';
 import { DeterministicStoryValidator } from '../story-validation/deterministic-story.validator';
 import type { ValidationFinding } from '../story-validation/models/story-validation';
 import {
@@ -510,6 +511,7 @@ export class FullStoryService {
             create: {
               schemaVersion: 1,
               title: story.title,
+              titleKey: canonicalTitleKey(story.title),
               storyMarkdown: story.storyMarkdown,
             },
           },

@@ -16,6 +16,32 @@ const FALLBACK_BATTLE_TITLES = [
   'The Clash Beyond the Frostwall',
 ] as const;
 
+const TITLE_STOP_WORDS = new Set([
+  'a',
+  'an',
+  'and',
+  'at',
+  'beneath',
+  'beyond',
+  'clash',
+  'of',
+  'the',
+  'under',
+  'war',
+  'battle',
+]);
+
+const DISTINCT_TITLE_FORMS = [
+  'The Chronicle of {place}',
+  'Ashes Along {place}',
+  'Stormlight Over {place}',
+  'The Iron March Through {place}',
+  'Banners Beneath {place}',
+  'The Sundering Near {place}',
+  'The Last Muster at {place}',
+  'Shadows Across {place}',
+] as const;
+
 const PIECE_TIER: Record<FantasyPieceType, number> = {
   grunt: 1,
   archwizard: 2,
@@ -51,6 +77,94 @@ export function archiveBattleTitle(
 
   const digest = createHash('sha256').update(seed).digest();
   return FALLBACK_BATTLE_TITLES[digest[0] % FALLBACK_BATTLE_TITLES.length];
+}
+
+export function titleSimilarity(left: string, right: string): number {
+  const leftWords = significantTitleWords(left);
+  const rightWords = significantTitleWords(right);
+  if (leftWords.size === 0 || rightWords.size === 0) {
+    return normalizeTitle(left) === normalizeTitle(right) ? 1 : 0;
+  }
+  const intersection = [...leftWords].filter((word) => rightWords.has(word));
+  return intersection.length / Math.min(leftWords.size, rightWords.size);
+}
+
+export function isDistinctBattleTitle(
+  candidate: string,
+  existingTitles: readonly string[],
+): boolean {
+  const normalizedCandidate = normalizeTitle(candidate);
+  return (
+    isSpoilerFreeBattleTitle(candidate) &&
+    existingTitles.every(
+      (existing) =>
+        normalizeTitle(existing) !== normalizedCandidate &&
+        titleSimilarity(existing, candidate) < 0.75,
+    )
+  );
+}
+
+export function selectDistinctBattleTitle(
+  candidates: readonly string[],
+  existingTitles: readonly string[],
+  environmentName: string,
+  seed: string,
+): string {
+  const uniqueCandidates = [...new Set(candidates.map((title) => title.trim()))];
+  const selected = uniqueCandidates.find((title) =>
+    isDistinctBattleTitle(title, existingTitles),
+  );
+  if (selected) return selected;
+
+  const place = environmentName.replace(/^The\s+/i, '');
+  const digest = createHash('sha256').update(seed).digest();
+  for (let offset = 0; offset < DISTINCT_TITLE_FORMS.length; offset += 1) {
+    const form =
+      DISTINCT_TITLE_FORMS[
+        (digest[0] + offset) % DISTINCT_TITLE_FORMS.length
+      ];
+    const fallback = form.replace('{place}', place);
+    if (isDistinctBattleTitle(fallback, existingTitles)) return fallback;
+  }
+
+  const words = ['Ember', 'Ivory', 'Obsidian', 'Sable', 'Crimson', 'Silver'];
+  const suffixes = ['Pilgrimage', 'Reckoning', 'Convergence', 'Vigil', 'March'];
+  for (let offset = 0; offset < words.length * suffixes.length; offset += 1) {
+    const word = words[(digest[1] + offset) % words.length];
+    const suffix =
+      suffixes[(digest[2] + Math.floor(offset / words.length)) % suffixes.length];
+    const fallback = `The ${word} ${suffix} of ${place}`;
+    if (isDistinctBattleTitle(fallback, existingTitles)) return fallback;
+  }
+
+  const signature = createHash('sha256')
+    .update(`title:${seed}:${existingTitles.length}`)
+    .digest('hex')
+    .slice(0, 8)
+    .toUpperCase();
+  return `The Unnumbered Chronicle of ${place} ${signature}`;
+}
+
+export function canonicalTitleKey(title: string): string {
+  return normalizeTitle(title);
+}
+
+function significantTitleWords(title: string): Set<string> {
+  return new Set(
+    normalizeTitle(title)
+      .split(' ')
+      .filter((word) => word.length > 1 && !TITLE_STOP_WORDS.has(word)),
+  );
+}
+
+function normalizeTitle(title: string): string {
+  return title
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
 }
 
 function titleForNotableCapture(ledger: GameLedger): string | null {

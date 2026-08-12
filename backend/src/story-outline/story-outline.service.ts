@@ -15,6 +15,7 @@ import {
   type StoryOutlineProvider,
 } from './story-outline.provider';
 import { StoryOutlineValidator } from './story-outline.validator';
+import { selectDistinctBattleTitle } from './story-title';
 
 @Injectable()
 export class StoryOutlineService {
@@ -131,6 +132,18 @@ export class StoryOutlineService {
       if (!outline) {
         throw new Error('Outline generation exhausted its validation retry');
       }
+      const existingStories = await this.prisma.generatedStory.findMany({
+        select: { title: true },
+      });
+      outline = {
+        ...outline,
+        selectedTitle: selectDistinctBattleTitle(
+          [outline.selectedTitle, ...narrativeAnalysis.titleConcepts],
+          existingStories.map((story) => story.title),
+          narrativeAnalysis.battlefieldEnvironment.name,
+          gameId,
+        ),
+      };
       const data = JSON.parse(JSON.stringify(outline)) as Prisma.InputJsonValue;
 
       await this.prisma.generationRun.update({

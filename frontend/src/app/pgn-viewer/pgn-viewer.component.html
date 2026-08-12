@@ -231,6 +231,37 @@
                   }
                 </aside>
               }
+
+              @if (
+                battlefieldDescriptionOpen && battlefieldEnvironment;
+                as battlefield
+              ) {
+                <div
+                  class="battlefield-backdrop"
+                  (click)="closeBattlefieldDescription()"
+                  role="presentation"
+                >
+                  <section
+                    class="battlefield-dialog"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="battlefield-dialog-title"
+                    (click)="$event.stopPropagation()"
+                  >
+                    <button
+                      type="button"
+                      class="battlefield-close"
+                      (click)="closeBattlefieldDescription()"
+                      aria-label="Close battlefield description"
+                    >
+                      ×
+                    </button>
+                    <p class="battlefield-kicker">Battlefield</p>
+                    <h3 id="battlefield-dialog-title">{{ battlefield.name }}</h3>
+                    <p>{{ battlefield.description }}</p>
+                  </section>
+                </div>
+              }
             </div>
           </div>
 
@@ -436,37 +467,6 @@
           }
         </aside>
       </div>
-
-      @if (
-        battlefieldDescriptionOpen && battlefieldEnvironment;
-        as battlefield
-      ) {
-        <div
-          class="battlefield-backdrop"
-          (click)="closeBattlefieldDescription()"
-          role="presentation"
-        >
-          <section
-            class="battlefield-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="battlefield-dialog-title"
-            (click)="$event.stopPropagation()"
-          >
-            <button
-              type="button"
-              class="battlefield-close"
-              (click)="closeBattlefieldDescription()"
-              aria-label="Close battlefield description"
-            >
-              ×
-            </button>
-            <p class="battlefield-kicker">Battlefield</p>
-            <h3 id="battlefield-dialog-title">{{ battlefield.name }}</h3>
-            <p>{{ battlefield.description }}</p>
-          </section>
-        </div>
-      }
 
       @if (fallenRosterOpen) {
         <div

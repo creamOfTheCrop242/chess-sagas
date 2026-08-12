@@ -989,7 +989,7 @@ button.piece-card-backdrop {
 @media (max-width: 900px), (hover: none) and (pointer: coarse) {
   button.piece-card-backdrop {
     display: block;
-    position: fixed;
+    position: absolute;
     z-index: 119;
     inset: 0;
     width: 100%;
@@ -1000,19 +1000,30 @@ button.piece-card-backdrop {
   }
 
   .piece-card-pinned {
-    position: fixed;
+    position: absolute;
     z-index: 120;
     top: 50%;
     right: auto;
     bottom: auto;
     left: 50%;
-    width: min(28rem, calc(100vw - 1.5rem));
-    max-height: min(82dvh, 40rem);
+    width: min(28rem, calc(100% - 1rem));
+    max-height: calc(100% - 1rem);
     overflow-y: auto;
     overscroll-behavior: contain;
     padding: 1rem;
     pointer-events: auto;
     transform: translate(-50%, -50%);
+  }
+
+  .battlefield-backdrop {
+    position: absolute;
+    z-index: 130;
+    padding: 0.5rem;
+  }
+
+  .battlefield-dialog {
+    width: min(32rem, 100%);
+    max-height: calc(100% - 1rem);
   }
 }
 

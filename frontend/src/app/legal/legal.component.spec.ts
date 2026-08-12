@@ -28,9 +28,9 @@ describe('LegalComponent', () => {
 
   it('provides account and data-deletion instructions', async () => {
     const text = await render('privacy');
-    expect(text).toContain('Delete my account and data');
+    expect(text).toContain('delete your account directly from My public profile');
     expect(text).toContain('don@creamofthecrop.tech');
-    expect(text).toContain('Public saga records may need separate review');
+    expect(text).toContain('Public saga records remain available but are de-identified');
   });
 
   it('explains refunds, cancellation, failures, and rollover', async () => {

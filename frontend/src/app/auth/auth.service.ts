@@ -55,4 +55,18 @@ export class AuthService {
         error: () => this.refresh(),
       });
   }
+
+  deleteAccount(confirmation: string) {
+    return this.http
+      .delete('/api/auth/account', {
+        body: { confirmation },
+        withCredentials: true,
+        observe: 'response' as const,
+      })
+      .pipe(finalize(() => this.loadingState.set(false)));
+  }
+
+  clearUser(): void {
+    this.userState.set(null);
+  }
 }

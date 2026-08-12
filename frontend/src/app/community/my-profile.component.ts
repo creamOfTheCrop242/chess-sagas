@@ -1,6 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { EditableProfile } from './community.models';
 import { CommunityService } from './community.service';
@@ -31,6 +31,18 @@ import { CommunityService } from './community.service';
               <button type="submit" [disabled]="saving">{{ saving ? 'Saving…' : 'Save profile' }}</button>
               @if (message) { <p class="state" [class.error]="saveFailed" role="status">{{ message }}</p> }
             </form>
+            <section class="danger-zone">
+              <h2>Delete account</h2>
+              <p>This permanently deletes your profile, sign-in sessions, bookmarks, reading progress, and unused credits. Public sagas remain in the Hall of Records without your name.</p>
+              <p>If you have a subscription, cancel it from Saga Credits before deleting your account.</p>
+              <label>Type <strong>DELETE MY ACCOUNT</strong> to confirm
+                <input [(ngModel)]="deletionConfirmation" [ngModelOptions]="{ standalone: true }" autocomplete="off" />
+              </label>
+              <button class="danger-button" type="button" [disabled]="deleting || deletionConfirmation !== 'DELETE MY ACCOUNT'" (click)="deleteAccount()">
+                {{ deleting ? 'Deleting…' : 'Permanently delete account' }}
+              </button>
+              @if (deletionMessage) { <p class="state error" role="alert">{{ deletionMessage }}</p> }
+            </section>
           }
         </div>
       </section>
@@ -41,11 +53,15 @@ import { CommunityService } from './community.service';
 export class MyProfileComponent implements OnInit {
   readonly auth = inject(AuthService);
   private readonly community = inject(CommunityService);
+  private readonly router = inject(Router);
   profile: EditableProfile | null = null;
   loading = true;
   saving = false;
   message: string | null = null;
   saveFailed = false;
+  deletionConfirmation = '';
+  deletionMessage: string | null = null;
+  deleting = false;
 
   ngOnInit(): void {
     if (!this.auth.loading() && this.auth.user()) this.load();
@@ -79,6 +95,27 @@ export class MyProfileComponent implements OnInit {
         this.message = error?.error?.message ?? 'The profile could not be saved.';
         this.saveFailed = true;
         this.saving = false;
+      },
+    });
+  }
+
+  deleteAccount(): void {
+    if (this.deleting || this.deletionConfirmation !== 'DELETE MY ACCOUNT') return;
+    const accepted = window.confirm(
+      'Delete your Chess Sagas account permanently? This cannot be undone.',
+    );
+    if (!accepted) return;
+    this.deleting = true;
+    this.deletionMessage = null;
+    this.auth.deleteAccount(this.deletionConfirmation).subscribe({
+      next: () => {
+        this.auth.clearUser();
+        void this.router.navigateByUrl('/');
+      },
+      error: (error) => {
+        this.deletionMessage =
+          error?.error?.message ?? 'Your account could not be deleted.';
+        this.deleting = false;
       },
     });
   }

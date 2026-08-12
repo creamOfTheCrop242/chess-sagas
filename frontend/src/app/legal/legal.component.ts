@@ -194,8 +194,8 @@ const PAGES: Record<LegalPageKey, LegalPage> = {
         id: 'deletion',
         heading: 'Account and data deletion instructions',
         paragraphs: [
-          'To request deletion, sign in to the account if possible, open Contact Support, choose “Account help,” use the subject “Delete my account and data,” and send the request from the email associated with your account. You may also email don@creamofthecrop.tech from that address. We may ask you to verify your identity before acting.',
-          'State whether you also want public sagas removed. Deleting an account can permanently remove profile information, sessions, bookmarks, reading progress, unused credits, and access to purchases. Public saga records may need separate review because they can contain game data shared by multiple people. We will delete or de-identify eligible information and explain any information we must retain for billing, fraud prevention, security, dispute resolution, or legal compliance.',
+          'You can delete your account directly from My public profile after signing in. Type the displayed confirmation phrase and confirm the permanent deletion. Cancel any active subscription through Saga Credits first. If you cannot sign in, contact don@creamofthecrop.tech from the account email so we can verify your identity.',
+          'Deleting an account permanently removes profile information, sessions, bookmarks, reading progress, unused credits, and access to purchases. Public saga records remain available but are de-identified and no longer link to your profile. Billing, fraud-prevention, tax, transaction, security, and legal records may be retained where required or permitted.',
         ],
       },
       {

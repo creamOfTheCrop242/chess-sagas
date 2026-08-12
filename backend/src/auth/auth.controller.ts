@@ -3,6 +3,7 @@ import {
   Body,
   Get,
   Header,
+  Delete,
   Logger,
   Post,
   Query,
@@ -133,6 +134,20 @@ export class AuthController {
     @Res() response: Response,
   ): Promise<void> {
     await this.auth.logout(readCookie(request, SESSION_COOKIE));
+    response.clearCookie(SESSION_COOKIE, this.cookieOptions());
+    response.status(204).send();
+  }
+
+  @Delete('account')
+  async deleteAccount(
+    @Body() body: { confirmation?: string },
+    @Req() request: Request,
+    @Res() response: Response,
+  ): Promise<void> {
+    await this.auth.deleteAccount(
+      readCookie(request, SESSION_COOKIE),
+      body.confirmation,
+    );
     response.clearCookie(SESSION_COOKIE, this.cookieOptions());
     response.status(204).send();
   }

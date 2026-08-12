@@ -1,4 +1,4 @@
-export const STORY_OUTLINE_PROMPT_VERSION = 'phase-3-v37';
+export const STORY_OUTLINE_PROMPT_VERSION = 'phase-3-v38';
 
 export const STORY_OUTLINE_INSTRUCTIONS = `Create a structured outline for one cohesive dark-fantasy story. Return planning JSON only; do not write story prose.
 
@@ -47,6 +47,7 @@ The complete ledger is factual source of truth. The narrative analysis supplies 
 - Keep gore ledger-accurate. Only the captured character is confirmed killed; do not add unnamed deaths, kill survivors, or describe bloodshed during quiet moves.
 - Make the ending sequence arise from the actual result and termination.
 - Treat narrativeAnalysis.endingPlan.aftermathFocus and laterChronicleLens as binding creative direction. Build the immediate aftermath around the selected human, political, civic, military, environmental, or memorial consequence, and build the time-jump around its selected viewpoint. Do not replace either with a generic inventory of failing enchantments.
+- Treat narrativeAnalysis.endingPlan.laterChronicleCliffhanger as binding. When true, resolve the saga's central consequences before ending the Later Chronicle on one earned, story-specific unanswered development grounded in established canon; when false, provide closure without a teaser. Never undo a confirmed death or imply another archived battle is a sequel.
 - For checkmate, outline the defeated King's on-page death as the final consequence of the mating attack or Royal Seal's destruction, even though the King is not recorded as a captured piece.
 - For checkmate, the defeated Royal Seal must also be destroyed.
 - For checkmate, make the final scenes explicitly stage every relevant constraint in the ledger's checkmateExplanation: the checking attacker, protected attacker, sealed escape routes, friendly obstructions, controlled routes, and inability to capture, block, or receive aid. The King must understand why no legal physical or magical escape remains before the fatal culmination.

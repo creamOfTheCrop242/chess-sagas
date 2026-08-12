@@ -39,6 +39,7 @@ export interface EndingContract {
   creativeDirection: {
     aftermathFocus: AftermathFocus;
     laterChronicleLens: LaterChronicleLens;
+    laterChronicleCliffhanger: boolean;
   };
 }
 
@@ -81,6 +82,13 @@ export function buildEndingContract(ledger: GameLedger): EndingContract {
           Math.floor(variationSeed / AFTERMATH_FOCUSES.length) %
             LATER_CHRONICLE_LENSES.length
         ],
+      laterChronicleCliffhanger:
+        Math.floor(
+          variationSeed /
+            (AFTERMATH_FOCUSES.length * LATER_CHRONICLE_LENSES.length),
+        ) %
+          4 ===
+        0,
     },
   };
 }

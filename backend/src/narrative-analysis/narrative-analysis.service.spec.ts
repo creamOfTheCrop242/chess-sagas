@@ -116,6 +116,9 @@ describe('NarrativeAnalysisService', () => {
                   endingContract.creativeDirection.aftermathFocus,
                 laterChronicleLens:
                   endingContract.creativeDirection.laterChronicleLens,
+                laterChronicleCliffhanger:
+                  endingContract.creativeDirection
+                    .laterChronicleCliffhanger,
               },
             },
           },

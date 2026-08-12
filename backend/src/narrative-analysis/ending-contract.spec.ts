@@ -27,6 +27,9 @@ describe('buildEndingContract', () => {
     });
     expect(contract.creativeDirection.aftermathFocus).toBeTruthy();
     expect(contract.creativeDirection.laterChronicleLens).toBeTruthy();
+    expect(
+      typeof contract.creativeDirection.laterChronicleCliffhanger,
+    ).toBe('boolean');
     expect(buildEndingContract(ledger).creativeDirection).toEqual(
       contract.creativeDirection,
     );

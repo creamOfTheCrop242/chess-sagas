@@ -1,5 +1,6 @@
 import {
   BadGatewayException,
+  ConflictException,
   Injectable,
   ServiceUnavailableException,
   UnauthorizedException,
@@ -245,6 +246,47 @@ export class AuthService {
     if (!sessionToken) return;
     await this.prisma.authSession.deleteMany({
       where: { tokenHash: this.hashToken(sessionToken) },
+    });
+  }
+
+  async deleteAccount(
+    sessionToken: string | undefined,
+    confirmation: string | undefined,
+  ): Promise<void> {
+    if (confirmation !== 'DELETE MY ACCOUNT') {
+      throw new UnauthorizedException('Type DELETE MY ACCOUNT to confirm');
+    }
+    const user = await this.currentUser(sessionToken);
+    if (!user) throw new UnauthorizedException('Sign in to delete your account');
+
+    const activeSubscription = await this.prisma.billingSubscription.findFirst({
+      where: {
+        userId: user.id,
+        status: { in: ['active', 'trialing', 'past_due', 'unpaid'] },
+        cancelAtPeriodEnd: false,
+      },
+      select: { id: true },
+    });
+    if (activeSubscription) {
+      throw new ConflictException(
+        'Cancel your active subscription from Saga Credits before deleting your account',
+      );
+    }
+
+    await this.prisma.$transaction(async (transaction) => {
+      await transaction.saga.updateMany({
+        where: { creatorId: user.id },
+        data: { creatorId: null },
+      });
+      await transaction.game.updateMany({
+        where: { ownerId: user.id },
+        data: { ownerId: null },
+      });
+      await transaction.sagaGenerationJob.updateMany({
+        where: { requestedByUserId: user.id },
+        data: { requestedByUserId: null },
+      });
+      await transaction.user.delete({ where: { id: user.id } });
     });
   }
 

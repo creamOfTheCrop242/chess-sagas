@@ -50,7 +50,11 @@ import { BillingClientService } from './billing/billing.service';
       <a routerLink="/terms">Terms</a>
       <a routerLink="/privacy">Privacy</a>
       <a routerLink="/refunds">Refunds & cancellations</a>
-      <a routerLink="/privacy" fragment="deletion">Delete account or data</a>
+      @if (auth.user()) {
+        <a routerLink="/profile">Delete account</a>
+      } @else {
+        <a routerLink="/privacy" fragment="deletion">Delete account or data</a>
+      }
       <a routerLink="/contact">Contact</a>
       <span>© 2026 Chess Sagas</span>
     </footer>

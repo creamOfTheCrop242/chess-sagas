@@ -420,6 +420,48 @@ describe('PgnViewerComponent character inspection', () => {
     );
   });
 
+  it('orders the Book of Heroes by piece hierarchy', () => {
+    component.game!.ledger.pieces.push(
+      {
+        ...structuredClone(component.game!.ledger.pieces[0]),
+        id: 'w-k-e1',
+        originalSquare: 'e1',
+        chessType: 'k',
+        currentChessType: 'k',
+        fantasyType: 'king',
+        permanentName: 'Northern King',
+        characterName: 'Ormund',
+      },
+      {
+        ...structuredClone(component.game!.ledger.pieces[0]),
+        id: 'w-q-d1',
+        originalSquare: 'd1',
+        chessType: 'q',
+        currentChessType: 'q',
+        fantasyType: 'queen',
+        permanentName: 'Northern Queen',
+        characterName: 'Seraphine',
+      },
+      {
+        ...structuredClone(component.game!.ledger.pieces[0]),
+        id: 'w-p-a2',
+        originalSquare: 'a2',
+        chessType: 'p',
+        currentChessType: 'p',
+        fantasyType: 'grunt',
+        permanentName: 'Falk',
+        viewpointName: 'Falk',
+      },
+    );
+
+    expect(component.lightKingdomRoster.map((piece) => piece.fantasyType)).toEqual([
+      'king',
+      'queen',
+      'moving-fortress',
+      'grunt',
+    ]);
+  });
+
   it('uses a character backstory in the board inspector and roster', () => {
     const piece = component.game!.ledger.pieces[0];
     piece.backstory = 'Mara enlisted after defending her village ward.';

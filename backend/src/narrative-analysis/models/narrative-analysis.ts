@@ -118,6 +118,7 @@ function buildNarrativeAnalysisSchema(pieceIdSchema: z.ZodType<string>) {
     finalImage: z.string().min(1),
     aftermathFocus: z.enum(AFTERMATH_FOCUSES),
     laterChronicleLens: z.enum(LATER_CHRONICLE_LENSES),
+    laterChronicleCliffhanger: z.boolean().default(false),
   });
 
   return z.object({

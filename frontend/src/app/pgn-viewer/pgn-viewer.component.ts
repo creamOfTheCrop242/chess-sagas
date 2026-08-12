@@ -947,9 +947,24 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
   private rosterFor(side: 'north' | 'south'): PieceIdentity[] {
     return (this.game?.ledger.pieces ?? [])
       .filter((piece) => piece.side === side)
-      .sort((left, right) =>
-        left.originalSquare.localeCompare(right.originalSquare),
+      .sort(
+        (left, right) =>
+          this.pieceHierarchyRank(left) - this.pieceHierarchyRank(right) ||
+          this.pieceDisplayName(left).localeCompare(
+            this.pieceDisplayName(right),
+          ),
       );
+  }
+  private pieceHierarchyRank(piece: PieceIdentity): number {
+    const ranks: Record<string, number> = {
+      king: 0,
+      queen: 1,
+      'moving-fortress': 2,
+      archwizard: 3,
+      'knight-commander': 4,
+      grunt: 5,
+    };
+    return ranks[piece.fantasyType] ?? 6;
   }
   private get piecesBySquare(): Map<string, string> {
     const pieces = new Map<string, string>();

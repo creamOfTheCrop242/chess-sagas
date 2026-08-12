@@ -63,6 +63,15 @@ export type PieceIdentity = {
   viewpointRole?: string;
   operatorName?: string;
   pronouns?: 'he/him' | 'she/her';
+  deathDisposition?:
+    | 'defiant'
+    | 'fearful'
+    | 'resigned'
+    | 'protective'
+    | 'furious'
+    | 'devout'
+    | 'disbelieving'
+    | 'calculating';
   backstory?: string;
   alive: boolean;
   capturedAtPly?: number;

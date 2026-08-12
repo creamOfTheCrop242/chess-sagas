@@ -3,6 +3,7 @@ import type { Chess } from 'chess.js';
 import type {
   ChessColor,
   ChessPieceType,
+  DeathDisposition,
   FantasyPieceType,
   GameLedger,
   PieceIdentity,
@@ -293,6 +294,10 @@ export class PieceIdentityService {
         id,
         pawnProfile?.viewpointRole,
       ),
+      deathDisposition: characterDeathDisposition(
+        id,
+        seedForIdentityName(characterName, id),
+      ),
       alive: true,
     };
   }
@@ -311,6 +316,34 @@ export class PieceIdentityService {
           : 'Knight Commander';
     return `${compass} ${title}`;
   }
+}
+
+const DEATH_DISPOSITIONS: readonly DeathDisposition[] = [
+  'defiant',
+  'resigned',
+  'protective',
+  'furious',
+  'devout',
+  'disbelieving',
+  'calculating',
+  'fearful',
+];
+
+function seedForIdentityName(
+  characterName: string | undefined,
+  stableId: string,
+): string {
+  return characterName ?? stableId;
+}
+
+function characterDeathDisposition(
+  stableId: string,
+  identitySeed: string,
+): DeathDisposition {
+  return DEATH_DISPOSITIONS[
+    hashSeed(`${stableId}:${identitySeed}:death-disposition`) %
+      DEATH_DISPOSITIONS.length
+  ];
 }
 
 function pawnNarrativeProfile(

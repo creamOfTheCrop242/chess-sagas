@@ -19,6 +19,7 @@ import { CommunityModule } from './community/community.module';
 import { OpenAiModule } from './openai/openai.module';
 import { ReportingModule } from './reporting/reporting.module';
 import { SupportModule } from './support/support.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { SupportModule } from './support/support.module';
     CommunityModule,
     ReportingModule,
     SupportModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

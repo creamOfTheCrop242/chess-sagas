@@ -103,7 +103,7 @@ export class PieceLoreComponent {
     {
       name: 'Queen Candidate',
       description:
-        'A potential future royal champion undergoing martial, magical, and company training without yet possessing a Queen’s full power or authority.',
+        'A gifted girl identified in childhood and trained as a possible successor should the reigning Queen die or become unable to serve. By the time she enters company service, she is old enough for battle but does not yet possess a Queen’s complete magical augmentation, fortress-grade armor, power, or authority.',
     },
   ];
 
@@ -114,9 +114,9 @@ export class PieceLoreComponent {
       sigil: '♚',
       oath: 'The realm’s greatest warrior-sorcerer, trained by its finest masters and able to reach across universes to siphon the magic that feeds the Royal Seal.',
       movement:
-        'The King advances cautiously because he must continually maintain the connection to his lost home universe. Even a single step can strain the flow sustaining his kingdom.',
+        'The King advances cautiously because he must continually maintain the connection to his lost home universe. The energy flowing through him has halted his physical aging, but even an ageless body can be exhausted, wounded, or killed when that connection comes under attack.',
       warfare:
-        'The King is both an exceptional warrior and a master of magic, but much of his power is committed to channeling energy into the Seal rather than conquest.',
+        'The King is both an exceptional warrior and a master of magic, but much of his power is committed to channeling energy into the Seal rather than conquest. Every reality produces a different ruler: some are merciful and accept honorable surrender, while others reject it, demand harsh judgment, or order executions.',
       fate: 'Checkmate leaves the King with no safe escape. Resignation is a conscious surrender whose outcome varies across realities: a ruler may break, abandon, defend, shatter, or spend the Seal. He may accept captivity, flee into exile, or—rarely—have his surrender rejected and be executed by a vengeful survivor.',
     },
     {
@@ -125,18 +125,18 @@ export class PieceLoreComponent {
       sigil: '♛',
       oath: 'Raised from birth to become the kingdom’s most complete champion, the Queen was trained by the King, Archwizards, Knight Commanders, and the veteran soldiers of its pawn companies.',
       movement:
-        'Archwizard augmentation transformed her body beyond mortal limits, granting the strength and speed required to cross open ground in explosive surges rather than teleporting.',
+        'Archwizard augmentation transformed her body beyond mortal limits. She may walk with deliberate armored weight or cross open ground in an explosive magical surge, but she never teleports.',
       warfare:
-        'She wears extraordinarily heavy armor forged from the same nearly indestructible material as a Moving Fortress. Only her augmented body can bear it while combining master swordsmanship, broad high sorcery, resilience, and speed.',
+        'She wears extraordinarily heavy armor forged from the same nearly indestructible material as a Moving Fortress. Only her augmented body can bear it while combining master swordsmanship, broad high sorcery, resilience, and speed. Each Queen develops a persistent discipline—arcane dueling, defensive guardianship, aggressive battlemagic, battlefield control, or tactical command—that shapes her preferred approach without limiting her wider abilities.',
       fate: 'A fallen Queen leaves a kingdom without its fiercest protector. Her death should feel like the collapse of an army’s center, not the loss of an ordinary soldier.',
     },
     {
       chessName: 'Bishop',
       sagaName: 'Archwizard',
       sigil: '♝',
-      oath: 'A master of high sorcery whose learning reaches far beyond the art used to cross the battlefield.',
+      oath: 'Archwizards are masters of high sorcery, but there is no single road to the title. Some rise through royal colleges; others learn from great masters, inherit old traditions, survive battlefield instruction, pursue forbidden research, teach themselves, or possess gifts no academy can explain.',
       movement:
-        'Archwizards travel through folded space, portals, blinks, and other forms of teleportation. Teleportation is their movement discipline—not the limit of their magic.',
+        'Archwizards may walk to nearby positions or cross greater distances through folded space, portals, and blinks. Teleportation is one movement discipline—not the limit of their magic or a requirement for every step.',
       warfare:
         'Their arsenal includes elemental destruction, wards, bindings, counterspells, illusions, divination, transmutation, and stranger arts.',
       fate: 'When an Archwizard falls, spells may collapse, wards may fail, and magical knowledge gathered over a lifetime can vanish in an instant.',
@@ -145,11 +145,11 @@ export class PieceLoreComponent {
       chessName: 'Knight',
       sagaName: 'Knight Commander',
       sigil: '♞',
-      oath: 'An elite battlefield commander trained to strike along routes no conventional formation can follow.',
+      oath: 'Chosen from the kingdom’s most elite captains, each Knight Commander leads from the front and stands above every ordinary soldier in strength, speed, resilience, and authority.',
       movement:
-        'Knight Commanders break predictable lines, vault obstacles, and attack from unexpected angles, turning defended ground into an exposed flank.',
+        'Limited Archwizard augmentation lets them vault obstacles, cross broken ground in explosive physical surges, and attack from angles no conventional formation can follow. They do not teleport, and their transformation is nowhere near the Queen’s.',
       warfare:
-        'They combine martial skill with command authority, leading sudden charges and personally exploiting openings in the enemy host.',
+        'Each carries a personal magic-powered heavy weapon—perhaps a great hammer, greatsword, mace, maul, poleaxe, flail, glaive, or war axe—and combines its supernatural force with masterful close combat and command authority.',
       fate: 'Their loss is both personal and tactical: soldiers lose a champion, and an entire wing of the army may lose its direction.',
     },
     {
@@ -158,9 +158,9 @@ export class PieceLoreComponent {
       sigil: '♜',
       oath: 'A colossal wheeled war machine commanded by a soldier who was wounded beyond the reach of healing. To preserve their life, the pilot’s broken body was permanently placed within its armored command cradle.',
       movement:
-        'Enchanted wheels drive the Fortress in direct, crushing lines. The machine never acts alone; every turn and attack is the decision of its named pilot.',
+        'Enchanted wheels drive the Fortress in direct, crushing lines. Its armored mass and reinforced prow make it a devastating ram, but collision is only one of the pilot’s options. The machine never acts alone; every turn and attack is the decision of its named pilot.',
       warfare:
-        'From within the hull, the pilot aims weapons that fire devastating magic rounds and controls the Fortress’s armor and immense machinery as extensions of their own wounded body.',
+        'Each Fortress has its own configuration. One may carry a heavy cannon, rotary gatling gun, precision twin cannons, siege bombard, repeating ward-rifles, breach cannon, broadside batteries, or storm-caster firing magical rounds. Specialized attachments can include siege drills, stabilizers, shield generators, bridge frames, smoke projectors, recovery winches, observation masts, blade wheels, or ward-siphons.',
       fate: 'The pilot cannot survive outside the machine or without its magic life-supporting core. Destroying the Fortress kills its pilot; if a defeated kingdom loses its magic, a surviving Fortress slowly becomes both tomb and failing body as its core fades.',
     },
     {
@@ -172,7 +172,7 @@ export class PieceLoreComponent {
         'Companies advance together and hold the kingdom’s front. Their first march may cover more ground, but afterward every step is hard won.',
       warfare:
         'They capture through close combat and coordinated assaults. When a humble company defeats a greater champion, survival often comes with wounds.',
-      fate: 'A company that reaches the farthest rank ascends into a greater form without surrendering its former identity. Until that moment, the nature of the transformation remains hidden.',
+      fate: 'At the invaded kingdom’s oldest far edge lies a hidden prototype Ascension Seal—perhaps upon a forgotten pedestal, inside a cave, beneath an altar, or within another secret ancient place. It belongs to the enemy kingdom and remains linked to its King’s Royal Seal. A soldier who reaches it can commandeer that connection: the Seal reads what the invader’s kingdom needs, transforms that same person without erasing name, memories, wounds, relationships, or former role, and injures the enemy King as it steals power through him. The resulting form remains unknown until Ascension occurs. A Queen Candidate is better prepared for the ordeal but is not guaranteed to become a Queen.',
     },
   ];
 }

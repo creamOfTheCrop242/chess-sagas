@@ -25,7 +25,7 @@ describe('PieceLoreComponent', () => {
 
   it('explains that teleportation is not the extent of Archwizard magic', () => {
     expect(fixture.nativeElement.textContent).toContain(
-      'Teleportation is their movement discipline—not the limit of their magic.',
+      'Teleportation is one movement discipline—not the limit of their magic or a requirement for every step.',
     );
   });
 
@@ -36,8 +36,10 @@ describe('PieceLoreComponent', () => {
     expect(fixture.nativeElement.textContent).toContain(
       'cannot survive outside the machine',
     );
+    expect(fixture.nativeElement.textContent).toContain('rotary gatling gun');
+    expect(fixture.nativeElement.textContent).toContain('devastating ram');
     expect(fixture.nativeElement.textContent).toContain(
-      'devastating magic rounds',
+      'Specialized attachments',
     );
   });
 
@@ -63,6 +65,8 @@ describe('PieceLoreComponent', () => {
     expect(subclasses).toHaveSize(16);
     expect(details.textContent).toContain('Mage Acolyte');
     expect(details.textContent).toContain('Queen Candidate');
+    expect(details.textContent).toContain('identified in childhood');
+    expect(details.textContent).toContain('old enough for battle');
     expect(details.textContent).toContain('Outrider');
 
     (details.querySelector('summary') as HTMLElement).click();

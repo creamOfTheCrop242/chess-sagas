@@ -185,14 +185,15 @@ export class NarrativeAnalysisValidator {
         .map((event) => [event.pieceId, event.ply]),
     );
     const plannedPromotions = new Map(
-      analysis.promotingPawnPlans.map((plan) => [
-        plan.pieceId,
-        plan.promotionPly,
-      ]),
+      analysis.promotingPawnPlans.map((plan) => [plan.pieceId, plan]),
     );
     for (const [pieceId, ply] of promotionEvents) {
-      if (plannedPromotions.get(pieceId) !== ply) {
+      const plan = plannedPromotions.get(pieceId);
+      if (plan?.promotionPly !== ply) {
         errors.push(`Missing or incorrect promotion plan for ${pieceId}`);
+      }
+      if (!plan?.ascensionSite?.trim()) {
+        errors.push(`Missing Ascension Seal site for ${pieceId}`);
       }
     }
     for (const pieceId of plannedPromotions.keys()) {

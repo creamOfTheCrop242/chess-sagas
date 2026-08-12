@@ -53,6 +53,11 @@ type WoundHistoryEntry = {
   recoveryPly: number | null;
 };
 
+type KingStrainEvent = {
+  ply: number;
+  source: 'check' | 'enemy-promotion';
+};
+
 type SagaReadingBookmark =
   | { page: 'move'; ply: number }
   | { page: 'aftermath' }
@@ -383,7 +388,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
     );
     return {
       label:
-        gravelyWounded || this.kingCheckEvents(piece).length >= 4
+        gravelyWounded || this.kingStrainEvents(piece).length >= 4
           ? 'Gravely Wounded'
           : 'Wounded',
       detail: combinedSummary,
@@ -451,10 +456,10 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
           : ('active' as const),
       recoveryPly: wound.recoveryPly,
     }));
-    const strainHistory = this.kingCheckEvents(piece).map((event, index) => ({
+    const strainHistory = this.kingStrainEvents(piece).map((event, index) => ({
       inflictedAtPly: event.ply,
-      injury: this.kingStrainLabel(index + 1),
-      effects: [this.kingStrainEffect(index + 1)],
+      injury: this.kingStrainLabel(index + 1, event.source),
+      effects: [this.kingStrainEffect(index + 1, event.source)],
       state: 'active' as const,
       recoveryPly: null,
     }));
@@ -1023,17 +1028,24 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
   private isGraveInjury(injury: string): boolean {
     return /\b(grave|critical|crippl|organ|spine|skull)\b/i.test(injury);
   }
-  private kingCheckEvents(piece: PieceIdentity): ChessEvent[] {
+  private kingStrainEvents(piece: PieceIdentity): KingStrainEvent[] {
     if (!this.game || piece.chessType !== 'k') return [];
-    return this.game.ledger.events.filter(
-      (event) =>
-        event.ply <= this.currentPly &&
-        event.isCheck &&
-        event.side !== piece.side,
-    );
+    return this.game.ledger.events
+      .filter((event) => event.ply <= this.currentPly)
+      .flatMap((event) => {
+        const strain: KingStrainEvent[] = [];
+        if (event.isCheck && event.side !== piece.side) {
+          strain.push({ ply: event.ply, source: 'check' });
+        }
+        if (event.isPromotion && event.side !== piece.side) {
+          strain.push({ ply: event.ply, source: 'enemy-promotion' });
+        }
+        return strain;
+      });
   }
   private kingStrainFor(piece: PieceIdentity): PieceStatus | null {
-    const count = this.kingCheckEvents(piece).length;
+    const events = this.kingStrainEvents(piece);
+    const count = events.length;
     if (!count) return null;
     const label =
       count === 1
@@ -1045,18 +1057,30 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
             : 'Gravely Wounded';
     return {
       label,
-      detail: `${count} direct ${count === 1 ? 'threat has' : 'threats have'} damaged the King's wards and strained his connection to the Royal Seal.`,
+      detail: `${count} magical ${count === 1 ? 'assault has' : 'assaults have'} damaged the King's wards and strained his connection to the Royal Seal.`,
       tone: 'wounded',
     };
   }
-  private kingStrainLabel(count: number): string {
+  private kingStrainLabel(
+    count: number,
+    source: KingStrainEvent['source'],
+  ): string {
+    if (source === 'enemy-promotion') {
+      return 'An enemy commandeered an Ascension Seal linked to the King.';
+    }
     if (count === 1) return 'The Royal Seal wards absorbed a damaging impact.';
     if (count === 2) return 'A second assault battered the Royal Seal wards.';
     if (count === 3)
       return 'Repeated attacks wounded the King through the Seal bond.';
     return 'Another direct assault deepened the King’s accumulated damage.';
   }
-  private kingStrainEffect(count: number): string {
+  private kingStrainEffect(
+    count: number,
+    source: KingStrainEvent['source'],
+  ): string {
+    if (source === 'enemy-promotion') {
+      return 'The stolen transformation tears power through his body and destabilizes the Royal Seal bond.';
+    }
     if (count === 1) return 'The inter-universal connection begins to falter.';
     if (count === 2)
       return 'Maintaining the realm’s magic demands visible effort.';

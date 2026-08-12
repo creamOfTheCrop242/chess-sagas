@@ -282,6 +282,59 @@ describe('PgnService deterministic ledger', () => {
     }
   });
 
+  it('assigns every queen candidate a feminine identity and varied candidate canon', () => {
+    const feminineNames = new Set([
+      'Aveline',
+      'Brienne',
+      'Catrin',
+      'Elara',
+      'Elowen',
+      'Fiora',
+      'Gwendolyn',
+      'Isolde',
+      'Jessamine',
+      'Kerra',
+      'Lyra',
+      'Maela',
+      'Mara',
+      'Mirelle',
+      'Nerys',
+      'Nessa',
+      'Odette',
+      'Rhiannon',
+      'Sabine',
+      'Sera',
+      'Tamsin',
+      'Veyra',
+      'Wren',
+      'Ysolde',
+      'Zara',
+    ]);
+    const candidates = Array.from({ length: 48 }, (_, index) =>
+      service
+        .parse(
+          `[White "Ada"]\n[Black "Turing"]\n[Date "2026.09.${String(index + 1).padStart(2, '0')}"]\n[Result "*"]\n\n1. e4 e5 *`,
+        )
+        .ledger.pieces.filter(
+          (piece) => piece.viewpointRole === 'queen candidate',
+        ),
+    ).flat();
+
+    expect(candidates.length).toBeGreaterThan(8);
+    expect(
+      candidates.every(
+        (piece) =>
+          feminineNames.has(piece.permanentName) &&
+          piece.pronouns === 'she/her' &&
+          /\b(?:she|her)\b/i.test(piece.backstory ?? '') &&
+          /Queen/.test(piece.backstory ?? ''),
+      ),
+    ).toBe(true);
+    expect(
+      new Set(candidates.map((piece) => piece.backstory)).size,
+    ).toBeGreaterThan(8);
+  });
+
   it('composes broad backstory variety across different battle records', () => {
     const ledgers = Array.from(
       { length: 12 },
@@ -318,7 +371,153 @@ describe('PgnService deterministic ledger', () => {
     expect(story('queen')).toContain('fortress-grade armor');
     expect(story('archwizard')).toContain('Teleportation');
     expect(story('moving-fortress')).toContain('cannot survive apart');
-    expect(story('knight-commander')).toContain('striking forces');
+    expect(story('knight-commander')).toContain('most elite captains');
+    expect(story('knight-commander')).toContain('Queen');
+    expect(story('knight-commander')).toContain('magic-powered weapon');
+  });
+
+  it('gives every Queen a persistent and varied combat discipline', () => {
+    const queens = Array.from({ length: 24 }, (_, index) =>
+      service
+        .parse(
+          `[White "Ada"]\n[Black "Turing"]\n[Date "2027.01.${String(index + 1).padStart(2, '0')}"]\n[Result "*"]\n\n1. e4 e5 *`,
+        )
+        .ledger.pieces.filter((piece) => piece.fantasyType === 'queen'),
+    ).flat();
+    const discipline =
+      /combat discipline is (arcane dueling|defensive guardianship|aggressive battlemagic|battlefield control|tactical command)/;
+
+    expect(queens.every((piece) => discipline.test(piece.backstory ?? ''))).toBe(
+      true,
+    );
+    expect(
+      new Set(
+        queens.map((piece) => piece.backstory?.match(discipline)?.[1]),
+      ).size,
+    ).toBe(5);
+  });
+
+  it('gives Knight Commanders varied augmentation histories and signature heavy weapons', () => {
+    const commanders = Array.from({ length: 24 }, (_, index) =>
+      service
+        .parse(
+          `[White "Ada"]\n[Black "Turing"]\n[Date "2026.10.${String(index + 1).padStart(2, '0')}\"]\n[Result "*"]\n\n1. e4 e5 *`,
+        )
+        .ledger.pieces.filter(
+          (piece) => piece.fantasyType === 'knight-commander',
+        ),
+    ).flat();
+
+    expect(
+      commanders.every(
+        (piece) =>
+          /most elite captains/.test(piece.backstory ?? '') &&
+          /nowhere near the Queen/.test(piece.backstory ?? '') &&
+          /magic-powered weapon/.test(piece.backstory ?? '') &&
+          /(?:great hammer|greatsword|mace|maul|poleaxe|war flail|glaive|war axe)/.test(
+            piece.backstory ?? '',
+          ),
+      ),
+    ).toBe(true);
+    expect(
+      new Set(
+        commanders.map(
+          (piece) =>
+            piece.backstory?.match(
+              /(?:stormbound great hammer|Seal-forged greatsword|gravity mace|rune-headed maul|ward-breaking poleaxe|chain-linked war flail|crescent glaive|two-handed war axe)/,
+            )?.[0],
+        ),
+      ).size,
+    ).toBeGreaterThan(5);
+  });
+
+  it('gives Archwizards varied paths to magical mastery', () => {
+    const archwizards = Array.from({ length: 24 }, (_, index) =>
+      service
+        .parse(
+          `[White "Ada"]\n[Black "Turing"]\n[Date "2026.11.${String(index + 1).padStart(2, '0')}\"]\n[Result "*"]\n\n1. e4 e5 *`,
+        )
+        .ledger.pieces.filter((piece) => piece.fantasyType === 'archwizard'),
+    ).flat();
+    const histories = archwizards.map((piece) => piece.backstory ?? '');
+
+    expect(histories.every((story) => story.includes('Teleportation'))).toBe(
+      true,
+    );
+    expect(histories.some((story) => story.includes('royal colleges'))).toBe(
+      true,
+    );
+    expect(
+      histories.some((story) =>
+        /reclusive master|private apprenticeship|many teachers/.test(story),
+      ),
+    ).toBe(true);
+    expect(
+      histories.some((story) =>
+        /natural ability|No academy|independent practice/.test(story),
+      ),
+    ).toBe(true);
+    expect(new Set(histories).size).toBeGreaterThan(histories.length / 2);
+  });
+
+  it('gives Moving Fortresses varied magic-round weapons and attachments', () => {
+    const fortresses = Array.from({ length: 24 }, (_, index) =>
+      service
+        .parse(
+          `[White "Ada"]\n[Black "Turing"]\n[Date "2026.12.${String(index + 1).padStart(2, '0')}\"]\n[Result "*"]\n\n1. e4 e5 *`,
+        )
+        .ledger.pieces.filter(
+          (piece) => piece.fantasyType === 'moving-fortress',
+        ),
+    ).flat();
+    const histories = fortresses.map((piece) => piece.backstory ?? '');
+    const weapons = histories.map(
+      (story) =>
+        story.match(
+          /(?:heavy cannon|rotary gatling gun|twin long-barreled cannons|siege bombard|repeating ward-rifles|breach cannon|broadside batteries|rotating storm-caster)/,
+        )?.[0],
+    );
+    const attachments = histories.map(
+      (story) =>
+        story.match(
+          /(?:crushing prow|siege drill|stabilizer claws|shield generator|bridge frame|smoke projectors|recovery winch|observation mast|blade wheels|ward-siphon array)/,
+        )?.[0],
+    );
+
+    expect(histories.every((story) => story.includes('devastating ram'))).toBe(
+      true,
+    );
+    expect(new Set(weapons).size).toBeGreaterThan(5);
+    expect(new Set(attachments).size).toBeGreaterThan(7);
+  });
+
+  it('makes Kings ageless conduits with varied ruling dispositions', () => {
+    const kings = Array.from({ length: 24 }, (_, index) =>
+      service
+        .parse(
+          `[White "Ada"]\n[Black "Turing"]\n[Date "2027.01.${String(index + 1).padStart(2, '0')}\"]\n[Result "*"]\n\n1. e4 e5 *`,
+        )
+        .ledger.pieces.filter((piece) => piece.fantasyType === 'king'),
+    ).flat();
+    const histories = kings.map((piece) => piece.backstory ?? '');
+
+    expect(
+      histories.every(
+        (story) =>
+          story.includes('halted his aging') && story.includes('ageless'),
+      ),
+    ).toBe(true);
+    expect(
+      histories.some((story) =>
+        /measured mercy|patient ruler|honorable surrender/.test(story),
+      ),
+    ).toBe(true);
+    expect(
+      histories.some((story) =>
+        /rejects surrender|public execution|authoritarian/.test(story),
+      ),
+    ).toBe(true);
+    expect(new Set(histories).size).toBeGreaterThan(histories.length / 2);
   });
 
   it('reverses east and west for commanders, Archwizards, and Fortresses', () => {

@@ -18,6 +18,7 @@ export interface PieceIdentity {
   currentChessType: ChessPieceType;
   fantasyType: FantasyPieceType;
   permanentName: string;
+  characterName?: string;
   companyName?: string;
   viewpointName?: string;
   viewpointRole?: string;

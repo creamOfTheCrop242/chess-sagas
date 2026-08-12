@@ -169,15 +169,10 @@
                     </button>
                   }
                   <p class="piece-kingdom">{{ pieceKingdom(piece) }}</p>
-                  <h3>{{ piece.permanentName }}</h3>
+                  <h3>{{ pieceDisplayName(piece) }}</h3>
                   <p class="piece-role">{{ pieceRole(piece) }}</p>
                   @if (piece.companyName) {
                     <p class="piece-company">{{ piece.companyName }}</p>
-                  }
-                  @if (piece.operatorName) {
-                    <p class="piece-company">
-                      Embedded pilot: {{ piece.operatorName }}
-                    </p>
                   }
                   <p class="piece-description">{{ pieceDescription(piece) }}</p>
                   <p class="piece-kills">
@@ -515,7 +510,7 @@
                         [attr.aria-expanded]="rosterPieceId === piece.id"
                       >
                         <span>
-                          <strong>{{ piece.permanentName }}</strong>
+                          <strong>{{ pieceDisplayName(piece) }}</strong>
                           <small>{{ pieceRole(piece) }}</small>
                         </span>
                         <span
@@ -575,7 +570,7 @@
                         [attr.aria-expanded]="rosterPieceId === piece.id"
                       >
                         <span>
-                          <strong>{{ piece.permanentName }}</strong>
+                          <strong>{{ pieceDisplayName(piece) }}</strong>
                           <small>{{ pieceRole(piece) }}</small>
                         </span>
                         <span

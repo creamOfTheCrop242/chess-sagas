@@ -744,7 +744,12 @@ export function buildCaptureManifest(ledger: GameLedger): CaptureDirective[] {
 }
 
 function narrativeAliases(piece: GameLedger['pieces'][number]): string[] {
-  return [piece.viewpointName, piece.operatorName, piece.permanentName].filter(
+  return [
+    piece.viewpointName,
+    piece.operatorName,
+    piece.characterName,
+    piece.permanentName,
+  ].filter(
     (name, index, all): name is string =>
       Boolean(name?.trim()) && all.indexOf(name) === index,
   );

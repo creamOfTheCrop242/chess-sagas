@@ -82,6 +82,7 @@ export class DeterministicStoryValidator {
         }
         const names = [
           piece.permanentName,
+          piece.characterName,
           piece.viewpointName,
           piece.operatorName,
         ].filter(
@@ -423,7 +424,12 @@ function prematureDeathExcerpt(
 }
 
 function characterAliases(piece: GameLedger['pieces'][number]): string[] {
-  return [piece.permanentName, piece.viewpointName, piece.operatorName].filter(
+  return [
+    piece.permanentName,
+    piece.characterName,
+    piece.viewpointName,
+    piece.operatorName,
+  ].filter(
     (name, index, all): name is string =>
       Boolean(name?.trim()) && all.indexOf(name) === index,
   );

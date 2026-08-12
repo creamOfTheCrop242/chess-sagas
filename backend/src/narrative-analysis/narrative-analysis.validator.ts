@@ -274,6 +274,7 @@ function containsForbiddenWoundReference(
   }
   const names = ledger.pieces.flatMap((piece) => [
     piece.permanentName,
+    piece.characterName,
     piece.viewpointName,
     piece.operatorName,
     piece.companyName,

@@ -72,7 +72,7 @@ describe('PgnService deterministic ledger', () => {
 
   it('assigns Archwizard travel from diagonal move distance', () => {
     const game = service.parse(
-      '1. d4 d5 2. Bf4 Bf5 3. Bg3 Bg6 4. Bxc7 Bxc2 *',
+      '1. d4 d5 2. Be3 Be6 3. Bf4 Bf5 4. Bxc7 Bxc2 *',
     );
     const archwizardMoves = game.ledger.events.filter(
       (event) => event.pieceType === 'archwizard',
@@ -85,12 +85,12 @@ describe('PgnService deterministic ledger', () => {
         mode: event.archwizardTravelMode,
       })),
     ).toEqual([
-      { from: 'c1', to: 'f4', mode: 'teleport' },
-      { from: 'c8', to: 'f5', mode: 'teleport' },
-      { from: 'f4', to: 'g3', mode: 'walk' },
-      { from: 'f5', to: 'g6', mode: 'walk' },
-      { from: 'g3', to: 'c7', mode: 'teleport' },
-      { from: 'g6', to: 'c2', mode: 'teleport' },
+      { from: 'c1', to: 'e3', mode: 'teleport' },
+      { from: 'c8', to: 'e6', mode: 'teleport' },
+      { from: 'e3', to: 'f4', mode: 'walk' },
+      { from: 'e6', to: 'f5', mode: 'walk' },
+      { from: 'f4', to: 'c7', mode: 'teleport' },
+      { from: 'f5', to: 'c2', mode: 'teleport' },
     ]);
   });
 
@@ -587,6 +587,26 @@ describe('PgnService deterministic ledger', () => {
     expect(names.get('h1')).toBe('Northwest Fortress');
     expect(names.get('a8')).toBe('Southeast Fortress');
     expect(names.get('h8')).toBe('Southwest Fortress');
+  });
+
+  it('assigns stable personal names to every major character', () => {
+    const pgn = '[White "Ada"]\n[Black "Turing"]\n[Result "*"]\n\n1. e4 *';
+    const first = service.parse(pgn).ledger.pieces;
+    const second = service.parse(pgn).ledger.pieces;
+    const majorCharacters = first.filter(
+      (piece) => piece.chessType !== 'p' && piece.chessType !== 'r',
+    );
+
+    expect(majorCharacters).toHaveLength(12);
+    expect(majorCharacters.every((piece) => Boolean(piece.characterName))).toBe(
+      true,
+    );
+    expect(new Set(majorCharacters.map((piece) => piece.characterName)).size).toBe(
+      majorCharacters.length,
+    );
+    expect(first.map((piece) => piece.characterName)).toEqual(
+      second.map((piece) => piece.characterName),
+    );
   });
 
   it('marks checks and checkmate and derives termination', () => {

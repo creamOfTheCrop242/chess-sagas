@@ -57,6 +57,7 @@ export type PieceIdentity = {
   currentChessType: PieceCode;
   fantasyType: string;
   permanentName: string;
+  characterName?: string;
   companyName?: string;
   viewpointName?: string;
   viewpointRole?: string;

@@ -154,6 +154,24 @@ Each account may have only one queued or running saga at a time. The hourly
 limits count newly created jobs, not completed-saga reuse or retries of the same
 failed job. IP addresses are stored only as one-way hashes on generation jobs.
 
+### Production health monitoring
+
+`GET /health` is a public, non-cached readiness check for the API and Postgres.
+It returns HTTP `200` only when both are reachable, and HTTP `503` when the
+database is unavailable. Failure responses intentionally omit exception text,
+hostnames, credentials, and other internal details.
+
+Configure an external uptime monitor to request this production URL every five
+minutes and alert by email after two consecutive failures:
+
+```text
+https://chesssagas.com/api/health
+```
+
+Also configure recovery notifications so an alert is sent when service returns.
+The monitor should expect HTTP `200` and may optionally verify that the JSON
+response contains `"status":"ok"`.
+
 ### Sign in with Apple
 
 Sign in with Apple for websites requires an Apple Developer Program account, a

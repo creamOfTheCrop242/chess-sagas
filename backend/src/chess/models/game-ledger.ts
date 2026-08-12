@@ -8,6 +8,15 @@ export type FantasyPieceType =
   | 'moving-fortress'
   | 'knight-commander'
   | 'grunt';
+export type DeathDisposition =
+  | 'defiant'
+  | 'fearful'
+  | 'resigned'
+  | 'protective'
+  | 'furious'
+  | 'devout'
+  | 'disbelieving'
+  | 'calculating';
 
 export interface PieceIdentity {
   id: string;
@@ -24,6 +33,7 @@ export interface PieceIdentity {
   viewpointRole?: string;
   operatorName?: string;
   pronouns?: 'he/him' | 'she/her';
+  deathDisposition?: DeathDisposition;
   backstory?: string;
   alive: boolean;
   capturedAtPly?: number;

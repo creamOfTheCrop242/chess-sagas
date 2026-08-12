@@ -607,6 +607,10 @@ describe('PgnService deterministic ledger', () => {
     expect(first.map((piece) => piece.characterName)).toEqual(
       second.map((piece) => piece.characterName),
     );
+    expect(first.every((piece) => Boolean(piece.deathDisposition))).toBe(true);
+    expect(first.map((piece) => piece.deathDisposition)).toEqual(
+      second.map((piece) => piece.deathDisposition),
+    );
   });
 
   it('marks checks and checkmate and derives termination', () => {

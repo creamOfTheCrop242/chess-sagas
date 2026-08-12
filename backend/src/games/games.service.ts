@@ -293,6 +293,8 @@ function preserveNarrativeIdentities(
         viewpointRole: existing.viewpointRole,
         operatorName: existing.operatorName,
         pronouns: existing.pronouns ?? piece.pronouns,
+        deathDisposition:
+          existing.deathDisposition ?? piece.deathDisposition,
         backstory: existing.backstory ?? piece.backstory,
       };
     }),

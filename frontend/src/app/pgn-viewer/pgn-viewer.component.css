@@ -1002,17 +1002,18 @@ button.piece-card-backdrop {
   .piece-card-pinned {
     position: absolute;
     z-index: 120;
-    top: 50%;
+    top: 0.5rem;
     right: auto;
     bottom: auto;
     left: 50%;
     width: min(28rem, calc(100% - 1rem));
-    max-height: calc(100% - 1rem);
-    overflow-y: auto;
-    overscroll-behavior: contain;
+    height: auto;
+    max-height: none;
+    box-sizing: border-box;
+    overflow: visible;
     padding: 1rem;
     pointer-events: auto;
-    transform: translate(-50%, -50%);
+    transform: translateX(-50%);
   }
 
   .battlefield-backdrop {

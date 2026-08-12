@@ -70,6 +70,54 @@ describe('PgnService deterministic ledger', () => {
     });
   });
 
+  it('assigns Archwizard travel from diagonal move distance', () => {
+    const game = service.parse(
+      '1. d4 d5 2. Bf4 Bf5 3. Bg3 Bg6 4. Bxc7 Bxc2 *',
+    );
+    const archwizardMoves = game.ledger.events.filter(
+      (event) => event.pieceType === 'archwizard',
+    );
+
+    expect(
+      archwizardMoves.map((event) => ({
+        from: event.from,
+        to: event.to,
+        mode: event.archwizardTravelMode,
+      })),
+    ).toEqual([
+      { from: 'c1', to: 'f4', mode: 'teleport' },
+      { from: 'c8', to: 'f5', mode: 'teleport' },
+      { from: 'f4', to: 'g3', mode: 'walk' },
+      { from: 'f5', to: 'g6', mode: 'walk' },
+      { from: 'g3', to: 'c7', mode: 'teleport' },
+      { from: 'g6', to: 'c2', mode: 'teleport' },
+    ]);
+  });
+
+  it('assigns Queen travel from move distance, including captures', () => {
+    const game = service.parse(
+      '[SetUp "1"]\n[FEN "k2q4/8/8/4p3/8/8/8/K2Q4 w - - 0 1"]\n[Result "*"]\n\n1. Qh5 Qh4 2. Qxe5 Qe7 3. Qd5 *',
+    );
+    const queenMoves = game.ledger.events.filter(
+      (event) => event.pieceType === 'queen',
+    );
+
+    expect(
+      queenMoves.map((event) => ({
+        from: event.from,
+        to: event.to,
+        mode: event.queenTravelMode,
+        capture: event.isCapture,
+      })),
+    ).toEqual([
+      { from: 'd1', to: 'h5', mode: 'magical-rush', capture: false },
+      { from: 'd8', to: 'h4', mode: 'magical-rush', capture: false },
+      { from: 'h5', to: 'e5', mode: 'magical-rush', capture: true },
+      { from: 'h4', to: 'e7', mode: 'magical-rush', capture: false },
+      { from: 'e5', to: 'd5', mode: 'walk', capture: false },
+    ]);
+  });
+
   it('records when a move blocks an existing check', () => {
     const game = service.parse(
       '[SetUp "1"]\n[FEN "4r2k/8/8/8/8/8/3B4/4K3 w - - 0 1"]\n[Result "*"]\n\n1. Be3 *',

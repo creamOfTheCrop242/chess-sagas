@@ -568,6 +568,56 @@ describe('PgnService deterministic ledger', () => {
     expect(new Set(histories).size).toBeGreaterThan(histories.length / 2);
   });
 
+  it('assigns Kings masculine personal names', () => {
+    const feminineNames = new Set([
+      'Aveline',
+      'Brienne',
+      'Catrin',
+      'Elara',
+      'Elowen',
+      'Fiora',
+      'Gwendolyn',
+      'Isolde',
+      'Jessamine',
+      'Kerra',
+      'Lyra',
+      'Maela',
+      'Mara',
+      'Mirelle',
+      'Nerys',
+      'Nessa',
+      'Odette',
+      'Rhiannon',
+      'Sabine',
+      'Sera',
+      'Tamsin',
+      'Veyra',
+      'Wren',
+      'Ysolde',
+      'Zara',
+    ]);
+    const ledgers = Array.from({ length: 32 }, (_, index) =>
+      service.parse(
+        `[White "Ada"]\n[Black "Turing"]\n[Date "2027.02.${String(index + 1).padStart(2, '0')}"]\n[Result "*"]\n\n1. e4 e5 *`,
+      ).ledger,
+    );
+
+    for (const ledger of ledgers) {
+      const kings = ledger.pieces.filter((piece) => piece.chessType === 'k');
+      expect(kings).toHaveLength(2);
+      expect(
+        kings.every(
+          (piece) =>
+            Boolean(piece.characterName) &&
+            !feminineNames.has(piece.characterName ?? ''),
+        ),
+      ).toBe(true);
+      expect(new Set(ledger.pieces.map((piece) => piece.characterName)).size).toBe(
+        ledger.pieces.length,
+      );
+    }
+  });
+
   it('reverses east and west for commanders, Archwizards, and Fortresses', () => {
     const parsed = service.parse(
       '[White "Ada"]\n[Black "Turing"]\n[Result "*"]\n\n1. e4 *',

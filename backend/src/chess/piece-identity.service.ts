@@ -219,6 +219,19 @@ export class PieceIdentityService {
                 reservedCharacterNames,
               )
             : randomizedPawnName;
+        const assignedMajorName =
+          piece.type !== 'p' && piece.type !== 'r'
+            ? characterNames[pawnCount + fortressCount + majorIndex++]
+            : undefined;
+        const majorCharacterName =
+          piece.type === 'k' && assignedMajorName
+            ? kingName(
+                assignedMajorName,
+                seed,
+                `${piece.color}-${piece.type}-${square}`,
+                reservedCharacterNames,
+              )
+            : assignedMajorName;
         const identity = this.identity(
           piece.color,
           piece.type,
@@ -228,9 +241,7 @@ export class PieceIdentityService {
           piece.type === 'r'
             ? characterNames[pawnCount + fortressIndex++]
             : undefined,
-          piece.type !== 'p' && piece.type !== 'r'
-            ? characterNames[pawnCount + fortressCount + majorIndex++]
-            : undefined,
+          majorCharacterName,
         );
         identity.backstory = pieceBackstory(identity, seed);
         pieces.push(identity);
@@ -857,6 +868,23 @@ function queenCandidateName(
   ).find((name) => FEMININE_NAMES.has(name) && !reservedNames.has(name));
   if (!replacement) {
     throw new Error('No unused feminine name is available for Queen Candidate');
+  }
+  reservedNames.add(replacement);
+  return replacement;
+}
+
+function kingName(
+  assignedName: string,
+  seed: string,
+  stableId: string,
+  reservedNames: Set<string>,
+): string {
+  if (!FEMININE_NAMES.has(assignedName)) return assignedName;
+  const replacement = shuffledCharacterNames(
+    `${seed}:${stableId}:king-name`,
+  ).find((name) => !FEMININE_NAMES.has(name) && !reservedNames.has(name));
+  if (!replacement) {
+    throw new Error('No unused masculine name is available for King');
   }
   reservedNames.add(replacement);
   return replacement;

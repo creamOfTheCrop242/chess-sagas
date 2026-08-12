@@ -370,6 +370,21 @@
                   This battle needs one saga credit.
                   <a routerLink="/pricing">View credit options</a>
                 </p>
+              } @else if (generationAccessFailure === "disabled") {
+                <p class="billing-generation-message" role="alert">
+                  The forge is temporarily closed to new sagas. Existing
+                  records remain available in the Hall of Records.
+                </p>
+              } @else if (generationAccessFailure === "active") {
+                <p class="billing-generation-message" role="alert">
+                  Another saga is already being forged for this account. Let it
+                  finish before beginning a different battle.
+                </p>
+              } @else if (generationAccessFailure === "rate-limit") {
+                <p class="billing-generation-message" role="alert">
+                  The hourly saga-generation limit has been reached. Try again
+                  later.
+                </p>
               }
 
               @if (pipelineVisible) {

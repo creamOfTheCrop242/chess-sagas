@@ -159,6 +159,9 @@ describe('PgnViewerComponent character inspection', () => {
       alive: true,
     };
     component.game!.ledger.pieces.push(southernKing);
+    component.game!.ledger.events.forEach((event) => {
+      event.isPromotion = false;
+    });
     component.game!.ledger.events[0].isCheck = true;
     component.game!.ledger.events[2].isCheck = true;
     component.game!.ledger.events[3].isCheck = true;
@@ -170,12 +173,44 @@ describe('PgnViewerComponent character inspection', () => {
     expect(component.pieceStatus(southernKing)).toEqual({
       label: 'Wounded',
       detail:
-        "3 direct threats have damaged the King's wards and strained his connection to the Royal Seal.",
+        "3 magical assaults have damaged the King's wards and strained his connection to the Royal Seal.",
       tone: 'wounded',
     });
     component.selectedPieceId = southernKing.id;
     expect(component.inspectedPieceWoundHistory).toHaveSize(3);
     expect(component.inspectedPieceWoundHistory[0].inflictedAtPly).toBe(4);
+  });
+
+  it('damages the defending King when an enemy soldier promotes', () => {
+    const northernKing = {
+      id: 'w-k-e1',
+      chessColor: 'w' as const,
+      side: 'north' as const,
+      originalSquare: 'e1',
+      chessType: 'k' as const,
+      currentChessType: 'k' as const,
+      fantasyType: 'king' as const,
+      permanentName: 'Northern King',
+      alive: true,
+    };
+    component.game!.ledger.pieces.push(northernKing);
+    component.game!.ledger.events[2].isPromotion = true;
+    component.game!.ledger.events[2].side = 'south';
+    component.currentPly = 3;
+
+    expect(component.pieceStatus(northernKing)).toEqual({
+      label: 'Strained',
+      detail:
+        "1 magical assault has damaged the King's wards and strained his connection to the Royal Seal.",
+      tone: 'wounded',
+    });
+    component.selectedPieceId = northernKing.id;
+    expect(component.inspectedPieceWoundHistory[0]).toEqual(
+      jasmine.objectContaining({
+        inflictedAtPly: 3,
+        injury: 'An enemy commandeered an Ascension Seal linked to the King.',
+      }),
+    );
   });
 
   it('hides cross-character names and piece IDs in malformed wound status data', () => {

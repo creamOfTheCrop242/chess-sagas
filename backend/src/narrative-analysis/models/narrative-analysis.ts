@@ -84,6 +84,7 @@ function buildNarrativeAnalysisSchema(pieceIdSchema: z.ZodType<string>) {
     pieceId: pieceIdSchema,
     promotionPly: z.number().int().positive(),
     setupPlies: z.array(z.number().int().positive()),
+    ascensionSite: z.string().min(1),
     ascensionMeaning: z.string().min(1),
   });
 

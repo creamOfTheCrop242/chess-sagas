@@ -38,6 +38,8 @@ export interface ChessEvent {
   to: string;
   pieceId: string;
   pieceType: FantasyPieceType;
+  archwizardTravelMode?: 'walk' | 'teleport';
+  queenTravelMode?: 'walk' | 'magical-rush';
   isCapture: boolean;
   capturedPieceId?: string;
   capturedPieceType?: FantasyPieceType;

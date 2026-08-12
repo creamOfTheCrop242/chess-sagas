@@ -77,6 +77,8 @@ export type ChessEvent = {
   to: string;
   pieceId: string;
   pieceType: string;
+  archwizardTravelMode?: 'walk' | 'teleport';
+  queenTravelMode?: 'walk' | 'magical-rush';
   isCapture: boolean;
   capturedPieceId?: string;
   capturedPieceType?: string;

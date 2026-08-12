@@ -20,11 +20,11 @@ Report:
 - board coordinates or chess terminology in reader-facing prose
 - any public title that reveals the ending, result, winner, defeated King, destroyed Seal, checkmate, resignation, surrender, draw, victory, or defeat; or that contains a board square, coordinate, rank, file, move number, SAN, or chess notation
 - important Queen combat lacking either swordplay or magic
-- Queen movement portrayed as teleportation, or as incapable of both ordinary close movement and magically amplified superhuman rushing when each suits the circumstances
+- Queen movement contradicting the event's authoritative queenTravelMode: a one- or two-square walk portrayed as a magical rush, a three-or-more-square magical rush portrayed as ordinary walking, or either mode portrayed as teleportation; danger and tone are not exceptions
 - a Queen portrayed without lifelong training by the King, Archwizards, Knight Commanders, and pawn-company soldiers; without magical bodily augmentation; or without extremely heavy nearly indestructible Moving-Fortress armor when those details are relevant
 - a Queen whose actions repeatedly contradict or replace the exact combat discipline established in her character-registry backstory; treat the discipline as a persistent preferred style rather than a prohibition on adapting or using her broader abilities
 - a Knight Commander portrayed as an ordinary soldier rather than an elite augmented captain; as equal or close to the Queen's enhancement; using a signature weapon that contradicts the character registry; teleporting; wearing Fortress-grade armor; or wielding broad Archwizard-level sorcery
-- Archwizard movement portrayed as incapable of walking to a close position or incapable of teleporting across meaningful distance, danger, urgency, or tactical surprise; do not require either mode for every individual move
+- Archwizard movement contradicting the event's authoritative archwizardTravelMode: a one- or two-square walk portrayed as teleportation, or a three-or-more-square teleport portrayed as walking, running, or riding; danger and tone are not exceptions
 - an Archwizard portrayed as possessing only teleportation magic, or repetitive combat that incorrectly turns every Archwizard spell into a portal, blink, or spatial effect
 - an Archwizard's registry-defined training history being contradicted or replaced with generic royal-college education; do not require college attendance when the established path is private apprenticeship, inherited tradition, natural gift, battlefield learning, forbidden research, or self-teaching
 - a Moving Fortress portrayed without magic-powered wheels, with a pilot who is not alive and physically embedded within it, or as a sentient machine acting independently of its pilot

@@ -111,6 +111,14 @@ export class GameLedgerService {
         to: result.to,
         pieceId: mover.id,
         pieceType: this.identities.fantasyType(result.piece),
+        archwizardTravelMode:
+          this.identities.fantasyType(result.piece) === 'archwizard'
+            ? distanceBasedTravelMode(result.from, result.to, 'teleport')
+            : undefined,
+        queenTravelMode:
+          this.identities.fantasyType(result.piece) === 'queen'
+            ? distanceBasedTravelMode(result.from, result.to, 'magical-rush')
+            : undefined,
         isCapture: Boolean(result.captured),
         capturedPieceId: captured?.id,
         capturedPieceType: captured?.fantasyType,
@@ -282,6 +290,16 @@ export class GameLedgerService {
       termination,
     };
   }
+}
+
+function distanceBasedTravelMode<T extends 'teleport' | 'magical-rush'>(
+  from: string,
+  to: string,
+  longTravelMode: T,
+): 'walk' | T {
+  const fileDistance = Math.abs(from.charCodeAt(0) - to.charCodeAt(0));
+  const rankDistance = Math.abs(Number(from[1]) - Number(to[1]));
+  return Math.max(fileDistance, rankDistance) > 2 ? longTravelMode : 'walk';
 }
 
 function adjacentSquares(square: Square): Square[] {

@@ -432,12 +432,14 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
           candidate.captureVictimId === piece.id),
     );
     return {
-      killerName: killer?.permanentName ?? 'An unknown enemy',
+      killerName: killer
+        ? this.pieceDisplayName(killer)
+        : 'An unknown enemy',
       beat: deathEvent.ply,
       account:
         (checkmate ? this.defeatedKingDeathDescription : '') ||
         scene?.fantasyNarration ||
-        `${piece.permanentName} fell during the clash at beat ${deathEvent.ply}.`,
+        `${this.pieceDisplayName(piece)} fell during the clash at beat ${deathEvent.ply}.`,
       finalCondition: this.finalWoundCondition(piece),
     };
   }
@@ -787,6 +789,14 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
       ? 'Light Kingdom · North'
       : 'Dark Kingdom · South';
   }
+  pieceDisplayName(piece: PieceIdentity): string {
+    return (
+      piece.viewpointName ??
+      piece.operatorName ??
+      piece.characterName ??
+      piece.permanentName
+    );
+  }
   pieceRole(piece: PieceIdentity): string {
     if (piece.chessType === 'p') {
       const promotion = this.currentPromotionFor(piece);
@@ -797,7 +807,9 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
       }
       return this.displayRole(piece.viewpointRole ?? 'company soldier');
     }
-    return this.displayRole(piece.fantasyType);
+    return piece.fantasyType === 'moving-fortress'
+      ? 'Moving Fortress Pilot'
+      : this.displayRole(piece.fantasyType);
   }
   pieceDescription(piece: PieceIdentity): string {
     if (piece.backstory) return piece.backstory;

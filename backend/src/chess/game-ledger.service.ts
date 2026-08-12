@@ -299,7 +299,7 @@ function distanceBasedTravelMode<T extends 'teleport' | 'magical-rush'>(
 ): 'walk' | T {
   const fileDistance = Math.abs(from.charCodeAt(0) - to.charCodeAt(0));
   const rankDistance = Math.abs(Number(from[1]) - Number(to[1]));
-  return Math.max(fileDistance, rankDistance) > 2 ? longTravelMode : 'walk';
+  return Math.max(fileDistance, rankDistance) > 1 ? longTravelMode : 'walk';
 }
 
 function adjacentSquares(square: Square): Square[] {

@@ -180,16 +180,14 @@ export class PieceIdentityService {
     const pieces: PieceIdentity[] = [];
     const squareToId = new Map<string, string>();
     const characterNames = shuffledCharacterNames(seed);
-    const pawnCount = chess
-      .board()
-      .flat()
-      .filter((piece) => piece?.type === 'p').length;
-    const fortressCount = chess
-      .board()
-      .flat()
-      .filter((piece) => piece?.type === 'r').length;
+    const boardPieces = chess.board().flat().filter((piece) => Boolean(piece));
+    const pawnCount = boardPieces.filter((piece) => piece?.type === 'p').length;
+    const fortressCount = boardPieces.filter((piece) => piece?.type === 'r').length;
+    const namedMajorCount = boardPieces.filter(
+      (piece) => piece && piece.type !== 'p' && piece.type !== 'r',
+    ).length;
     const reservedCharacterNames = new Set(
-      characterNames.slice(0, pawnCount + fortressCount),
+      characterNames.slice(0, pawnCount + fortressCount + namedMajorCount),
     );
     const pawnRoles = {
       north: shuffledPawnRoles(seed, 'north'),
@@ -197,6 +195,7 @@ export class PieceIdentityService {
     };
     let pawnIndex = 0;
     let fortressIndex = 0;
+    let majorIndex = 0;
 
     for (const row of chess.board()) {
       for (const piece of row) {
@@ -228,6 +227,9 @@ export class PieceIdentityService {
           piece.type === 'r'
             ? characterNames[pawnCount + fortressIndex++]
             : undefined,
+          piece.type !== 'p' && piece.type !== 'r'
+            ? characterNames[pawnCount + fortressCount + majorIndex++]
+            : undefined,
         );
         identity.backstory = pieceBackstory(identity, seed);
         pieces.push(identity);
@@ -257,6 +259,7 @@ export class PieceIdentityService {
     pawnName?: string,
     pawnRole?: string,
     fortressOperatorName?: string,
+    majorCharacterName?: string,
   ): PieceIdentity {
     const side: Side = color === 'w' ? 'north' : 'south';
     const id = `${color}-${type}-${square}`;
@@ -267,7 +270,9 @@ export class PieceIdentityService {
     const permanentName =
       pawnProfile?.viewpointName ?? this.name(side, type, square);
     const characterName =
-      type === 'r' ? fortressOperatorName : pawnProfile?.viewpointName;
+      type === 'r'
+        ? fortressOperatorName
+        : pawnProfile?.viewpointName ?? majorCharacterName;
     return {
       id,
       chessColor: color,
@@ -277,6 +282,7 @@ export class PieceIdentityService {
       currentChessType: type,
       fantasyType: this.fantasyType(type),
       permanentName,
+      characterName,
       companyName: pawnProfile?.companyName,
       viewpointName: pawnProfile?.viewpointName,
       viewpointRole: pawnProfile?.viewpointRole,
@@ -356,7 +362,8 @@ export function normalizePawnViewpoints(ledger: GameLedger): GameLedger {
 
 function pieceBackstory(piece: PieceIdentity, seed: string): string {
   const kingdom = piece.side === 'north' ? 'Light Kingdom' : 'Dark Kingdom';
-  const name = piece.operatorName ?? piece.permanentName;
+  const name =
+    piece.operatorName ?? piece.viewpointName ?? piece.characterName ?? piece.permanentName;
   const choice = (values: readonly string[], key: string): string =>
     values[hashSeed(`${seed}:${piece.id}:${key}`) % values.length];
   const personalize = (text: string): string =>
@@ -651,7 +658,7 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       'He judges every surrender individually, weighing civilian lives, battlefield conduct, personal oaths, and the advice of surviving commanders',
       'He values order above mercy or vengeance and chooses whichever fate he believes will prevent the next war',
     ];
-    return `${piece.permanentName} ${choice(upbringings, 'upbringing')}, studying warfare beside the finest commanders and magic beneath the greatest Archwizards. When the Calamity severed the kingdom’s native power, the King ${choice(discoveries, 'discovery')} and forged the Royal Seal before the last reserves failed. The immense current flowing continuously through his body has halted his aging, leaving him physically ageless for as long as he can sustain the connection. ${choice(dispositions, 'ruling-disposition')}. ${choice(burdens, 'burden')}.`;
+    return `${name} ${choice(upbringings, 'upbringing')}, studying warfare beside the finest commanders and magic beneath the greatest Archwizards. When the Calamity severed the kingdom’s native power, the King ${choice(discoveries, 'discovery')} and forged the Royal Seal before the last reserves failed. The immense current flowing continuously through his body has halted his aging, leaving him physically ageless for as long as he can sustain the connection. ${choice(dispositions, 'ruling-disposition')}. ${choice(burdens, 'burden')}.`;
   }
 
   if (piece.chessType === 'q') {
@@ -686,7 +693,7 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       'Her combat discipline is battlefield control: bindings, barriers, altered terrain, and measured blade work constrain enemy movement before she commits to a decisive attack',
       'Her combat discipline is tactical command: she fights as the moving center of a coordinated formation, using blade, magic, and signals to make the entire army act as one',
     ];
-    return `${piece.permanentName} ${choice(selections, 'selection')}. Trained from childhood by the King, Archwizards, Knight Commanders, and soldier companies, her magically augmented body can bear nearly indestructible fortress-grade armor and fight with superhuman speed. ${choice(combatDisciplines, 'combat-discipline')}. ${choice(definingLessons, 'lesson')}. ${choice(conflicts, 'conflict')}.`;
+    return `${name} ${choice(selections, 'selection')}. Trained from childhood by the King, Archwizards, Knight Commanders, and soldier companies, her magically augmented body can bear nearly indestructible fortress-grade armor and fight with superhuman speed. ${choice(combatDisciplines, 'combat-discipline')}. ${choice(definingLessons, 'lesson')}. ${choice(conflicts, 'conflict')}.`;
   }
 
   if (piece.chessType === 'b') {
@@ -731,7 +738,7 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       'They keep meticulous records because reality itself can no longer be trusted to remember correctly',
     ];
     return personalize(
-      `${piece.permanentName} first drew royal notice after they ${choice(awakenings, 'awakening')}. ${choice(pathsToMastery, 'path-to-mastery')}. The Archwizard became a master of ${choice(specialties, 'specialty')}, alongside the broad disciplines required of their rank. Teleportation lets them cross the battlefield almost instantly. ${choice(convictions, 'conviction')}.`,
+      `${name} first drew royal notice after they ${choice(awakenings, 'awakening')}. ${choice(pathsToMastery, 'path-to-mastery')}. The Archwizard became a master of ${choice(specialties, 'specialty')}, alongside the broad disciplines required of their rank. Teleportation lets them cross the battlefield almost instantly. ${choice(convictions, 'conviction')}.`,
     );
   }
 
@@ -783,7 +790,7 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       'a two-handed war axe whose edge stores the force of every blocked blow',
     ];
     return personalize(
-      `${piece.permanentName} ${choice(origins, 'order-origin')} and ${choice(feats, 'command-feat')}. Chosen from the kingdom’s most elite captains, they became a Knight Commander. ${choice(augmentations, 'commander-augmentation')}; formidable, but nowhere near the Queen’s complete transformation. They wield ${choice(weapons, 'signature-weapon')} as their personal magic-powered weapon. ${choice(styles, 'command-style')}.`,
+      `${name} ${choice(origins, 'order-origin')} and ${choice(feats, 'command-feat')}. Chosen from the kingdom’s most elite captains, they became a Knight Commander. ${choice(augmentations, 'commander-augmentation')}; formidable, but nowhere near the Queen’s complete transformation. They wield ${choice(weapons, 'signature-weapon')} as their personal magic-powered weapon. ${choice(styles, 'command-style')}.`,
     );
   }
 

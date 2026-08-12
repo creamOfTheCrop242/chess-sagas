@@ -287,6 +287,7 @@ function preserveNarrativeIdentities(
       return {
         ...piece,
         permanentName: existing.permanentName,
+        characterName: existing.characterName,
         companyName: existing.companyName,
         viewpointName: existing.viewpointName,
         viewpointRole: existing.viewpointRole,

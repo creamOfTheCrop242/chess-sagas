@@ -139,6 +139,21 @@ has been persisted and is released after a terminal failure. Retrying the same
 job reuses its reservation, and opening a game whose completed saga artifacts
 already exist is marked as reused and never charged.
 
+### Generation guardrails
+
+New saga generation can be paused without affecting existing records, accounts,
+or billing. Production also limits concurrent and rapid generation requests:
+
+```text
+SAGA_GENERATION_ENABLED=true
+SAGA_GENERATION_ACCOUNT_HOURLY_LIMIT=5
+SAGA_GENERATION_IP_HOURLY_LIMIT=20
+```
+
+Each account may have only one queued or running saga at a time. The hourly
+limits count newly created jobs, not completed-saga reuse or retries of the same
+failed job. IP addresses are stored only as one-way hashes on generation jobs.
+
 ### Sign in with Apple
 
 Sign in with Apple for websites requires an Apple Developer Program account, a

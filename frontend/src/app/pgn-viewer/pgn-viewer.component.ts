@@ -102,6 +102,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
   recordReplay = false;
   generationElapsedSeconds = 0;
   billingFailure: 'signin' | 'credits' | null = null;
+  generationAccessFailure: 'disabled' | 'active' | 'rate-limit' | null = null;
   private generationStartedAt: number | null = null;
   private generationTimer: ReturnType<typeof setInterval> | null = null;
   private ignorePieceBackdropUntil = 0;
@@ -522,6 +523,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
     this.error = null;
     this.storyError = null;
     this.billingFailure = null;
+    this.generationAccessFailure = null;
     const billing = this.billing?.status();
     const needsCredit = Boolean(
       billing?.enforcementEnabled &&
@@ -635,6 +637,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
     this.startGenerationTimer();
     this.storyError = null;
     this.billingFailure = null;
+    this.generationAccessFailure = null;
     this.pipelineState = this.initialPipelineState();
     this.pgnApi
       .generateSaga(this.gameId, (stage, state) => {
@@ -660,6 +663,26 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
             this.billingFailure = 'credits';
             this.storyError =
               'A saga credit is required to begin this chronicle.';
+            return;
+          }
+          if (error instanceof HttpErrorResponse && error.status === 503) {
+            this.generationAccessFailure = 'disabled';
+            this.storyError =
+              'Saga generation is temporarily unavailable. Existing sagas remain available.';
+            return;
+          }
+          if (error instanceof HttpErrorResponse && error.status === 409) {
+            this.generationAccessFailure = 'active';
+            this.storyError =
+              'Another saga is already being generated for this account.';
+            return;
+          }
+          if (error instanceof HttpErrorResponse && error.status === 429) {
+            this.generationAccessFailure = 'rate-limit';
+            this.storyError = this.extractError(
+              error,
+              'The hourly saga-generation limit has been reached. Try again later.',
+            );
             return;
           }
           this.storyError = `Saga generation could not finish. Select “Retry saga generation” to try again. ${this.extractError(

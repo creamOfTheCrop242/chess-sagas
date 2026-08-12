@@ -1,12 +1,16 @@
 import {
+  ConflictException,
+  HttpException,
+  HttpStatus,
   Injectable,
   Logger,
   NotFoundException,
   OnApplicationBootstrap,
   OnModuleDestroy,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { GenerationBillingState, Prisma } from '@prisma/client';
 import type { AuthenticatedUser } from '../auth/auth.service';
 import { CreditService } from '../billing/credit.service';
@@ -24,6 +28,7 @@ import { PushNotificationService } from './push-notification.service';
 
 const LEASE_MS = 90_000;
 const HEARTBEAT_MS = 20_000;
+const RATE_WINDOW_MS = 60 * 60_000;
 
 export type SagaJobState =
   'idle' | 'queued' | 'running' | 'completed' | 'failed';
@@ -81,6 +86,7 @@ export class SagaGenerationService
     gameId: string,
     pushSubscription?: unknown,
     user: AuthenticatedUser | null = null,
+    requestIp: string | null = null,
   ): Promise<SagaGenerationStatus> {
     await this.assertGame(gameId);
     const stages = await this.stageSnapshot(gameId);
@@ -144,6 +150,24 @@ export class SagaGenerationService
       existing?.pushSubscriptions,
       pushSubscription,
     );
+    if (existing && ['QUEUED', 'RUNNING'].includes(existing.status)) {
+      if (pushSubscriptions.length) {
+        await this.prisma.sagaGenerationJob.update({
+          where: { gameId },
+          data: {
+            pushSubscriptions:
+              pushSubscriptions as unknown as Prisma.InputJsonValue,
+          },
+        });
+      }
+      this.scheduleDrain();
+      return this.status(gameId);
+    }
+
+    this.assertGenerationEnabled();
+    const requestIpHash = this.requestIpHash(requestIp);
+    await this.assertGenerationLimits(user, requestIpHash, existing?.id);
+
     if (!existing || ['FAILED', 'COMPLETED'].includes(existing.status)) {
       const shadowState = await this.shadowBillingState(user);
       const pendingAuthorization = this.credits.enforcementEnabled;
@@ -161,6 +185,7 @@ export class SagaGenerationService
         lockedUntil: null,
         heartbeatAt: null,
         requestedByUserId: user?.id,
+        requestIpHash,
         billingState: claimState,
         pushSubscriptions:
           pushSubscriptions as unknown as Prisma.InputJsonValue,
@@ -174,16 +199,33 @@ export class SagaGenerationService
           });
         } catch (caught) {
           if (!this.isUniqueConstraintError(caught)) throw caught;
+          const sameGameJob = await this.prisma.sagaGenerationJob.findUnique({
+            where: { gameId },
+            select: { id: true },
+          });
+          if (!sameGameJob) {
+            throw new ConflictException(
+              'Another saga is already being generated for this account.',
+            );
+          }
         }
       } else if (existing.billingState !== GenerationBillingState.AUTHORIZING) {
-        const claimed = await this.prisma.sagaGenerationJob.updateMany({
-          where: {
-            id: existing.id,
-            status: existing.status,
-            billingState: existing.billingState,
-          },
-          data: claimData,
-        });
+        let claimed: { count: number };
+        try {
+          claimed = await this.prisma.sagaGenerationJob.updateMany({
+            where: {
+              id: existing.id,
+              status: existing.status,
+              billingState: existing.billingState,
+            },
+            data: claimData,
+          });
+        } catch (caught) {
+          if (!this.isUniqueConstraintError(caught)) throw caught;
+          throw new ConflictException(
+            'Another saga is already being generated for this account.',
+          );
+        }
         if (claimed.count === 1) job = { id: existing.id };
       }
       if (pendingAuthorization && user) {
@@ -230,6 +272,93 @@ export class SagaGenerationService
     }
     this.scheduleDrain();
     return this.status(gameId);
+  }
+
+  private assertGenerationEnabled(): void {
+    const configured = process.env.SAGA_GENERATION_ENABLED?.trim().toLowerCase();
+    if (configured === 'false' || configured === '0') {
+      throw new ServiceUnavailableException(
+        'Saga generation is temporarily unavailable. Existing sagas remain available.',
+      );
+    }
+  }
+
+  private async assertGenerationLimits(
+    user: AuthenticatedUser | null,
+    requestIpHash: string | null,
+    retryJobId?: string,
+  ): Promise<void> {
+    const since = new Date(Date.now() - RATE_WINDOW_MS);
+    if (user) {
+      const active = await this.prisma.sagaGenerationJob.findFirst({
+        where: {
+          requestedByUserId: user.id,
+          status: { in: ['QUEUED', 'RUNNING'] },
+          ...(retryJobId ? { id: { not: retryJobId } } : {}),
+        },
+        select: { id: true },
+      });
+      if (active) {
+        throw new ConflictException(
+          'Another saga is already being generated for this account.',
+        );
+      }
+      const accountStarts = await this.prisma.sagaGenerationJob.count({
+        where: {
+          requestedByUserId: user.id,
+          createdAt: { gte: since },
+          ...(retryJobId ? { id: { not: retryJobId } } : {}),
+        },
+      });
+      if (
+        accountStarts >=
+        this.positiveIntegerEnvironmentValue(
+          'SAGA_GENERATION_ACCOUNT_HOURLY_LIMIT',
+          5,
+        )
+      ) {
+        throw new HttpException(
+          'This account has reached its hourly saga-generation limit. Try again later.',
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+    }
+    if (requestIpHash) {
+      const ipStarts = await this.prisma.sagaGenerationJob.count({
+        where: {
+          requestIpHash,
+          createdAt: { gte: since },
+          ...(retryJobId ? { id: { not: retryJobId } } : {}),
+        },
+      });
+      if (
+        ipStarts >=
+        this.positiveIntegerEnvironmentValue(
+          'SAGA_GENERATION_IP_HOURLY_LIMIT',
+          20,
+        )
+      ) {
+        throw new HttpException(
+          'Too many sagas have been started from this network. Try again later.',
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+    }
+  }
+
+  private requestIpHash(requestIp: string | null): string | null {
+    if (!requestIp) return null;
+    return createHash('sha256')
+      .update(`chess-sagas:generation:${requestIp}`)
+      .digest('hex');
+  }
+
+  private positiveIntegerEnvironmentValue(
+    name: string,
+    fallback: number,
+  ): number {
+    const value = Number(process.env[name]);
+    return Number.isInteger(value) && value > 0 ? value : fallback;
   }
 
   async status(gameId: string): Promise<SagaGenerationStatus> {

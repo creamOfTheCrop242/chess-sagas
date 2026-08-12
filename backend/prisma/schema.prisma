@@ -158,6 +158,7 @@ model SagaGenerationJob {
   completedAt        DateTime?
   pushSubscriptions  Json?
   requestedByUserId  String?
+  requestIpHash      String?
   billingState       GenerationBillingState @default(UNTRACKED)
   game               Game                   @relation(fields: [gameId], references: [id], onDelete: Cascade)
   requestedBy        User?                  @relation("SagaJobRequester", fields: [requestedByUserId], references: [id], onDelete: SetNull)
@@ -165,6 +166,7 @@ model SagaGenerationJob {
 
   @@index([status, lockedUntil])
   @@index([requestedByUserId, createdAt])
+  @@index([requestIpHash, createdAt])
   @@index([billingState, updatedAt])
 }
 

@@ -30,11 +30,22 @@ export class SagaGenerationController {
     const user = await this.auth.currentUser(
       readCookie(request, SESSION_COOKIE),
     );
-    return this.generation.start(gameId, body?.pushSubscription, user);
+    return this.generation.start(
+      gameId,
+      body?.pushSubscription,
+      user,
+      requestIp(request),
+    );
   }
 
   @Get()
   status(@Param('gameId') gameId: string) {
     return this.generation.status(gameId);
   }
+}
+
+function requestIp(request: Request): string | null {
+  const forwarded = request.headers['x-forwarded-for'];
+  const value = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+  return value?.split(',')[0]?.trim() || request.ip || null;
 }

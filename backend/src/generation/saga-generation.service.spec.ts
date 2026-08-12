@@ -31,6 +31,8 @@ describe('SagaGenerationService', () => {
     },
     sagaGenerationJob: {
       findUnique: jest.fn().mockResolvedValue(null),
+      findFirst: jest.fn().mockResolvedValue(null),
+      count: jest.fn().mockResolvedValue(0),
       findMany: jest.fn().mockResolvedValue([]),
       create: jest.fn().mockResolvedValue({ id: 'job-1' }),
       update: jobUpdate.mockResolvedValue({}),
@@ -76,6 +78,8 @@ describe('SagaGenerationService', () => {
     enforcementEnabled = false;
     runs.length = 0;
     jest.mocked(prisma.sagaGenerationJob.findUnique).mockResolvedValue(null);
+    jest.mocked(prisma.sagaGenerationJob.findFirst).mockResolvedValue(null);
+    jest.mocked(prisma.sagaGenerationJob.count).mockResolvedValue(0);
     jest.mocked(prisma.generationRun.findFirst).mockResolvedValue({
       id: 'scene-run-1',
     } as never);
@@ -107,7 +111,12 @@ describe('SagaGenerationService', () => {
     );
   });
 
-  afterEach(() => service.onModuleDestroy());
+  afterEach(() => {
+    delete process.env.SAGA_GENERATION_ENABLED;
+    delete process.env.SAGA_GENERATION_ACCOUNT_HOURLY_LIMIT;
+    delete process.env.SAGA_GENERATION_IP_HOURLY_LIMIT;
+    service.onModuleDestroy();
+  });
 
   it('reports completed artifacts even when they predate the job queue', async () => {
     runs.push(...completedRuns());
@@ -319,6 +328,22 @@ describe('SagaGenerationService', () => {
     });
   });
 
+  it('allows completed-saga reuse while new generation is disabled', async () => {
+    process.env.SAGA_GENERATION_ENABLED = 'false';
+    runs.push(...completedRuns());
+
+    const result = await service.start('game-1', undefined, {
+      id: 'user-1',
+      email: 'reader@example.com',
+      displayName: 'Reader',
+      avatarUrl: null,
+    });
+
+    expect(result.billing.reused).toBe(true);
+    expect(prisma.sagaGenerationJob.findFirst).not.toHaveBeenCalled();
+    expect(credits.reserve).not.toHaveBeenCalled();
+  });
+
   it('claims an existing unowned saga for its authenticated requester', async () => {
     runs.push(...completedRuns());
     jest.mocked(prisma.sagaGenerationJob.findUnique).mockResolvedValue(null);
@@ -381,6 +406,72 @@ describe('SagaGenerationService', () => {
       'Sign in to generate a new saga',
     );
     expect(prisma.sagaGenerationJob.create).not.toHaveBeenCalled();
+  });
+
+  it('blocks new generation while the emergency switch is disabled', async () => {
+    process.env.SAGA_GENERATION_ENABLED = 'false';
+
+    await expect(
+      service.start('game-1', undefined, {
+        id: 'user-1',
+        email: 'reader@example.com',
+        displayName: 'Reader',
+        avatarUrl: null,
+      }),
+    ).rejects.toThrow('Saga generation is temporarily unavailable');
+    expect(credits.reserve).not.toHaveBeenCalled();
+    expect(prisma.sagaGenerationJob.create).not.toHaveBeenCalled();
+  });
+
+  it('blocks a second active saga for the same account', async () => {
+    jest.mocked(prisma.sagaGenerationJob.findFirst).mockResolvedValueOnce({
+      id: 'other-job',
+    } as never);
+
+    await expect(
+      service.start('game-1', undefined, {
+        id: 'user-1',
+        email: 'reader@example.com',
+        displayName: 'Reader',
+        avatarUrl: null,
+      }),
+    ).rejects.toThrow('Another saga is already being generated');
+    expect(prisma.sagaGenerationJob.create).not.toHaveBeenCalled();
+  });
+
+  it('blocks an account after its hourly generation limit', async () => {
+    jest.mocked(prisma.sagaGenerationJob.count).mockResolvedValueOnce(5);
+
+    await expect(
+      service.start('game-1', undefined, {
+        id: 'user-1',
+        email: 'reader@example.com',
+        displayName: 'Reader',
+        avatarUrl: null,
+      }),
+    ).rejects.toMatchObject({ status: 429 });
+    expect(prisma.sagaGenerationJob.create).not.toHaveBeenCalled();
+  });
+
+  it('returns an already active same-game job without applying limits', async () => {
+    jest.mocked(prisma.sagaGenerationJob.findUnique).mockResolvedValue({
+      id: 'job-1',
+      status: 'RUNNING',
+      currentStage: 'STORY',
+      pushSubscriptions: [],
+      billingState: GenerationBillingState.RESERVED,
+    } as never);
+
+    await service.start('game-1', undefined, {
+      id: 'user-1',
+      email: 'reader@example.com',
+      displayName: 'Reader',
+      avatarUrl: null,
+    });
+
+    expect(prisma.sagaGenerationJob.findFirst).not.toHaveBeenCalled();
+    expect(prisma.sagaGenerationJob.count).not.toHaveBeenCalled();
+    expect(credits.reserve).not.toHaveBeenCalled();
   });
 
   it('reserves before queueing when enforcement is enabled', async () => {

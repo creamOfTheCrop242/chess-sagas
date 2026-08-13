@@ -979,6 +979,9 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
       );
   }
   private pieceHierarchyRank(piece: PieceIdentity): number {
+    // Ascension changes a pawn's current form, not their place among the
+    // original company soldiers in the Book of Heroes.
+    if (piece.chessType === 'p') return 5;
     const ranks: Record<string, number> = {
       king: 0,
       queen: 1,

@@ -576,6 +576,26 @@ describe('PgnService deterministic ledger', () => {
     ).toBeGreaterThan(5);
   });
 
+  it('assigns every starting Knight Commander a distinct Mythic Arm', () => {
+    const commanders = service
+      .parse(
+        '[White "Ada"]\n[Black "Turing"]\n[Date "2027.04.01"]\n[Result "*"]\n\n1. e4 e5 *',
+      )
+      .ledger.pieces.filter(
+        (piece) => piece.fantasyType === 'knight-commander',
+      );
+    const arms = commanders.map(
+      (piece) =>
+        piece.backstory?.match(
+          /(?:stormbound great hammer|Seal-forged greatsword|gravity mace|ward-breaking poleaxe|crescent glaive|two-handed war axe|matched pair of oathbound swords)/,
+        )?.[0],
+    );
+
+    expect(commanders).toHaveLength(4);
+    expect(arms.every(Boolean)).toBe(true);
+    expect(new Set(arms).size).toBe(commanders.length);
+  });
+
   it('gives every starting Knight Commander a distinct spectral steed origin', () => {
     const commanders = service
       .parse(

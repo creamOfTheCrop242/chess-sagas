@@ -928,6 +928,8 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       'a two-handed war axe whose edge stores the force of every blocked blow',
       'a matched pair of oathbound swords whose alternating strikes build and release cutting arcs of realm-light',
     ];
+    const weaponOffset = hashSeed(`${seed}:mythic-arms`);
+    const mythicArm = weapons[(weaponOffset + commanderIndex) % weapons.length];
     const weaponLegacies = [
       'This Mythic Arm is a legendary relic carried by generations of champions, and soldiers recognize its silhouette before they recognize its bearer',
       'The weapon is legendary throughout the kingdom, its earlier wielders named in military oaths and funeral songs',
@@ -937,7 +939,7 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       'Its legendary reputation crosses both kingdoms, though their chronicles violently disagree about the deeds that made it famous',
     ];
     return personalize(
-      `${name} ${choice(origins, 'order-origin')} and ${choice(feats, 'command-feat')}. Chosen from the kingdom’s most elite captains, they became a Knight Commander. ${choice(augmentations, 'commander-augmentation')}; formidable, but nowhere near the Queen’s complete transformation. ${spectralSteedOrigin}. They wield ${choice(weapons, 'signature-weapon')}, their personal Mythic Arm. ${choice(weaponLegacies, 'weapon-legacy')}. ${choice(styles, 'command-style')}.`,
+      `${name} ${choice(origins, 'order-origin')} and ${choice(feats, 'command-feat')}. Chosen from the kingdom’s most elite captains, they became a Knight Commander. ${choice(augmentations, 'commander-augmentation')}; formidable, but nowhere near the Queen’s complete transformation. ${spectralSteedOrigin}. They wield ${mythicArm}, their personal Mythic Arm. ${choice(weaponLegacies, 'weapon-legacy')}. ${choice(styles, 'command-style')}.`,
     );
   }
 

@@ -112,6 +112,44 @@ export class DeterministicStoryValidator {
     return findings;
   }
 
+  validatePrematureAscensionReveals(
+    scenes: Array<{ ply: number; fantasyNarration: string }>,
+    ledger: GameLedger,
+  ): ValidationFinding[] {
+    const promotionPlies = ledger.events
+      .filter((event) => event.isPromotion)
+      .map((event) => event.ply);
+    if (promotionPlies.length === 0) return [];
+
+    const firstPromotionPly = Math.min(...promotionPlies);
+    const patterns = [
+      /\bAscension Seal\b/i,
+      /\bprototype(?:\s+(?:Seal|artifact|relic|device))?\b/i,
+      /\btransformation (?:device|artifact|relic)\b/i,
+      /\broyal experiment\b/i,
+      /\b(?:artifact|relic|device)\b[^.!?]{0,90}\b(?:made|forged|created|linked|bound|connected)\b[^.!?]{0,60}\bKing(?:['’]s)?\b/i,
+      /\b(?:artifact|relic|device)\b[^.!?]{0,90}\b(?:choose|chooses|chose|sense|senses|decide|decides)\b[^.!?]{0,70}\bkingdom needs\b/i,
+    ];
+
+    return scenes.flatMap((scene) => {
+      if (scene.ply >= firstPromotionPly) return [];
+      const excerpt = patterns
+        .map((pattern) => scene.fantasyNarration.match(pattern)?.[0])
+        .find((match): match is string => Boolean(match));
+      if (!excerpt) return [];
+      return [
+        {
+          type: 'premature-promotion-reveal',
+          severity: 'error',
+          message: `Promotion artifact identity or purpose appears before its first activation at ply ${firstPromotionPly}`,
+          ply: scene.ply,
+          pieceId: null,
+          excerpt,
+        },
+      ];
+    });
+  }
+
   validateCaptureAttribution(
     scenes: Array<{ ply: number; fantasyNarration: string }>,
     ledger: GameLedger,

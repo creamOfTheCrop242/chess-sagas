@@ -1,4 +1,4 @@
-export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v17';
+export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v18';
 
 export const STORY_VALIDATION_INSTRUCTIONS = `Validate the supplied story against the complete deterministic chess ledger, narrative analysis, outline, and deterministic findings.
 
@@ -11,6 +11,7 @@ Report:
 - a promotion occurring without the invading soldier commandeering the enemy kingdom's ancient prototype Ascension Seal at the analysis-defined ascensionSite; giving the soldier a personal Seal; linking the prototype to the wrong King; or failing to damage the enemy King and his Royal Seal bond at that exact promotion ply
 - failure to preserve cumulative enemy-King ascension strain after one or more promotions, confusion between ascension strain and check strain or woundPlans, or assigning promotion damage to the promoting soldier's own King
 - revealing a promoted form before its promotion ply; transforming the whole company or a replacement character; losing the soldier's name, memories, wounds, relationships, former role, or loyalties; or producing a form other than the ledger-recorded promotion
+- revealing the promotion artifact's identity or purpose before its promotion ply, including calling it an Ascension Seal, Seal, prototype, transformation device, royal experiment, artifact made by or linked to a King, or explaining that it chooses what a kingdom needs. Pre-promotion prose may describe only an unidentified ancient artifact or relic and its appearance, power, strange effects, rumors, danger, or hidden location. Its true identity, prototype status, King linkage, and purpose must first be revealed during activation at the exact promotion ply
 - incorrect form-specific Ascension: a Queen without completed augmentation, high sorcery, and fortress-grade armor; a Knight Commander without limited augmentation, command authority, and a magic-powered heavy weapon; an Archwizard without awakened broad high sorcery and teleportation; or a Moving Fortress that invents a preexisting wound instead of constructing an engine around and permanently integrating the soldier
 - treating Queen Candidate status as a guarantee or advance revelation of Queen promotion, replacing a still-living reigning Queen, or failing to give emotional weight when a candidate Ascends into a different recorded form
 - inconsistent permanent names

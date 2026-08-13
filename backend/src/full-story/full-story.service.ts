@@ -292,6 +292,24 @@ export class FullStoryService {
           })),
           ledger,
         );
+      const prematureAscensionFindings =
+        this.deterministic.validatePrematureAscensionReveals(
+          scenes.map((scene) => ({
+            ply: scene.startPly,
+            fantasyNarration: scene.fantasyNarration,
+          })),
+          ledger,
+        );
+      if (prematureAscensionFindings.length > 0) {
+        throw new Error(
+          `Generated story package reveals the promotion artifact prematurely: ${prematureAscensionFindings
+            .map(
+              (finding) =>
+                `${finding.message}. Rejected prose: ${JSON.stringify(finding.excerpt)}`,
+            )
+            .join('; ')}`,
+        );
+      }
       if (captureAttributionFindings.length > 0) {
         throw new Error(
           `Generated story package contains capture attribution errors: ${captureAttributionFindings
@@ -412,10 +430,19 @@ export class FullStoryService {
               })),
               ledger,
             );
+          const repairedAscensionErrors =
+            this.deterministic.validatePrematureAscensionReveals(
+              candidateScenes.map((scene) => ({
+                ply: scene.startPly,
+                fantasyNarration: scene.fantasyNarration,
+              })),
+              ledger,
+            );
           const repairedWoundFindings = findTimedWounds(candidateScenes);
           if (
             repairedCaptureErrors.length > 0 ||
             repairedFateErrors.length > 0 ||
+            repairedAscensionErrors.length > 0 ||
             repairedWoundFindings.some(
               (finding) => finding.severity === 'error',
             )

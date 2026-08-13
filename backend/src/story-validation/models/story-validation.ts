@@ -10,6 +10,7 @@ export const validationFindingTypeSchema = z.enum([
   'missing-checkmate',
   'wrong-winner',
   'wrong-promotion',
+  'premature-promotion-reveal',
   'dead-character-reappears',
   'queen-missing-swordplay',
   'queen-missing-magic',

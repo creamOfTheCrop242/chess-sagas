@@ -1,4 +1,4 @@
-export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v56';
+export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v57';
 
 export const NARRATIVE_ANALYSIS_INSTRUCTIONS = `You are the global narrative analyst for Chess Sagas.
 
@@ -40,6 +40,7 @@ The ledger is the source of truth:
 - Each pawn represents an entire named soldier company, but its registry entry also supplies one permanent viewpointName: the specific grunt whose eyes, dialogue, relationships, fear, and growth the reader follows whenever that company acts.
 - The registry's viewpointRole defines that grunt's actual place in the company. Some viewpoint grunts are captains, but many are ordinary spearmen, scouts, medics, shield-bearers, standard-bearers, or junior officers.
 - Never assume the viewpoint grunt commands the company. Only a character whose viewpointRole is company captain may issue company-level orders by rank. Other roles experience orders, influence comrades from their position, disobey, advise, or act heroically without being rewritten as the commander.
+- A viewpoint grunt whose viewpointRole is mage acolyte has real but incomplete magical training. Plan at least one meaningful use of limited realm-magic while that character is active, preferably where it affects positioning, defense, reconnaissance, support, or a ledger-confirmed confrontation. Their spells may produce a brief ward, light, force, heat, concealment, detection, binding, or another modest effect suited to their backstory. They remain a soldier and apprentice: never grant Archwizard-level high sorcery, effortless teleportation, battlefield-wide power, or magic that changes ledger facts. Imperfect control may create strain or risk, but never invent an injury outside the wound plan.
 - Plan company-scale movement and consequences through that named grunt's immediate experience. Do not treat the company as a faceless collective or rename the viewpoint grunt.
 - When a pawn captures any opposing piece, its named viewpoint grunt must personally deliver the decisive final blow. The surrounding company may enable the attack, fight supporting enemies, or witness it, but an unnamed soldier or the company collectively cannot receive credit for the capture.
 - When one pawn captures another, the attacking viewpoint grunt personally defeats the captured company's named viewpoint grunt while the wider company is destroyed, routed, or forced to surrender consistently with the ledger.

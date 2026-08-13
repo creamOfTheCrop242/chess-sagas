@@ -1,10 +1,11 @@
-export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v19';
+export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v20';
 
 export const STORY_VALIDATION_INSTRUCTIONS = `Validate the supplied story against the complete deterministic chess ledger, narrative analysis, outline, and deterministic findings.
 
 Return structured findings only plus an optional repaired full Markdown story.
 
 Report:
+- any mage acolyte who remains purely a conventional soldier throughout the story without at least one visible, meaningful use of limited apprentice magic, and any mage acolyte incorrectly given teleportation or Archwizard-level power
 - every missing or invented capture and every wrong captor
 - a quiet event that ignores or contradicts its deterministic quietBeatContext, fails to change knowledge, emotion, preparation, relationship, danger, environment, backstory relevance, observation, humanity, or position as selected, prematurely reveals the outcome at relatedEventPly, or invents combat, injury, or death
 - any captured character returning or survivor being killed

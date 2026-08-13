@@ -1,4 +1,4 @@
-export const STORY_OUTLINE_PROMPT_VERSION = 'phase-3-v52';
+export const STORY_OUTLINE_PROMPT_VERSION = 'phase-3-v53';
 
 export const STORY_OUTLINE_INSTRUCTIONS = `Create a structured outline for one cohesive dark-fantasy story. Return planning JSON only; do not write story prose.
 
@@ -32,6 +32,7 @@ The complete ledger is factual source of truth. The narrative analysis supplies 
 - Fatal dismemberment belongs only to a ledger-confirmed death scene and must not be added to woundBeats. Nonfatal dismemberment belongs only to the surviving attacker at the capture recorded by inflictedAtPly.
 - For every pawn scene, the pawn's company moves and fights as the military unit while the named viewpoint grunt in its registry entry anchors the reader's perspective.
 - Preserve each viewpoint grunt's viewpointRole and chain of command. Captains may command their companies; ordinary soldiers and specialists must experience company orders from their actual station and cannot casually command officers or the whole formation.
+- Give every featured mage acolyte at least one planned, consequential use of limited apprentice magic while active. Use a modest ward, light, force, heat, concealment, detection, binding, or similarly narrow spell to support the ledger action, protect someone, gather knowledge, or shape a confrontation. Do not turn an acolyte into an Archwizard, grant teleportation or battlefield-wide sorcery, alter a capture, or invent an unplanned wound.
 - Use role differences for character depth: a scout sees danger first, a medic faces divided duties, a standard-bearer carries morale, a spearman holds the line, and a junior officer mediates between commanders and troops.
 - Track that grunt's dialogue, relationships, injuries, fears, and choices across the company's scenes. If the pawn promotes, copy its narrativeAnalysis promotingPawnPlan ascensionSite exactly and make the same grunt's personal transformation the payoff; never introduce a replacement character.
 - Promotion occurs only when the invading grunt reaches and commandeers the enemy kingdom's ancient prototype Ascension Seal at that exact hidden site. The soldier owns no Seal. The prototype is linked to the enemy King's Royal Seal, reads what the invader's kingdom needs, and produces the ledger-recorded form by drawing power through the enemy King. At the promotion ply, outline visible damage and destabilization to that enemy King and his Seal bond. Accumulate this ascension strain with every later promotion and alongside any check strain without adding it to woundBeats.

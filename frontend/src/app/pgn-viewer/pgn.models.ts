@@ -102,6 +102,20 @@ export type ChessEvent = {
   promotionType?: string;
   isEnPassant: boolean;
   isQuietMove: boolean;
+  quietBeatContext?: {
+    purpose:
+      | 'aftermath-reaction'
+      | 'approaching-danger'
+      | 'threat-recognition'
+      | 'tactical-preparation'
+      | 'relationship-development'
+      | 'environmental-pressure'
+      | 'backstory-reflection'
+      | 'enemy-observation'
+      | 'human-moment'
+      | 'meaningful-travel';
+    relatedEventPly?: number;
+  };
   boardFenAfterMove: string;
 };
 

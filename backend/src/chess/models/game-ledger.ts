@@ -23,6 +23,20 @@ export type KingDisposition =
   | 'calculating-monarch'
   | 'selfish-tyrant';
 
+export const QUIET_BEAT_PURPOSES = [
+  'aftermath-reaction',
+  'approaching-danger',
+  'threat-recognition',
+  'tactical-preparation',
+  'relationship-development',
+  'environmental-pressure',
+  'backstory-reflection',
+  'enemy-observation',
+  'human-moment',
+  'meaningful-travel',
+] as const;
+export type QuietBeatPurpose = (typeof QUIET_BEAT_PURPOSES)[number];
+
 export interface PieceIdentity {
   id: string;
   chessColor: ChessColor;
@@ -71,9 +85,15 @@ export interface ChessEvent {
   promotionType?: FantasyPieceType;
   isEnPassant: boolean;
   isQuietMove: boolean;
+  quietBeatContext?: QuietBeatContext;
   boardFenAfterMove: string;
   tacticalContext?: TacticalContext;
   checkmateExplanation?: CheckmateExplanation;
+}
+
+export interface QuietBeatContext {
+  purpose: QuietBeatPurpose;
+  relatedEventPly?: number;
 }
 
 export interface TacticalContext {

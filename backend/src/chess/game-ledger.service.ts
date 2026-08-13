@@ -1,7 +1,12 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Chess } from 'chess.js';
 import type { Color, Move, Square } from 'chess.js';
-import type { ChessPieceType, GameLedger } from './models/game-ledger';
+import type {
+  ChessEvent,
+  ChessPieceType,
+  GameLedger,
+  QuietBeatPurpose,
+} from './models/game-ledger';
 import { PieceIdentityService } from './piece-identity.service';
 
 @Injectable()
@@ -144,6 +149,8 @@ export class GameLedgerService {
       });
     }
 
+    this.assignQuietBeatContexts(events, identitySeed);
+
     return {
       metadata: this.metadata(headers, events.at(-1)?.isCheckmate ?? false),
       initialFen,
@@ -156,6 +163,71 @@ export class GameLedgerService {
         .map((piece) => piece.id),
       promotedPieces,
     };
+  }
+
+  private assignQuietBeatContexts(
+    events: ChessEvent[],
+    identitySeed: string,
+  ): void {
+    const isMajor = (event: ChessEvent) =>
+      event.isCapture ||
+      event.isCheck ||
+      event.isPromotion ||
+      event.isCastle ||
+      event.isCheckmate;
+
+    for (const event of events) {
+      if (!event.isQuietMove) continue;
+      const previousMajor = [...events]
+        .reverse()
+        .find((candidate) => candidate.ply < event.ply && isMajor(candidate));
+      const nextMajor = events.find(
+        (candidate) => candidate.ply > event.ply && isMajor(candidate),
+      );
+      const previousDistance = previousMajor
+        ? event.ply - previousMajor.ply
+        : Number.POSITIVE_INFINITY;
+      const nextDistance = nextMajor
+        ? nextMajor.ply - event.ply
+        : Number.POSITIVE_INFINITY;
+      const purposes: QuietBeatPurpose[] = [];
+
+      if (previousDistance <= 2) purposes.push('aftermath-reaction');
+      if (nextDistance <= 2) {
+        purposes.push('approaching-danger', 'tactical-preparation');
+      }
+      if (
+        (event.tacticalContext?.attacksPieceIds.length ?? 0) > 0 ||
+        (event.tacticalContext?.attackedByPieceIds.length ?? 0) > 0
+      ) {
+        purposes.push('threat-recognition', 'enemy-observation');
+      }
+      purposes.push(
+        'relationship-development',
+        'environmental-pressure',
+        'backstory-reflection',
+        'enemy-observation',
+        'human-moment',
+        'meaningful-travel',
+        'tactical-preparation',
+      );
+
+      const purpose =
+        purposes[
+          stableIndex(
+            `${identitySeed}|quiet-beat|${event.ply}|${event.pieceId}`,
+            purposes.length,
+          )
+        ];
+      const relatedEventPly =
+        purpose === 'aftermath-reaction'
+          ? previousMajor?.ply
+          : ['approaching-danger', 'tactical-preparation'].includes(purpose) &&
+              nextDistance <= 2
+            ? nextMajor?.ply
+            : undefined;
+      event.quietBeatContext = { purpose, relatedEventPly };
+    }
   }
 
   private buildTacticalContext(
@@ -305,6 +377,15 @@ function distanceBasedTravelMode<
   const fileDistance = Math.abs(from.charCodeAt(0) - to.charCodeAt(0));
   const rankDistance = Math.abs(Number(from[1]) - Number(to[1]));
   return Math.max(fileDistance, rankDistance) > 1 ? longTravelMode : 'walk';
+}
+
+function stableIndex(seed: string, length: number): number {
+  let hash = 2166136261;
+  for (let index = 0; index < seed.length; index += 1) {
+    hash ^= seed.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) % length;
 }
 
 function adjacentSquares(square: Square): Square[] {

@@ -1,4 +1,4 @@
-export const STORY_OUTLINE_PROMPT_VERSION = 'phase-3-v51';
+export const STORY_OUTLINE_PROMPT_VERSION = 'phase-3-v52';
 
 export const STORY_OUTLINE_INSTRUCTIONS = `Create a structured outline for one cohesive dark-fantasy story. Return planning JSON only; do not write story prose.
 
@@ -10,6 +10,7 @@ The complete ledger is factual source of truth. The narrative analysis supplies 
 - Cover every ply exactly once with chronological, contiguous acts and scenes.
 - Follow the narrative analysis act boundaries.
 - Group related quiet moves into shared scenes.
+- Honor every quiet move's deterministic quietBeatContext at its exact ply even when related quiet plies share an outline scene. Use the selected purpose to advance knowledge, emotion, preparation, relationships, danger, environment, backstory, observation, humanity, or meaningful travel. relatedEventPly permits setup or aftermath around that event but never permits advance revelation of its outcome. Do not reduce quiet beats to generic marching, waiting, looking around, or repeated weather description, and never invent combat, injury, or death.
 - Give every capture, check, checkmate, promotion, and castling event explicit weight by listing its ply in requiredEventPlies.
 - At every castling ply, explicitly outline the Royal Bastion Maneuver between the moving King and the exact Moving Fortress in castlingFortressId. Include the Fortress pilot by operatorName and both piece IDs in the scene. Show the Fortress physically repositioning and anchoring an armored screen while the King crosses behind it carrying the Royal Seal; a brief Seal-to-core synchronization may accelerate the machines, but castling is never teleportation. Treat kingside castling as a short shelter transfer and queenside castling as a broader command relocation. Ground its weapons, screens, smoke, wards, or attachments in the registry, terrain, threat, and relationship without inventing wounds.
 - At every ledger check, explicitly outline a new cumulative increment of damage to the threatened King and his Royal Seal bond. Escalate repeated checks from strain to battered defenses, then wounds and grave magical exhaustion. Carry the accumulated effects into every later scene involving that King. This deterministic check strain is separate from woundBeats and must not be added to, removed from, or confused with capture-based wounds.

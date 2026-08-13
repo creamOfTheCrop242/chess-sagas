@@ -30,8 +30,18 @@ describe('buildEndingContract', () => {
     expect(typeof contract.creativeDirection.laterChronicleCliffhanger).toBe(
       'boolean',
     );
+    expect(contract.creativeDirection.destroyedSealConsequence).toBeTruthy();
+    expect(contract.creativeDirection.intactSealConsequence).toBeTruthy();
     expect(buildEndingContract(ledger).creativeDirection).toEqual(
       contract.creativeDirection,
     );
+  });
+
+  it('selects a destroyed-Seal consequence for checkmate', () => {
+    const ledger = pgn.parse('1. f3 e5 2. g4 Qh4# 0-1').ledger;
+    const contract = buildEndingContract(ledger);
+
+    expect(contract.termination).toBe('checkmate');
+    expect(contract.creativeDirection.destroyedSealConsequence).toBeTruthy();
   });
 });

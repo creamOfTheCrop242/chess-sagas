@@ -2,7 +2,12 @@ import { z } from 'zod';
 import { WOUND_CAUSE_TYPES } from '../wound-planning';
 import { DEFEATED_KING_FATES } from '../../chess/models/story-ending';
 import { SURRENDER_JUDGMENTS } from '../../chess/surrender-context';
-import { AFTERMATH_FOCUSES, LATER_CHRONICLE_LENSES } from '../ending-contract';
+import {
+  AFTERMATH_FOCUSES,
+  DESTROYED_SEAL_CONSEQUENCES,
+  INTACT_SEAL_CONSEQUENCES,
+  LATER_CHRONICLE_LENSES,
+} from '../ending-contract';
 export const battlefieldEnvironmentSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -122,6 +127,9 @@ function buildNarrativeAnalysisSchema(pieceIdSchema: z.ZodType<string>) {
     aftermathFocus: z.enum(AFTERMATH_FOCUSES),
     laterChronicleLens: z.enum(LATER_CHRONICLE_LENSES),
     laterChronicleCliffhanger: z.boolean().default(false),
+    darkEndingConsequence: z
+      .enum([...DESTROYED_SEAL_CONSEQUENCES, ...INTACT_SEAL_CONSEQUENCES])
+      .default('surviving-character-leading-an-uprising-against-the-victor'),
   });
 
   return z.object({

@@ -117,6 +117,8 @@ describe('NarrativeAnalysisService', () => {
                   endingContract.creativeDirection.laterChronicleLens,
                 laterChronicleCliffhanger:
                   endingContract.creativeDirection.laterChronicleCliffhanger,
+                darkEndingConsequence:
+                  endingContract.creativeDirection.destroyedSealConsequence,
               },
             },
           },

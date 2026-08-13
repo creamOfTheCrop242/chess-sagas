@@ -223,15 +223,23 @@ export class PieceIdentityService {
           piece.type !== 'p' && piece.type !== 'r'
             ? characterNames[pawnCount + fortressCount + majorIndex++]
             : undefined;
-        const majorCharacterName =
-          piece.type === 'k' && assignedMajorName
+        const majorCharacterName = assignedMajorName
+          ? piece.type === 'k'
             ? kingName(
                 assignedMajorName,
                 seed,
                 `${piece.color}-${piece.type}-${square}`,
                 reservedCharacterNames,
               )
-            : assignedMajorName;
+            : piece.type === 'q'
+              ? queenName(
+                  assignedMajorName,
+                  seed,
+                  `${piece.color}-${piece.type}-${square}`,
+                  reservedCharacterNames,
+                )
+              : assignedMajorName
+          : undefined;
         const identity = this.identity(
           piece.color,
           piece.type,
@@ -868,6 +876,23 @@ function queenCandidateName(
   ).find((name) => FEMININE_NAMES.has(name) && !reservedNames.has(name));
   if (!replacement) {
     throw new Error('No unused feminine name is available for Queen Candidate');
+  }
+  reservedNames.add(replacement);
+  return replacement;
+}
+
+function queenName(
+  assignedName: string,
+  seed: string,
+  stableId: string,
+  reservedNames: Set<string>,
+): string {
+  if (FEMININE_NAMES.has(assignedName)) return assignedName;
+  const replacement = shuffledCharacterNames(
+    `${seed}:${stableId}:queen-name`,
+  ).find((name) => FEMININE_NAMES.has(name) && !reservedNames.has(name));
+  if (!replacement) {
+    throw new Error('No unused feminine name is available for Queen');
   }
   reservedNames.add(replacement);
   return replacement;

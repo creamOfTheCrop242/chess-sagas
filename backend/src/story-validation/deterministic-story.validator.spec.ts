@@ -134,6 +134,60 @@ describe('DeterministicStoryValidator', () => {
     });
   });
 
+  it('rejects revealing an Ascension Seal before its activation', () => {
+    const promotionLedger = {
+      events: [
+        { ply: 1, isPromotion: false },
+        { ply: 2, isPromotion: false },
+        { ply: 3, isPromotion: true },
+      ],
+    } as GameLedger;
+
+    const findings = validator.validatePrematureAscensionReveals(
+      [
+        {
+          ply: 1,
+          fantasyNarration:
+            'She found a prototype Ascension Seal beneath the altar.',
+        },
+        {
+          ply: 3,
+          fantasyNarration:
+            'At her touch, the relic revealed itself as an Ascension Seal.',
+        },
+      ],
+      promotionLedger,
+    );
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({
+      type: 'premature-promotion-reveal',
+      ply: 1,
+    });
+  });
+
+  it('allows an unidentified relic before promotion', () => {
+    const promotionLedger = {
+      events: [
+        { ply: 1, isPromotion: false },
+        { ply: 2, isPromotion: true },
+      ],
+    } as GameLedger;
+
+    expect(
+      validator.validatePrematureAscensionReveals(
+        [
+          {
+            ply: 1,
+            fantasyNarration:
+              'An unidentified relic pulsed beneath the forgotten altar.',
+          },
+        ],
+        promotionLedger,
+      ),
+    ).toEqual([]);
+  });
+
   it('rejects a planned wound mentioned before its infliction beat', () => {
     const woundLedger = {
       pieces: [

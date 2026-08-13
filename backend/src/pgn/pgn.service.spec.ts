@@ -576,6 +576,36 @@ describe('PgnService deterministic ledger', () => {
     ).toBeGreaterThan(5);
   });
 
+  it('gives every starting Knight Commander a distinct spectral steed origin', () => {
+    const commanders = service
+      .parse(
+        '[White "Ada"]\n[Black "Turing"]\n[Date "2026.10.25"]\n[Result "*"]\n\n1. e4 e5 *',
+      )
+      .ledger.pieces.filter(
+        (piece) => piece.fantasyType === 'knight-commander',
+      );
+    const steedOrigins = commanders.map(
+      (piece) =>
+        piece.backstory
+          ?.split(
+            'formidable, but nowhere near the Queen’s complete transformation. ',
+          )[1]
+          ?.split('. They wield')[0],
+    );
+
+    expect(commanders).toHaveLength(4);
+    expect(steedOrigins.every(Boolean)).toBe(true);
+    expect(new Set(steedOrigins).size).toBe(4);
+    expect(
+      commanders.every(
+        (piece) =>
+          /artifact|relic|charm|bridle|horseshoe|spur|bell|signet|bit|pendant|whistle|reins|token/.test(
+            piece.backstory ?? '',
+          ) && piece.backstory?.includes('summon'),
+      ),
+    ).toBe(true);
+  });
+
   it('gives Archwizards varied paths to magical mastery', () => {
     const archwizards = Array.from({ length: 24 }, (_, index) =>
       service

@@ -895,6 +895,30 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       'Carefully limited realm-magic strengthened their frame and senses so they could survive assaults no ordinary captain could lead',
       'The crown’s augmentation chambers gave them the power and resilience required to break fortified formations in person',
     ];
+    const spectralSteedOrigins = [
+      'A dying cavalry officer entrusted them with an etched silver bridle-clasp while they carried him through an encirclement; when invoked, the artifact summons the spectral steed that once bore him',
+      'They earned a black-glass stirrup charm by completing an ancient commander’s vigil alone beyond the kingdom’s last ward-line, and the artifact now summons their spectral steed',
+      'After saving a warhorse during their first campaign, they received one of its shed iron shoes from a grateful spirit-tender; the enchanted horseshoe summons that animal’s spectral likeness',
+      'The King granted them a rune-cut spectral bridle once reserved for a fallen royal champion; mastering the artifact and the steed it summons became the final trial of their commission',
+      'An Archwizard forged a route-finding spur after they repeatedly crossed terrain that maps and ordinary mounts could not survive; striking the artifact against the earth summons their spectral steed',
+      'They found a small bronze saddle bell at a battlefield shrine after refusing to abandon trapped soldiers; ringing the relic summons the spectral steed of an oathbound forgotten rider',
+      'They inherited a family signet carved with a rearing horse, dormant for generations until their company service restored the household’s honor and awakened the steed-summoning artifact',
+      'Inside a reality fracture they recovered a cracked obsidian bit and guided its frightened spirit back to stable ground rather than dominating it; the artifact now summons their spectral steed',
+      'Royal artificers captured the last stored motion of a destroyed cavalry ward inside a crystal hoof pendant, which summons a spectral steed because they used speed to rescue soldiers rather than pursue glory',
+      'A dying frontier master entrusted them with a bone whistle bearing one forbidden name; sounding the artifact summons a particular spectral steed that serves judgment but refuses vanity',
+      'A mourning smith forged the broken tack of every mount lost under their former command into a chain of iron reins; grasping the artifact summons a spectral steed formed from their shared memory',
+      'They recovered a palm-sized waystone token from a pre-Calamity road and awakened it by swearing never to use its power to abandon the wounded; the artifact summons its dormant spectral steed',
+    ];
+    const commanderSquares = ['b1', 'g1', 'b8', 'g8'];
+    const commanderIndex = Math.max(
+      0,
+      commanderSquares.indexOf(piece.originalSquare),
+    );
+    const steedOriginOffset = hashSeed(`${seed}:spectral-steed-origins`);
+    const spectralSteedOrigin =
+      spectralSteedOrigins[
+        (steedOriginOffset + commanderIndex) % spectralSteedOrigins.length
+      ];
     const weapons = [
       'a stormbound great hammer whose impacts release concussive thunder',
       'a Seal-forged greatsword that burns through hostile wards',
@@ -913,7 +937,7 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       'Its legendary reputation crosses both kingdoms, though their chronicles violently disagree about the deeds that made it famous',
     ];
     return personalize(
-      `${name} ${choice(origins, 'order-origin')} and ${choice(feats, 'command-feat')}. Chosen from the kingdom’s most elite captains, they became a Knight Commander. ${choice(augmentations, 'commander-augmentation')}; formidable, but nowhere near the Queen’s complete transformation. They can summon a spectral mount to carry them swiftly across distant or obstructed ground, though the mount travels physically and never teleports. It serves only as transport: the Commander dismounts before fighting on foot, and the steed dissolves rather than joining the attack. They wield ${choice(weapons, 'signature-weapon')}, their personal Mythic Arm. ${choice(weaponLegacies, 'weapon-legacy')}. ${choice(styles, 'command-style')}.`,
+      `${name} ${choice(origins, 'order-origin')} and ${choice(feats, 'command-feat')}. Chosen from the kingdom’s most elite captains, they became a Knight Commander. ${choice(augmentations, 'commander-augmentation')}; formidable, but nowhere near the Queen’s complete transformation. ${spectralSteedOrigin}. They wield ${choice(weapons, 'signature-weapon')}, their personal Mythic Arm. ${choice(weaponLegacies, 'weapon-legacy')}. ${choice(styles, 'command-style')}.`,
     );
   }
 

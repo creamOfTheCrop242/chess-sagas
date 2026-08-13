@@ -462,6 +462,52 @@ describe('PgnViewerComponent character inspection', () => {
     ]);
   });
 
+  it('keeps an ascended Queen Candidate with the pawn companies', () => {
+    component.game!.ledger.pieces.push(
+      {
+        ...structuredClone(component.game!.ledger.pieces[0]),
+        id: 'w-q-d1',
+        originalSquare: 'd1',
+        chessType: 'q',
+        currentChessType: 'q',
+        fantasyType: 'queen',
+        permanentName: 'Northern Queen',
+        characterName: 'Seraphine',
+      },
+      {
+        ...structuredClone(component.game!.ledger.pieces[0]),
+        id: 'w-p-a7',
+        originalSquare: 'a7',
+        chessType: 'p',
+        currentChessType: 'q',
+        fantasyType: 'queen',
+        permanentName: 'Elowen',
+        viewpointName: 'Elowen',
+        viewpointRole: 'queen candidate',
+        promotedFromPawnId: 'w-p-a7',
+      },
+      {
+        ...structuredClone(component.game!.ledger.pieces[0]),
+        id: 'w-p-b2',
+        originalSquare: 'b2',
+        chessType: 'p',
+        currentChessType: 'p',
+        fantasyType: 'grunt',
+        permanentName: 'Falk',
+        viewpointName: 'Falk',
+      },
+    );
+
+    const roster = component.lightKingdomRoster;
+    expect(roster.findIndex((piece) => piece.id === 'w-q-d1')).toBeLessThan(
+      roster.findIndex((piece) => piece.id === 'w-p-a7'),
+    );
+    expect(Math.abs(
+      roster.findIndex((piece) => piece.id === 'w-p-a7') -
+        roster.findIndex((piece) => piece.id === 'w-p-b2'),
+    )).toBe(1);
+  });
+
   it('uses a character backstory in the board inspector and roster', () => {
     const piece = component.game!.ledger.pieces[0];
     piece.backstory = 'Mara enlisted after defending her village ward.';

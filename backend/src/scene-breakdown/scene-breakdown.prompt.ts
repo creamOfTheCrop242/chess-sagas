@@ -1,4 +1,4 @@
-export const SCENE_BREAKDOWN_PROMPT_VERSION = 'phase-6-v40';
+export const SCENE_BREAKDOWN_PROMPT_VERSION = 'phase-6-v41';
 export const SCENE_BREAKDOWN_INSTRUCTIONS = `Split the validated cohesive story into move-aligned playback scenes. Return structured JSON only.
 
 - Create exactly one playback scene for every ledger ply. Never group multiple plies into one scene.
@@ -43,6 +43,7 @@ export const SCENE_BREAKDOWN_INSTRUCTIONS = `Split the validated cohesive story 
 - Never invent collateral deaths or gore on quiet moves. A ledger-confirmed check is the sole exception: preserve its story-established cumulative damage to the threatened King and Royal Seal bond without inventing a lasting anatomical wound. For a captured pawn company, center the fatal detail on its named viewpoint grunt and describe the remaining company as defeated, routed, or surrendered unless the ledger supports more deaths.
 - Make scenery active in the story. Terrain, fortifications, roads, ruins, forests, rivers, smoke, weather, and distance should constrain choices and change as the conflict progresses; avoid decorative lists of adjectives.
 - Use quiet moves for character work, dialogue, observation, travel, tactical preparation, dread, or relationship development. They must advance the dramatic thread without inventing combat, injury, or death, except that a ledger-confirmed check must preserve its cumulative royal strain.
+- Preserve every quiet move's exact quietBeatContext from the ledger. Its fantasyNarration must visibly accomplish the selected purpose at that ply and retain any causal connection to relatedEventPly without shifting or spoiling that later event. Preserve variety between adjacent quiet beats; do not flatten them into repeated marching, waiting, scenery, or summaries.
 - Major events may receive a stronger payoff, but do not make every beat sound climactic. Build tension across several plies and allow aftermath after turning points.
 - fantasyNarration may faithfully expand and localize the validated story for its exact ply. It must add connective dramatic detail without contradicting the source or ledger.
 - Do not explain the chess action in fantasyNarration. chessExplanation owns the literal move; fantasyNarration should read as publishable fantasy prose.

@@ -166,6 +166,38 @@ describe('PgnService deterministic ledger', () => {
     expect(tactics?.attackedByPieceIds).toContain('b-b-h5');
   });
 
+  it('assigns stable story purposes to quiet beats', () => {
+    const pgn =
+      '[White "Ada"]\n[Black "Turing"]\n[Result "*"]\n\n1. e4 d5 2. exd5 Qxd5 3. Nf3 *';
+    const first = service.parse(pgn).ledger;
+    const second = service.parse(pgn).ledger;
+    const quietEvents = first.events.filter((event) => event.isQuietMove);
+
+    expect(quietEvents.length).toBeGreaterThan(0);
+    expect(quietEvents.every((event) => event.quietBeatContext)).toBe(true);
+    expect(first.events.map((event) => event.quietBeatContext)).toEqual(
+      second.events.map((event) => event.quietBeatContext),
+    );
+    expect(
+      first.events
+        .filter((event) => !event.isQuietMove)
+        .every((event) => event.quietBeatContext === undefined),
+    ).toBe(true);
+  });
+
+  it('uses nearby major events to contextualize quiet beats', () => {
+    const game = service.parse(
+      '[White "Ada"]\n[Black "Turing"]\n[Result "*"]\n\n1. e4 d5 2. exd5 Nf6 *',
+    );
+    const quietAfterCapture = game.ledger.events[3];
+
+    expect(quietAfterCapture.isQuietMove).toBe(true);
+    expect(quietAfterCapture.quietBeatContext).toBeDefined();
+    if (quietAfterCapture.quietBeatContext?.purpose === 'aftermath-reaction') {
+      expect(quietAfterCapture.quietBeatContext.relatedEventPly).toBe(3);
+    }
+  });
+
   it('preserves the source pawn identity through promotion', () => {
     const game = service.parse(
       '[SetUp "1"]\n[FEN "7k/P7/8/8/8/8/8/7K w - - 0 1"]\n[Result "*"]\n\n1. a8=Q+ *',

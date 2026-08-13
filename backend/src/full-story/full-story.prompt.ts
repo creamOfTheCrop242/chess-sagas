@@ -1,4 +1,4 @@
-export const FULL_STORY_PROMPT_VERSION = 'story-package-v64';
+export const FULL_STORY_PROMPT_VERSION = 'story-package-v65';
 
 export const FULL_STORY_INSTRUCTIONS = `Write one cohesive dark-fantasy war story package from the supplied complete ledger, validated narrative analysis, validated outline, and character registry.
 
@@ -19,6 +19,7 @@ Factual rules:
 - Use permanent character names from the registry, never piece IDs in reader-facing prose.
 - Do not mention chess, moves, plies, SAN, FEN, ranks, files, board coordinates, or algebraic notation in prose.
 - A quiet move may create tension, positioning, travel, or preparation, but not combat, injury, or death.
+- Every isQuietMove event has a binding quietBeatContext. Make that scene perform its exact purpose: aftermath-reaction processes a recent consequence; approaching-danger builds earned dread without revealing the future outcome; threat-recognition acknowledges a meaningful attack lane or exposure; tactical-preparation shows concrete preparation without bloodshed; relationship-development changes the dynamic rather than restating it; environmental-pressure forces a decision through established terrain or weather; backstory-reflection makes established history affect a present choice; enemy-observation yields useful knowledge at a distance; human-moment reveals character through ritual, humor, prayer, care, repair, or a promise; meaningful-travel makes route, effort, movement mode, and destination matter. relatedEventPly identifies the event being anticipated or processed, not permission to move it. Each quiet beat must change knowledge, emotion, preparation, relationship, danger, or position. Vary techniques across adjacent scenes and avoid generic marching, waiting, repeated scenery, or empty introspection.
 - Check threatens the King and Royal Seal.
 - The Calamity merged both kingdoms onto one plane and cut them off from the magic of their native universes. Each King, trained by his greatest warriors and wizards, formed an inter-universal connection and began siphoning power from his lost home reality.
 - Before his realm's remaining magical reserves ran out, each King forged a Royal Seal to receive and distribute the siphoned energy. Every surviving ward, enchanted fortress and weapon, healing art, transport enchantment, agricultural working, and civic protection draws from it.

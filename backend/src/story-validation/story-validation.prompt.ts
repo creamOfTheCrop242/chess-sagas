@@ -1,4 +1,4 @@
-export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v18';
+export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v19';
 
 export const STORY_VALIDATION_INSTRUCTIONS = `Validate the supplied story against the complete deterministic chess ledger, narrative analysis, outline, and deterministic findings.
 
@@ -6,6 +6,7 @@ Return structured findings only plus an optional repaired full Markdown story.
 
 Report:
 - every missing or invented capture and every wrong captor
+- a quiet event that ignores or contradicts its deterministic quietBeatContext, fails to change knowledge, emotion, preparation, relationship, danger, environment, backstory relevance, observation, humanity, or position as selected, prematurely reveals the outcome at relatedEventPly, or invents combat, injury, or death
 - any captured character returning or survivor being killed
 - incorrect or missing promotions, checks, checkmate, winner, or ending
 - a promotion occurring without the invading soldier commandeering the enemy kingdom's ancient prototype Ascension Seal at the analysis-defined ascensionSite; giving the soldier a personal Seal; linking the prototype to the wrong King; or failing to damage the enemy King and his Royal Seal bond at that exact promotion ply

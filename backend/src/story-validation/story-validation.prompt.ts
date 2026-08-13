@@ -1,10 +1,12 @@
-export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v20';
+export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v21';
 
 export const STORY_VALIDATION_INSTRUCTIONS = `Validate the supplied story against the complete deterministic chess ledger, narrative analysis, outline, and deterministic findings.
 
 Return structured findings only plus an optional repaired full Markdown story.
 
 Report:
+- an ending that omits, replaces, or materially weakens endingPlan.darkEndingConsequence; presents victory as clean or wholly good; treats a dead King's magical distribution as fading gradually rather than stopping immediately; or invents a Seal catastrophe incompatible with the validated consequence
+- any claim that a Moving Fortress pilot can be extracted, transferred, cut free, or survive outside the machine; unnecessary Fortress-centered ending material when the pilot was not central to the story or selected consequence
 - any mage acolyte who remains purely a conventional soldier throughout the story without at least one visible, meaningful use of limited apprentice magic, and any mage acolyte incorrectly given teleportation or Archwizard-level power
 - every missing or invented capture and every wrong captor
 - a quiet event that ignores or contradicts its deterministic quietBeatContext, fails to change knowledge, emotion, preparation, relationship, danger, environment, backstory relevance, observation, humanity, or position as selected, prematurely reveals the outcome at relatedEventPly, or invents combat, injury, or death
@@ -28,13 +30,13 @@ Report:
 - a Queen whose actions repeatedly contradict or replace the exact combat discipline established in her character-registry backstory; treat the discipline as a persistent preferred style rather than a prohibition on adapting or using her broader abilities
 - a Knight Commander portrayed as an ordinary soldier rather than an elite augmented captain; as equal or close to the Queen's enhancement; using a signature weapon that contradicts the character registry; teleporting; wearing Fortress-grade armor; or wielding broad Archwizard-level sorcery
 - Archwizard movement contradicting the event's authoritative archwizardTravelMode: a one-square walk portrayed as teleportation, or a two-or-more-square teleport portrayed as walking, running, or riding; danger and tone are not exceptions
-- Knight Commander movement contradicting the event's authoritative knightCommanderTravelMode: a one-square walk portrayed as mounted travel, or a two-or-more-square spectral-mount event portrayed as traveling on foot or teleporting. The spectral steed must be summoned and physically cross the intervening battlefield, but it is transport only: flag mounted combat or any steed attacking, trampling, shielding, or suffering injury. The Commander must dismount and fight on foot; danger and tone are not exceptions
+- Knight Commander movement contradicting the event's authoritative knightCommanderTravelMode: a one-square walk portrayed as mounted travel, or a two-or-more-square spectral-mount event portrayed as traveling on foot or teleporting. The spectral steed must be summoned and cross the intervening battlefield, but it is transport only: flag mounted combat or any steed attacking, trampling, shielding, or suffering injury. The Commander must dismount and fight on foot; danger and tone are not exceptions
 - an Archwizard portrayed as possessing only teleportation magic, or repetitive combat that incorrectly turns every Archwizard spell into a portal, blink, or spatial effect
 - an Archwizard's registry-defined training history being contradicted or replaced with generic royal-college education; do not require college attendance when the established path is private apprenticeship, inherited tradition, natural gift, battlefield learning, forbidden research, or self-teaching
-- a Moving Fortress portrayed without magic-powered wheels, with a pilot who is not alive and physically embedded within it, or as a sentient machine acting independently of its pilot
+- a Moving Fortress portrayed without magic-powered wheels, with a pilot who is not alive and embedded permanently within it, or as a sentient machine acting independently of its pilot
 - a Moving Fortress using a primary weapon or specialized attachment that contradicts its registry backstory; lacking its ability to ram; or being portrayed as relying almost exclusively on ramming while its established magic-round cannon, gatling gun, batteries, rifles, bombard, or storm-caster is repeatedly ignored when ranged fire is tactically appropriate
 - a Royal Seal portrayed as creating magic independently or as the realm's original source of magic, rather than distributing energy its King siphons from the kingdom's lost home universe
-- a King portrayed as physically aging while his inter-universal current remains intact, or agelessness incorrectly treated as invulnerability to check damage, exhaustion, wounds, or checkmate death
+- a King portrayed as visibly aging while his inter-universal current remains intact, or agelessness incorrectly treated as invulnerability to check damage, exhaustion, wounds, or checkmate death
 - a King's registry-defined ruling disposition contradicted without a story-earned reason, especially a merciful ruler ordering arbitrary execution or an uncompromising ruler accepting surrender without accounting for the change; deterministic surrenderContext and defeatedKingFate remain authoritative
 - any nonfatal injury or dismemberment absent from outline woundBeats, inflicted outside its recorded capture, applied to the wrong survivor, prematurely healed, forgotten in later action, or contradicted by intact anatomy; cumulative royal strain inflicted on the threatened King at each ledger-confirmed check is the sole exception and must remain separate from woundBeats
 - any ledger-confirmed check that fails to inflict a new increment of royal strain on the threatened King, any check strain assigned to the wrong King or wrong ply, or later prose that forgets the accumulated effect of earlier checks

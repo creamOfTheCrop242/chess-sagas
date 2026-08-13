@@ -24,8 +24,41 @@ export const LATER_CHRONICLE_LENSES = [
   'a-scavenger-misunderstanding-a-dangerous-discovery',
 ] as const;
 
+export const DESTROYED_SEAL_CONSEQUENCES = [
+  'realm-magic-detonation-threatening-both-kingdoms',
+  'devouring-void-consuming-the-defeated-capital',
+  'ancient-being-released-from-seal-imprisonment',
+  'foreign-power-crossing-the-severed-universal-bridge',
+  'reality-fracture-scattering-survivors-across-worlds',
+  'time-wound-trapping-the-battlefield-in-repeating-moments',
+  'magical-contamination-transforming-land-and-survivors',
+  'the-dead-speaking-through-extinguished-wards',
+  'surviving-character-leading-an-uprising-against-the-victor',
+  'victorious-seal-absorbing-the-collapse-and-corrupting-its-king',
+  'civilian-third-power-rising-against-both-crowns',
+  'dangerous-relic-surviving-with-an-unknown-purpose',
+] as const;
+
+export const INTACT_SEAL_CONSEQUENCES = [
+  'surviving-character-leading-an-uprising-against-the-victor',
+  'defeated-kingdom-reorganizing-beneath-a-hidden-leader',
+  'victorious-queen-challenging-her-kings-rule',
+  'occupation-hardening-the-victor-into-a-harsher-regime',
+  'civilian-third-power-rising-against-both-crowns',
+  'ancient-being-drawn-to-the-strained-but-living-seals',
+  'surviving-seal-slowly-corrupting-its-king',
+  'reality-fracture-opening-along-the-final-battlefield',
+  'dangerous-relic-being-stolen-or-awakened',
+  'children-inheriting-memories-from-other-fractured-realities',
+] as const;
+
 export type AftermathFocus = (typeof AFTERMATH_FOCUSES)[number];
 export type LaterChronicleLens = (typeof LATER_CHRONICLE_LENSES)[number];
+export type DestroyedSealConsequence =
+  (typeof DESTROYED_SEAL_CONSEQUENCES)[number];
+export type IntactSealConsequence = (typeof INTACT_SEAL_CONSEQUENCES)[number];
+export type DarkEndingConsequence =
+  DestroyedSealConsequence | IntactSealConsequence;
 
 export interface EndingContract {
   result: GameLedger['metadata']['result'];
@@ -40,6 +73,8 @@ export interface EndingContract {
     aftermathFocus: AftermathFocus;
     laterChronicleLens: LaterChronicleLens;
     laterChronicleCliffhanger: boolean;
+    destroyedSealConsequence: DestroyedSealConsequence;
+    intactSealConsequence: IntactSealConsequence;
   };
 }
 
@@ -63,6 +98,8 @@ export function buildEndingContract(ledger: GameLedger): EndingContract {
       ledger.events.map((event) => event.san).join(' '),
     ].join('|'),
   );
+  const consequenceDivisor =
+    AFTERMATH_FOCUSES.length * LATER_CHRONICLE_LENSES.length * 4;
 
   return {
     result: ledger.metadata.result,
@@ -88,6 +125,18 @@ export function buildEndingContract(ledger: GameLedger): EndingContract {
         ) %
           4 ===
         0,
+      destroyedSealConsequence:
+        DESTROYED_SEAL_CONSEQUENCES[
+          Math.floor(variationSeed / consequenceDivisor) %
+            DESTROYED_SEAL_CONSEQUENCES.length
+        ],
+      intactSealConsequence:
+        INTACT_SEAL_CONSEQUENCES[
+          Math.floor(
+            variationSeed /
+              (consequenceDivisor * DESTROYED_SEAL_CONSEQUENCES.length),
+          ) % INTACT_SEAL_CONSEQUENCES.length
+        ],
     },
   };
 }

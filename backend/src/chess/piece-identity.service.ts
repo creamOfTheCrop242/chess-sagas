@@ -774,7 +774,7 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       dispositionVariants[disposition],
       `ruling-disposition:${disposition}`,
     );
-    return `${name} ${choice(upbringings, 'upbringing')}, studying warfare beside the finest commanders and magic beneath the greatest Archwizards. When the Calamity severed the kingdom’s native power, the King ${choice(discoveries, 'discovery')} and forged the Royal Seal before the last reserves failed. The immense current flowing continuously through his body has halted his aging, leaving him physically ageless for as long as he can sustain the connection. ${dispositionText}. ${choice(burdens, 'burden')}.`;
+    return `${name} ${choice(upbringings, 'upbringing')}, studying warfare beside the finest commanders and magic beneath the greatest Archwizards. When the Calamity severed the kingdom’s native power, the King ${choice(discoveries, 'discovery')} and forged the Royal Seal before the last reserves failed. The immense current flowing continuously through his body has halted his aging, leaving him ageless for as long as he can sustain the connection. ${dispositionText}. ${choice(burdens, 'burden')}.`;
   }
 
   if (piece.chessType === 'q') {

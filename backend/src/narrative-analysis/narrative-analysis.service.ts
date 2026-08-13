@@ -11,6 +11,7 @@ import { NARRATIVE_ANALYSIS_PROMPT_VERSION } from './narrative-analysis.prompt';
 import { NarrativeAnalysisValidator } from './narrative-analysis.validator';
 import { buildEndingContract } from './ending-contract';
 import type { NarrativeAnalysis } from './models/narrative-analysis';
+import { sealFateForKingFate } from '../chess/models/story-ending';
 
 @Injectable()
 export class NarrativeAnalysisService {
@@ -164,6 +165,10 @@ function normalizeDeterministicAnalysisFacts(
       laterChronicleLens: endingContract.creativeDirection.laterChronicleLens,
       laterChronicleCliffhanger:
         endingContract.creativeDirection.laterChronicleCliffhanger,
+      darkEndingConsequence:
+        sealFateForKingFate(defeatedKingFate) === 'destroyed'
+          ? endingContract.creativeDirection.destroyedSealConsequence
+          : endingContract.creativeDirection.intactSealConsequence,
     },
   });
 }

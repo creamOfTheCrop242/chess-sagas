@@ -65,8 +65,9 @@ export class CalamityLoreComponent {
       marker: 'VI',
       title: 'When a Seal Falls',
       paragraphs: [
-        'Destroying a Royal Seal does not extinguish every spell at once. Stored magic fades. Wards weaken, enchanted infrastructure decays, healing and harvests fail, and political order begins to fracture unless survivors learn to live without magic.',
-        'Moving Fortresses suffer a particularly cruel decline. Their wheels seize and their life-supporting cores fade, leaving wounded pilots—who cannot live outside their machines—entombed in armored hulls unless rescue comes before the last power is spent.',
+        'When a King dies, the connection to his lost universe is severed and controlled magic across his kingdom stops immediately. What follows the destruction of his Royal Seal is unknowable: some collapse into devouring silence, some detonate across both realms, some tear open reality, and some release powers the Seal may have held imprisoned.',
+        'Victory offers no protection from that aftermath. A surviving soldier may raise a rebellion, the victor’s Seal may absorb a corrupting current, or an ancient intelligence may cross the broken path between universes. The battle has a winner; the world it leaves behind rarely does.',
+        'Moving Fortress pilots are inseparable from their life-supporting cores. They cannot be extracted or transferred without dying. If their King’s magic ends, the Fortress falls silent at once and the living pilot remains entombed within it.',
       ],
     },
   ];

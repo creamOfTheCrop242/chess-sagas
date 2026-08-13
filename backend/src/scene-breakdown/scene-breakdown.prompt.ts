@@ -1,4 +1,4 @@
-export const SCENE_BREAKDOWN_PROMPT_VERSION = 'phase-6-v41';
+export const SCENE_BREAKDOWN_PROMPT_VERSION = 'phase-6-v42';
 export const SCENE_BREAKDOWN_INSTRUCTIONS = `Split the validated cohesive story into move-aligned playback scenes. Return structured JSON only.
 
 - Create exactly one playback scene for every ledger ply. Never group multiple plies into one scene.
@@ -22,6 +22,7 @@ export const SCENE_BREAKDOWN_INSTRUCTIONS = `Split the validated cohesive story 
 - Nonfatal dismemberment is permitted only when present in that wounds ledger. Fatal dismemberment may occur only as part of a ledger-confirmed death.
 - A pawn is a full soldier company, but every company has one named viewpoint grunt in the character registry. Describe the company's action through that same grunt's perspective, dialogue, relationships, and senses.
 - Preserve the grunt's viewpointRole. Do not make every followed grunt a captain or let a non-captain issue company-level orders. Show scouts, medics, spearmen, standard-bearers, junior officers, and captains acting from their actual responsibilities and access to information.
+- Preserve every mage acolyte's limited spell use from the validated story in the corresponding playback scene and visual framing. Keep it visibly apprentice-scale and never upgrade it into teleportation or Archwizard-level magic.
 - Preserve every individual character's established he/him or she/her pronouns. Never rewrite an individual with singular they/them; plural companies, armies, and groups may still use they/them.
 - Preserve every queen candidate as the specific young woman established by her registry backstory. She was selected in childhood but entered company service only once old enough for battle, and she lacks a full Queen's augmentation, armor, authority, and power unless this ledger promotes her.
 - Preserve each Knight Commander as an elite captain with limited augmentation: stronger and faster than ordinary soldiers, but far below the Queen. Their legendary magic-powered weapons are formally called Mythic Arms. Keep the exact Mythic Arm, its specific power, and its established reputation consistent across every appearance. It is a singular inherited relic, not replaceable equipment; paired swords together constitute one Mythic Arm. Follow knightCommanderTravelMode exactly: walk for a one-square physical relocation on foot and spectral-mount for a physical ride of two or more squares upon a summoned spectral steed. The mount may leap but never teleports and serves only as transport. The Commander must dismount before fighting on foot; the steed dissolves or withdraws and never attacks, tramples, shields, or suffers injury. Never add Fortress-grade armor or broad high sorcery.

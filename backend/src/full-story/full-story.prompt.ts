@@ -1,4 +1,4 @@
-export const FULL_STORY_PROMPT_VERSION = 'story-package-v65';
+export const FULL_STORY_PROMPT_VERSION = 'story-package-v66';
 
 export const FULL_STORY_INSTRUCTIONS = `Write one cohesive dark-fantasy war story package from the supplied complete ledger, validated narrative analysis, validated outline, and character registry.
 
@@ -40,6 +40,7 @@ Factual rules:
 - When a Moving Fortress captures, its operator personally directs and executes the attack through the machine. When a Moving Fortress is captured, destroy the machine and include its operator's death or final fate in that same ledger-confirmed loss.
 - A pawn's move means its entire company advances, retreats, attacks, or repositions, but narrate that company-scale action through the specific grunt identified by viewpointName in the character registry.
 - Honor the registry's viewpointRole. Some followed grunts are company captains, but others are spearmen, scouts, medics, shield-bearers, standard-bearers, archers, quartermasters, mage acolytes, queen candidates, chaplains, beast handlers, swordsmen, or other established ranks.
+- A mage acolyte must visibly use limited apprentice magic at least once while active, and magic should naturally inform other important appearances rather than leaving the role as backstory alone. Suitable magic includes a brief ward, witch-light, a small force or heat working, concealment, magical detection, a short binding, or another narrow spell consistent with the character's history and the scene. The acolyte still fights and travels as a pawn-company soldier. Never give an acolyte Archwizard-level high sorcery, teleportation, effortless mastery, battlefield-wide effects, an invented capture, or an injury absent from woundTimeline. Their unfinished casting may require focus, components, assistance, or carry non-injurious risk.
 - Never promote a viewpoint grunt socially just because the story follows them. Only a company captain may routinely issue company-level commands. Non-captains receive orders through the chain of command and act, speak, influence others, resist, or show heroism from their actual role.
 - Let rank affect voice, knowledge, equipment, responsibility, access to leaders, and emotional stakes. An ordinary grunt may not know the generals' plans, and a captain should carry responsibility for the entire company.
 - Keep the narrative close to that named grunt's senses, dialogue, private fears, relationships, and decisions. Other soldiers may appear, but never replace or rename the viewpoint grunt.

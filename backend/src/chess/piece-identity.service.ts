@@ -6,6 +6,7 @@ import type {
   DeathDisposition,
   FantasyPieceType,
   GameLedger,
+  KingDisposition,
   PieceIdentity,
   Side,
 } from './models/game-ledger';
@@ -89,7 +90,7 @@ const PAWN_VIEWPOINT_ROLES = {
   north: [
     'scout',
     'shield-bearer',
-    'sergeant',
+    'swordsman',
     'company captain',
     'spearman',
     'field medic',
@@ -100,7 +101,7 @@ const PAWN_VIEWPOINT_ROLES = {
     'spearman',
     'company captain',
     'scout',
-    'sergeant',
+    'chaplain',
     'shield-bearer',
     'company captain',
     'field medic',
@@ -108,26 +109,20 @@ const PAWN_VIEWPOINT_ROLES = {
   ],
 } as const;
 
-const REQUIRED_PAWN_VIEWPOINT_ROLES = [
+const PAWN_VIEWPOINT_ROLE_POOL = [
   'company captain',
   'field medic',
-] as const;
-
-const PAWN_SPECIALTY_ROLES = [
   'scout',
   'shield-bearer',
   'spearman',
   'standard-bearer',
-  'sergeant',
   'archer',
-  'sapper',
-  'outrider',
   'quartermaster',
-  'signaler',
-  'skirmisher',
-  'siege engineer',
   'mage acolyte',
   'queen candidate',
+  'chaplain',
+  'beast handler',
+  'swordsman',
 ] as const;
 
 const FEMININE_NAMES = new Set([
@@ -181,9 +176,14 @@ export class PieceIdentityService {
     const pieces: PieceIdentity[] = [];
     const squareToId = new Map<string, string>();
     const characterNames = shuffledCharacterNames(seed);
-    const boardPieces = chess.board().flat().filter((piece) => Boolean(piece));
+    const boardPieces = chess
+      .board()
+      .flat()
+      .filter((piece) => Boolean(piece));
     const pawnCount = boardPieces.filter((piece) => piece?.type === 'p').length;
-    const fortressCount = boardPieces.filter((piece) => piece?.type === 'r').length;
+    const fortressCount = boardPieces.filter(
+      (piece) => piece?.type === 'r',
+    ).length;
     const namedMajorCount = boardPieces.filter(
       (piece) => piece && piece.type !== 'p' && piece.type !== 'r',
     ).length;
@@ -240,17 +240,44 @@ export class PieceIdentityService {
                 )
               : assignedMajorName
           : undefined;
+        const fortressFormerRole =
+          piece.type === 'r'
+            ? fortressPilotFormerRole(
+                `${piece.color}-${piece.type}-${square}`,
+                seed,
+              )
+            : undefined;
+        const assignedFortressOperator =
+          piece.type === 'r'
+            ? characterNames[pawnCount + fortressIndex++]
+            : undefined;
+        const fortressOperatorName =
+          fortressFormerRole === 'queen candidate' && assignedFortressOperator
+            ? queenCandidateName(
+                assignedFortressOperator,
+                seed,
+                `${piece.color}-${piece.type}-${square}:operator`,
+                reservedCharacterNames,
+              )
+            : assignedFortressOperator;
         const identity = this.identity(
           piece.color,
           piece.type,
           square,
           pawnName,
           pawnRole,
-          piece.type === 'r'
-            ? characterNames[pawnCount + fortressIndex++]
-            : undefined,
+          fortressOperatorName,
           majorCharacterName,
         );
+        if (identity.chessType === 'k') {
+          identity.kingDisposition = kingDisposition(identity.id, seed);
+        }
+        if (identity.chessType === 'r') {
+          identity.formerRole = fortressFormerRole;
+          if (fortressFormerRole === 'queen candidate') {
+            identity.pronouns = 'she/her';
+          }
+        }
         identity.backstory = pieceBackstory(identity, seed);
         pieces.push(identity);
         squareToId.set(square, identity.id);
@@ -292,7 +319,7 @@ export class PieceIdentityService {
     const characterName =
       type === 'r'
         ? fortressOperatorName
-        : pawnProfile?.viewpointName ?? majorCharacterName;
+        : (pawnProfile?.viewpointName ?? majorCharacterName);
     return {
       id,
       chessColor: color,
@@ -365,6 +392,28 @@ function characterDeathDisposition(
   ];
 }
 
+const KING_DISPOSITIONS: readonly KingDisposition[] = [
+  'benevolent-guardian',
+  'honorable-sovereign',
+  'calculating-monarch',
+  'selfish-tyrant',
+];
+
+const FORTRESS_PILOT_FORMER_ROLES = [...PAWN_VIEWPOINT_ROLE_POOL] as const;
+
+function fortressPilotFormerRole(stableId: string, seed: string): string {
+  return FORTRESS_PILOT_FORMER_ROLES[
+    hashSeed(`${seed}:${stableId}:fortress-pilot-former-role`) %
+      FORTRESS_PILOT_FORMER_ROLES.length
+  ];
+}
+
+function kingDisposition(stableId: string, seed: string): KingDisposition {
+  return KING_DISPOSITIONS[
+    hashSeed(`${seed}:${stableId}:king-disposition`) % KING_DISPOSITIONS.length
+  ];
+}
+
 function pawnNarrativeProfile(
   side: Side,
   square: string,
@@ -390,6 +439,11 @@ export function normalizePawnViewpoints(ledger: GameLedger): GameLedger {
       if (piece.chessType !== 'p') {
         return {
           ...piece,
+          kingDisposition:
+            piece.chessType === 'k'
+              ? (piece.kingDisposition ??
+                kingDisposition(piece.id, ledger.initialFen))
+              : piece.kingDisposition,
           backstory:
             piece.backstory ?? pieceBackstory(piece, ledger.initialFen),
         };
@@ -415,7 +469,10 @@ export function normalizePawnViewpoints(ledger: GameLedger): GameLedger {
 function pieceBackstory(piece: PieceIdentity, seed: string): string {
   const kingdom = piece.side === 'north' ? 'Light Kingdom' : 'Dark Kingdom';
   const name =
-    piece.operatorName ?? piece.viewpointName ?? piece.characterName ?? piece.permanentName;
+    piece.operatorName ??
+    piece.viewpointName ??
+    piece.characterName ??
+    piece.permanentName;
   const choice = (values: readonly string[], key: string): string =>
     values[hashSeed(`${seed}:${piece.id}:${key}`) % values.length];
   const personalize = (text: string): string =>
@@ -548,10 +605,6 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
         'Their refusal to yield ground made them the shield-bearer trusted to anchor a failing line',
         'They became shield-bearer after carrying two wounded soldiers out beneath spellfire',
       ],
-      sergeant: [
-        'They became sergeant by keeping frightened recruits organized when every officer was lost',
-        'A talent for turning confused orders into practical action earned them a sergeant’s braid',
-      ],
       'company captain': [
         'The company elected them captain after they exposed a commander who had abandoned civilians',
         'They inherited command in disaster and kept it because the survivors trusted their judgment',
@@ -572,29 +625,9 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
         'A hunter’s patience and an uncanny sense for distance earned them a place among the company archers',
         'They learned to loose arrows through storm and spell-glare while guarding isolated supply roads',
       ],
-      sapper: [
-        'They became a sapper after learning to undermine walls, clear traps, and turn ruined streets into defenses',
-        'An apprenticeship in quarry blasting taught them how to break fortifications without burying their own soldiers',
-      ],
-      outrider: [
-        'Years carrying warnings between distant garrisons made them the company’s swift and watchful outrider',
-        'They earned an outrider’s saddle by crossing hostile ground with messages no spell could safely carry',
-      ],
       quartermaster: [
         'A gift for finding food, medicine, and ammunition in a collapsing supply chain made them quartermaster',
         'They became quartermaster after proving that careful inventories could save more soldiers than reckless heroics',
-      ],
-      signaler: [
-        'They mastered horn, flag, and shutter-lamp codes until the company trusted them to carry orders through chaos',
-        'Their sharp eyes and flawless timing made them the signaler who kept scattered formations acting as one',
-      ],
-      skirmisher: [
-        'Quick judgment and a refusal to be pinned in formation made them a skirmisher on the company’s exposed edge',
-        'They became a skirmisher by surviving close reconnaissance where speed mattered more than armor',
-      ],
-      'siege engineer': [
-        'They trained to brace gates, measure walls, and keep siege engines working while enemy fire fell around them',
-        'A talent for timber, leverage, and field repairs made them the company’s siege engineer',
       ],
       'mage acolyte': [
         'A rare sensitivity to realm-magic earned them battlefield apprenticeship under an Archwizard, though their unfinished spells remain dangerous to cast',
@@ -603,6 +636,18 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       'queen candidate': [
         'The court selected her in childhood as a possible successor and sent her into company service only after she became old enough for its final field trials',
         'She survived the martial and magical education reserved for potential successors but has not received a Queen’s full augmentation or authority',
+      ],
+      chaplain: [
+        'The company chose them as chaplain after their rites and counsel held frightened soldiers together through a season of losses',
+        'They became chaplain by learning how to comfort the living, honor the dead, and question orders that demanded empty sacrifice',
+      ],
+      'beast handler': [
+        'A lifelong bond with the kingdom’s war beasts made them the handler trusted to guide animals through spellfire and panic',
+        'They became the company’s beast handler after calming a wounded war animal that every other soldier believed was lost',
+      ],
+      swordsman: [
+        'Relentless drills and hard-won duels made them the company swordsman sent into the most dangerous close fighting',
+        'They earned recognition as a swordsman by defending a broken line with disciplined blade work rather than reckless glory',
       ],
     };
     const role = piece.viewpointRole ?? 'company soldier';
@@ -630,14 +675,17 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       'was poisoned by raw realm-magic after sealing a breach with their own body still inside it',
       'suffered catastrophic wounds piloting an experimental engine away from a populated district',
     ];
-    const formerDuties = [
-      'a siege engineer known for repairing engines under fire',
-      'a cavalry outrider who volunteered for the most dangerous evacuations',
-      'an artillery officer whose crews trusted precision more than bravado',
-      'a common soldier repeatedly decorated for bringing others home alive',
-      'a ward technician who understood the kingdom’s machines better than its court did',
-      'a company officer who challenged orders that treated soldiers as expendable',
+    const formerRole =
+      piece.formerRole ?? fortressPilotFormerRole(piece.id, seed);
+    const formerService = [
+      `served as the ${formerRole} whose company relied on them when its formation began to break`,
+      `earned recognition as a ${formerRole} during the kingdom’s long struggle to keep its frontier companies alive`,
+      `carried the duties of a ${formerRole}, experience that still shapes every order issued from the armored cradle`,
     ];
+    const formerCalling =
+      formerRole === 'queen candidate'
+        ? ' Before the injury, the court had selected her in childhood as a possible replacement for the reigning Queen. Implantation saved her life but ended any ordinary path to the throne, leaving a trained successor permanently bound to a Fortress instead.'
+        : '';
     const attitudes = [
       'The transformation saved a life but left the pilot grieving every ordinary sensation the cradle replaced',
       'The pilot treats the fortress as a second body and fears the day its voice becomes easier to hear than human voices',
@@ -669,7 +717,7 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       'A ward-siphon array steals a brief pulse of hostile magic to strengthen the next shot or impact',
     ];
     return personalize(
-      `${name} once served as ${choice(formerDuties, 'former-duty')} and ${choice(injuries, 'injury')}. With death otherwise certain, the kingdom’s Archwizards placed the soldier’s living body inside ${piece.permanentName}; its magical cradle now sustains the pilot, who cannot survive apart from the Moving Fortress. The machine carries ${choice(primaryWeapons, 'primary-weapon')}. ${choice(attachments, 'specialized-attachment')}. Its armored mass and reinforced prow also make the entire Fortress a devastating ram. ${choice(attitudes, 'attitude')}.`,
+      `${name} once ${choice(formerService, `former-service:${formerRole}`)}.${formerCalling} ${choice(injuries, 'injury')}. With death otherwise certain, the kingdom’s Archwizards placed the soldier’s living body inside ${piece.permanentName}; its magical cradle now sustains the pilot, who cannot survive apart from the Moving Fortress. The machine carries ${choice(primaryWeapons, 'primary-weapon')}. ${choice(attachments, 'specialized-attachment')}. Its armored mass and reinforced prow also make the entire Fortress a devastating ram. ${choice(attitudes, 'attitude')}.`,
     );
   }
 
@@ -698,19 +746,35 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       'The King believes the rival realm’s destruction might heal reality, though no Archwizard can prove it',
       'The crown keeps a secret list of settlements that will lose power first if the Seal weakens',
     ];
-    const dispositions = [
-      'He rules with measured mercy, accepts honorable surrender, and considers needless execution a confession of weak authority',
-      'He is lenient toward defeated soldiers but merciless toward rulers who sacrifice their subjects to preserve a crown',
-      'He offers surrender once and keeps every term exactly, whether that promise requires clemency or severe judgment',
-      'He is a patient ruler who prefers imprisonment, negotiated submission, and reconstruction to revenge',
-      'He believes rebellion survives through mercy and routinely rejects surrender from enemy leaders, ordering public execution as a warning',
-      'He accepts the surrender of common soldiers but has enemy commanders executed when he judges their wars unforgivable',
-      'He is authoritarian and suspicious, treating surrender as another weapon and granting clemency only when it materially protects his realm',
-      'He is compassionate in peace yet capable of terrifying finality when betrayal or cruelty exhausts that compassion',
-      'He judges every surrender individually, weighing civilian lives, battlefield conduct, personal oaths, and the advice of surviving commanders',
-      'He values order above mercy or vengeance and chooses whichever fate he believes will prevent the next war',
-    ];
-    return `${name} ${choice(upbringings, 'upbringing')}, studying warfare beside the finest commanders and magic beneath the greatest Archwizards. When the Calamity severed the kingdom’s native power, the King ${choice(discoveries, 'discovery')} and forged the Royal Seal before the last reserves failed. The immense current flowing continuously through his body has halted his aging, leaving him physically ageless for as long as he can sustain the connection. ${choice(dispositions, 'ruling-disposition')}. ${choice(burdens, 'burden')}.`;
+    const disposition =
+      piece.kingDisposition ?? kingDisposition(piece.id, seed);
+    const dispositionVariants: Record<KingDisposition, readonly string[]> = {
+      'benevolent-guardian': [
+        'As a Benevolent Guardian, he treats the crown as a duty to protect ordinary lives, accepts honorable surrender, and considers needless execution a failure of rule',
+        'As a Benevolent Guardian, he prefers mercy, prisoner protection, and reconstruction, but will use severe force when it is the only way to shield his people',
+        'As a Benevolent Guardian, he measures victory by the subjects brought home alive and would spend power, prestige, or freedom to preserve them',
+      ],
+      'honorable-sovereign': [
+        'As an Honorable Sovereign, he binds himself to law, oath, and formal terms of surrender, granting mercy without excusing betrayal or atrocities',
+        'As an Honorable Sovereign, he offers surrender once, keeps every promised term exactly, and expects defeated rulers to answer publicly for their conduct',
+        'As an Honorable Sovereign, he places duty above appetite and accepts personal ruin more readily than a victory purchased through a broken oath',
+      ],
+      'calculating-monarch': [
+        'As a Calculating Monarch, he weighs mercy, imprisonment, flight, and execution by whichever choice best preserves his power and prevents another war',
+        'As a Calculating Monarch, he treats surrender and clemency as strategic instruments, protecting lives when stability profits more than revenge',
+        'As a Calculating Monarch, he listens patiently, reveals little, and will sacrifice reputation, territory, or selected forces to secure the realm’s survival',
+      ],
+      'selfish-tyrant': [
+        'As a Selfish Tyrant, he values his life, throne, and legacy above his subjects, spending soldiers freely and granting mercy only when it strengthens his rule',
+        'As a Selfish Tyrant, he treats the kingdom as his possession, rejects surrender when terror would serve him better, and blames commanders for the cost of his own decisions',
+        'As a Selfish Tyrant, he hoards authority, regards civilians and companies as expendable, and would abandon or ruin the realm rather than willingly surrender his crown',
+      ],
+    };
+    const dispositionText = choice(
+      dispositionVariants[disposition],
+      `ruling-disposition:${disposition}`,
+    );
+    return `${name} ${choice(upbringings, 'upbringing')}, studying warfare beside the finest commanders and magic beneath the greatest Archwizards. When the Calamity severed the kingdom’s native power, the King ${choice(discoveries, 'discovery')} and forged the Royal Seal before the last reserves failed. The immense current flowing continuously through his body has halted his aging, leaving him physically ageless for as long as he can sustain the connection. ${dispositionText}. ${choice(burdens, 'burden')}.`;
   }
 
   if (piece.chessType === 'q') {
@@ -835,14 +899,21 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       'a stormbound great hammer whose impacts release concussive thunder',
       'a Seal-forged greatsword that burns through hostile wards',
       'a gravity mace that multiplies its weight at the instant of impact',
-      'a rune-headed maul that fractures enchanted armor and stone',
       'a ward-breaking poleaxe charged to tear open magical defenses',
-      'a chain-linked war flail whose glowing head bends around shields',
       'a crescent glaive that throws a short arc of cutting realm-light',
       'a two-handed war axe whose edge stores the force of every blocked blow',
+      'a matched pair of oathbound swords whose alternating strikes build and release cutting arcs of realm-light',
+    ];
+    const weaponLegacies = [
+      'This Mythic Arm is a legendary relic carried by generations of champions, and soldiers recognize its silhouette before they recognize its bearer',
+      'The weapon is legendary throughout the kingdom, its earlier wielders named in military oaths and funeral songs',
+      'It survived the Calamity and became a legendary symbol of command whose appearance can steady an army or terrify an old enemy',
+      'Only a Knight Commander is permitted to bear this Mythic Arm, which has accumulated victories, failures, and old blood across centuries of service',
+      'The kingdom considers it a legendary inheritance rather than ordinary equipment, and its history places a burden on every new bearer',
+      'Its legendary reputation crosses both kingdoms, though their chronicles violently disagree about the deeds that made it famous',
     ];
     return personalize(
-      `${name} ${choice(origins, 'order-origin')} and ${choice(feats, 'command-feat')}. Chosen from the kingdom’s most elite captains, they became a Knight Commander. ${choice(augmentations, 'commander-augmentation')}; formidable, but nowhere near the Queen’s complete transformation. They wield ${choice(weapons, 'signature-weapon')} as their personal magic-powered weapon. ${choice(styles, 'command-style')}.`,
+      `${name} ${choice(origins, 'order-origin')} and ${choice(feats, 'command-feat')}. Chosen from the kingdom’s most elite captains, they became a Knight Commander. ${choice(augmentations, 'commander-augmentation')}; formidable, but nowhere near the Queen’s complete transformation. They can summon a spectral mount to carry them swiftly across distant or obstructed ground, though the mount travels physically and never teleports. It serves only as transport: the Commander dismounts before fighting on foot, and the steed dissolves rather than joining the attack. They wield ${choice(weapons, 'signature-weapon')}, their personal Mythic Arm. ${choice(weaponLegacies, 'weapon-legacy')}. ${choice(styles, 'command-style')}.`,
     );
   }
 
@@ -938,6 +1009,7 @@ function applyCharacterPronouns(
     meet: 'meets',
     plan: 'plans',
     prize: 'prizes',
+    recognize: 'recognizes',
     pursue: 'pursues',
     regard: 'regards',
     speak: 'speaks',
@@ -978,14 +1050,10 @@ function shuffledCharacterNames(seed: string): string[] {
 }
 
 function shuffledPawnRoles(seed: string, side: Side): string[] {
-  const specialties = shuffledValues(
-    PAWN_SPECIALTY_ROLES,
-    `${seed}:${side}:specialties`,
-  ).slice(0, 6);
   return shuffledValues(
-    [...REQUIRED_PAWN_VIEWPOINT_ROLES, ...specialties],
+    PAWN_VIEWPOINT_ROLE_POOL,
     `${seed}:${side}:roles`,
-  );
+  ).slice(0, 8);
 }
 
 function shuffledValues<T>(source: readonly T[], seed: string): T[] {

@@ -62,12 +62,33 @@ describe('PieceLoreComponent', () => {
     const subclasses = details.querySelectorAll('li');
 
     expect(details.open).toBeFalse();
-    expect(subclasses).toHaveSize(16);
+    expect(subclasses).toHaveSize(13);
     expect(details.textContent).toContain('Mage Acolyte');
     expect(details.textContent).toContain('Queen Candidate');
     expect(details.textContent).toContain('identified in childhood');
     expect(details.textContent).toContain('old enough for battle');
-    expect(details.textContent).toContain('Outrider');
+    expect(details.textContent).toContain('Chaplain');
+    expect(details.textContent).toContain('Beast Handler');
+    expect(details.textContent).toContain('Swordsman');
+    expect(details.textContent).not.toContain('Sergeant');
+
+    (details.querySelector('summary') as HTMLElement).click();
+    expect(details.open).toBeTrue();
+  });
+
+  it('provides a collapsible catalog of every Mythic Arm', () => {
+    const details = fixture.nativeElement.querySelector(
+      '.mythic-arms',
+    ) as HTMLDetailsElement;
+    const arms = details.querySelectorAll('li');
+
+    expect(details.open).toBeFalse();
+    expect(arms).toHaveSize(7);
+    expect(details.textContent).toContain('Stormbound Great Hammer');
+    expect(details.textContent).toContain('Seal-Forged Greatsword');
+    expect(details.textContent).toContain('Matched Oathbound Swords');
+    expect(details.textContent).not.toContain('Maul');
+    expect(details.textContent).not.toContain('Flail');
 
     (details.querySelector('summary') as HTMLElement).click();
     expect(details.open).toBeTrue();

@@ -717,6 +717,12 @@ export function buildWoundTimeline(
           ? finalPly
           : Math.max(wound.inflictedAtPly, wound.recoveryPly - 1),
       recoveryPly: wound.recoveryPly,
+      causeType: analysisWound?.causeType ?? wound.causeType,
+      sourcePieceId: analysisWound?.sourcePieceId ?? wound.sourcePieceId,
+      sourceNames:
+        analysisWound?.sourcePieceId && pieces.get(analysisWound.sourcePieceId)
+          ? narrativeAliases(pieces.get(analysisWound.sourcePieceId)!)
+          : [],
     };
   });
 }

@@ -16,6 +16,11 @@ type PawnSubclass = {
   description: string;
 };
 
+type MythicArm = {
+  name: string;
+  description: string;
+};
+
 @Component({
   selector: 'app-piece-lore',
   standalone: true,
@@ -24,6 +29,44 @@ type PawnSubclass = {
   styleUrl: './piece-lore.component.css',
 })
 export class PieceLoreComponent {
+  readonly mythicArms: MythicArm[] = [
+    {
+      name: 'Stormbound Great Hammer',
+      description:
+        'A colossal hammer whose impacts release concussive thunder through armor, earth, and nearby formations.',
+    },
+    {
+      name: 'Seal-Forged Greatsword',
+      description:
+        'A two-handed blade fed by Seal-power that burns through hostile wards as readily as physical defenses.',
+    },
+    {
+      name: 'Gravity Mace',
+      description:
+        'An enchanted mace that multiplies its weight at the instant of impact without burdening its bearer between strikes.',
+    },
+    {
+      name: 'Ward-Breaking Poleaxe',
+      description:
+        'A hooked and bladed arm charged to catch, split, and tear openings through magical defenses.',
+    },
+    {
+      name: 'Crescent Glaive',
+      description:
+        'A sweeping polearm whose crescent edge projects short arcs of cutting realm-light beyond its physical reach.',
+    },
+    {
+      name: 'Two-Handed War Axe',
+      description:
+        'A heavy axe that stores the force of every blocked blow and releases that gathered violence through later attacks.',
+    },
+    {
+      name: 'Matched Oathbound Swords',
+      description:
+        'An inseparable pair wielded together; alternating strikes build and release crossing arcs of realm-light.',
+    },
+  ];
+
   readonly pawnSubclasses: PawnSubclass[] = [
     {
       name: 'Company Captain',
@@ -56,44 +99,14 @@ export class PieceLoreComponent {
         'The keeper of the company banner, battlefield signals, and the symbol around which scattered soldiers rally.',
     },
     {
-      name: 'Sergeant',
-      description:
-        'An experienced junior officer who turns the captain’s commands into practical action among the ranks.',
-    },
-    {
       name: 'Archer',
       description:
         'A ranged fighter trained to place arrows through poor visibility, spell-glare, and gaps in enemy protection.',
     },
     {
-      name: 'Sapper',
-      description:
-        'A specialist in traps, demolition, tunneling, breached walls, and rapidly constructed battlefield defenses.',
-    },
-    {
-      name: 'Outrider',
-      description:
-        'A mounted scout and messenger who patrols exposed flanks and carries urgent orders across dangerous ground.',
-    },
-    {
       name: 'Quartermaster',
       description:
         'The soldier responsible for preserving food, medicine, weapons, and ammunition when supply lines collapse.',
-    },
-    {
-      name: 'Signaler',
-      description:
-        'A communications specialist who uses horns, flags, lamps, and codes to coordinate separated formations.',
-    },
-    {
-      name: 'Skirmisher',
-      description:
-        'A lightly equipped fighter who screens the formation, harasses enemies, and survives through speed and initiative.',
-    },
-    {
-      name: 'Siege Engineer',
-      description:
-        'A builder and battlefield mechanic trained to assess walls, reinforce gates, and operate or repair siege equipment.',
     },
     {
       name: 'Mage Acolyte',
@@ -104,6 +117,21 @@ export class PieceLoreComponent {
       name: 'Queen Candidate',
       description:
         'A gifted girl identified in childhood and trained as a possible successor should the reigning Queen die or become unable to serve. By the time she enters company service, she is old enough for battle but does not yet possess a Queen’s complete magical augmentation, fortress-grade armor, power, or authority.',
+    },
+    {
+      name: 'Chaplain',
+      description:
+        'A spiritual counselor who steadies frightened soldiers, performs rites for the dead, and gives the company a moral voice during war.',
+    },
+    {
+      name: 'Beast Handler',
+      description:
+        'A specialist bonded with the kingdom’s trained war beasts, directing them through battle while protecting and understanding the creatures entrusted to the company.',
+    },
+    {
+      name: 'Swordsman',
+      description:
+        'A disciplined close-combat specialist whose practiced blade work is used wherever the company’s formation faces its most dangerous fighting.',
     },
   ];
 
@@ -147,9 +175,9 @@ export class PieceLoreComponent {
       sigil: '♞',
       oath: 'Chosen from the kingdom’s most elite captains, each Knight Commander leads from the front and stands above every ordinary soldier in strength, speed, resilience, and authority.',
       movement:
-        'Limited Archwizard augmentation lets them vault obstacles, cross broken ground in explosive physical surges, and attack from angles no conventional formation can follow. They do not teleport, and their transformation is nowhere near the Queen’s.',
+        'A Knight Commander can walk nearby ground or summon a spectral mount for longer movement. The steed physically carries its rider and leaps across the battlefield along routes ordinary cavalry cannot follow; neither rider nor mount teleports. It is transportation only: the Commander dismounts and fights on foot with the Mythic Arm while the steed dissolves or withdraws.',
       warfare:
-        'Each carries a personal magic-powered heavy weapon—perhaps a great hammer, greatsword, mace, maul, poleaxe, flail, glaive, or war axe—and combines its supernatural force with masterful close combat and command authority.',
+        'Every Knight Commander carries a Mythic Arm: a singular legendary magic-powered weapon such as a great hammer, greatsword, mace, poleaxe, glaive, war axe, or matched pair of dual-wielded swords. Mythic Arms have histories and reputations of their own, and soldiers may recognize one before they recognize its bearer.',
       fate: 'Their loss is both personal and tactical: soldiers lose a champion, and an entire wing of the army may lose its direction.',
     },
     {
@@ -167,7 +195,7 @@ export class PieceLoreComponent {
       chessName: 'Pawn',
       sagaName: 'Soldier Company',
       sigil: '♟',
-      oath: 'Each company carries its own name, history, and sworn specialist whose viewpoint gives the formation a human voice. Every kingdom fields a captain and medic, while its remaining specialists vary between realities.',
+      oath: 'Each company carries its own name and history, while one named soldier gives the formation a human viewpoint. The wider company still contains officers, medics, and ordinary troops even when the chronicle follows a different specialist.',
       movement:
         'Companies advance together and hold the kingdom’s front. Their first march may cover more ground, but afterward every step is hard won.',
       warfare:

@@ -107,6 +107,9 @@ describe('full-story wound timing preparation', () => {
         inflictedAtPly: 55,
         activeThroughPly: 60,
         recoveryPly: null,
+        causeType: undefined,
+        sourcePieceId: undefined,
+        sourceNames: [],
       },
     ]);
   });

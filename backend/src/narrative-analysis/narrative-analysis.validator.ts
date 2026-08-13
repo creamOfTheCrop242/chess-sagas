@@ -115,6 +115,20 @@ export class NarrativeAnalysisValidator {
           `Wound for ${wound.pieceId} must be inflicted while that character survives a ledger-confirmed capture`,
         );
       }
+      const requiredCause = selectRequiredWoundEvents(ledger).find(
+        (required) =>
+          required.pieceId === wound.pieceId &&
+          required.inflictedAtPly === wound.inflictedAtPly,
+      );
+      if (
+        requiredCause &&
+        (wound.causeType !== requiredCause.causeType ||
+          wound.sourcePieceId !== requiredCause.sourcePieceId)
+      ) {
+        errors.push(
+          `Wound cause for ${wound.pieceId} at ply ${wound.inflictedAtPly} must match the seeded cause`,
+        );
+      }
       if (
         wound.recoveryPly !== null &&
         wound.recoveryPly <= wound.inflictedAtPly

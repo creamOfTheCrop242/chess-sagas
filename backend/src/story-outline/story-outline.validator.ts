@@ -162,7 +162,9 @@ export class StoryOutlineValidator {
       if (
         !planned ||
         wound.injury !== planned.injury ||
-        wound.recoveryPly !== planned.recoveryPly
+        wound.recoveryPly !== planned.recoveryPly ||
+        wound.causeType !== planned.causeType ||
+        wound.sourcePieceId !== planned.sourcePieceId
       ) {
         errors.push(`Wound beat ${key} must match the narrative analysis`);
       }

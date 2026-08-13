@@ -62,6 +62,7 @@ export type PieceIdentity = {
   viewpointName?: string;
   viewpointRole?: string;
   operatorName?: string;
+  formerRole?: string;
   pronouns?: 'he/him' | 'she/her';
   deathDisposition?:
     | 'defiant'
@@ -89,6 +90,7 @@ export type ChessEvent = {
   pieceType: string;
   archwizardTravelMode?: 'walk' | 'teleport';
   queenTravelMode?: 'walk' | 'magical-rush';
+  knightCommanderTravelMode?: 'walk' | 'spectral-mount';
   isCapture: boolean;
   capturedPieceId?: string;
   capturedPieceType?: string;

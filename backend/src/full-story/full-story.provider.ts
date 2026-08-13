@@ -3,6 +3,7 @@ import type { NarrativeAnalysis } from '../narrative-analysis/models/narrative-a
 import type { StoryOutline } from '../story-outline/models/story-outline';
 import type { GeneratedStoryPackage } from './models/generated-story';
 import type { GenerationTelemetryContext } from '../openai/openai-generation';
+import type { WoundCauseType } from '../narrative-analysis/wound-planning';
 
 export const FULL_STORY_PROVIDER = Symbol('FULL_STORY_PROVIDER');
 
@@ -24,6 +25,9 @@ export interface WoundTimelineDirective {
   inflictedAtPly: number;
   activeThroughPly: number;
   recoveryPly: number | null;
+  causeType: WoundCauseType;
+  sourcePieceId: string | null;
+  sourceNames: string[];
 }
 
 export type FortressPowerOutcome = 'retains-seal-power' | 'loses-seal-power';

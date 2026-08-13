@@ -112,13 +112,11 @@ describe('NarrativeAnalysisService', () => {
               ...analysis,
               endingPlan: {
                 ...analysis.endingPlan,
-                aftermathFocus:
-                  endingContract.creativeDirection.aftermathFocus,
+                aftermathFocus: endingContract.creativeDirection.aftermathFocus,
                 laterChronicleLens:
                   endingContract.creativeDirection.laterChronicleLens,
                 laterChronicleCliffhanger:
-                  endingContract.creativeDirection
-                    .laterChronicleCliffhanger,
+                  endingContract.creativeDirection.laterChronicleCliffhanger,
               },
             },
           },

@@ -182,7 +182,7 @@ describe('GamesService', () => {
           storyValidation: { valid: true },
         },
       ],
-    } as never);
+    });
 
     await expect(service.pipelineStatus('game-1')).resolves.toEqual({
       analysis: true,
@@ -204,7 +204,7 @@ describe('GamesService', () => {
           narrativeAnalysis: { id: 'analysis-1' },
         },
       ],
-    } as never);
+    });
 
     await expect(service.pipelineStatus('game-1')).resolves.toEqual({
       analysis: false,
@@ -308,7 +308,7 @@ describe('GamesService', () => {
           },
         },
       ],
-    } as never);
+    });
 
     await expect(service.findRecord('game-1')).resolves.toEqual(
       expect.objectContaining({

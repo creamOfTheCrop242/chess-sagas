@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { battlefieldEnvironmentSchema } from '../../narrative-analysis/models/narrative-analysis';
+import { WOUND_CAUSE_TYPES } from '../../narrative-analysis/wound-planning';
 
 const outlineSceneSchema = z.object({
   sceneNumber: z.number().int().positive(),
@@ -49,6 +50,8 @@ const woundBeatSchema = z.object({
   injury: z.string().min(1),
   continuityPlies: z.array(z.number().int().positive()),
   recoveryPly: z.number().int().positive().nullable(),
+  causeType: z.enum(WOUND_CAUSE_TYPES),
+  sourcePieceId: z.string().min(1).nullable(),
 });
 
 export const storyOutlineSchema = z.object({

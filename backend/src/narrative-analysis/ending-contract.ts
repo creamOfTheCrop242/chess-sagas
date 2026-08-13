@@ -72,8 +72,7 @@ export function buildEndingContract(ledger: GameLedger): EndingContract {
     finalMove: finalEvent?.san ?? null,
     finalPositionIsCheck: finalEvent?.isCheck ?? false,
     finalPositionIsCheckmate: finalEvent?.isCheckmate ?? false,
-    resigningSide:
-      ledger.metadata.termination === 'resignation' ? loser : null,
+    resigningSide: ledger.metadata.termination === 'resignation' ? loser : null,
     creativeDirection: {
       aftermathFocus:
         AFTERMATH_FOCUSES[variationSeed % AFTERMATH_FOCUSES.length],

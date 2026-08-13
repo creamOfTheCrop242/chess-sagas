@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { WOUND_CAUSE_TYPES } from '../wound-planning';
 import { DEFEATED_KING_FATES } from '../../chess/models/story-ending';
 import { SURRENDER_JUDGMENTS } from '../../chess/surrender-context';
 import { AFTERMATH_FOCUSES, LATER_CHRONICLE_LENSES } from '../ending-contract';
@@ -101,6 +102,8 @@ function buildNarrativeAnalysisSchema(pieceIdSchema: z.ZodType<string>) {
     injury: z.string().min(1),
     lastingEffects: z.array(z.string().min(1)).min(1),
     recoveryPly: z.number().int().positive().nullable(),
+    causeType: z.enum(WOUND_CAUSE_TYPES),
+    sourcePieceId: pieceIdSchema.nullable(),
   });
 
   const endingPlanSchema = z.object({

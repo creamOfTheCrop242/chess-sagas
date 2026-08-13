@@ -275,7 +275,8 @@ export class SagaGenerationService
   }
 
   private assertGenerationEnabled(): void {
-    const configured = process.env.SAGA_GENERATION_ENABLED?.trim().toLowerCase();
+    const configured =
+      process.env.SAGA_GENERATION_ENABLED?.trim().toLowerCase();
     if (configured === 'false' || configured === '0') {
       throw new ServiceUnavailableException(
         'Saga generation is temporarily unavailable. Existing sagas remain available.',

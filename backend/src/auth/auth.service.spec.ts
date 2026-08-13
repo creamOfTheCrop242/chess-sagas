@@ -169,32 +169,51 @@ describe('AuthService', () => {
 
   it('de-identifies public records and deletes account data', async () => {
     prisma.authSession.findFirst.mockResolvedValue({
-      user: { id: 'user-1', email: 'reader@example.com', displayName: 'Reader', avatarUrl: null },
+      user: {
+        id: 'user-1',
+        email: 'reader@example.com',
+        displayName: 'Reader',
+        avatarUrl: null,
+      },
     });
     prisma.billingSubscription.findFirst.mockResolvedValue(null);
     const transaction = {
       saga: { updateMany: jest.fn().mockResolvedValue({ count: 2 }) },
       game: { updateMany: jest.fn().mockResolvedValue({ count: 2 }) },
-      sagaGenerationJob: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      sagaGenerationJob: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
       user: { delete: jest.fn().mockResolvedValue({ id: 'user-1' }) },
     };
-    prisma.$transaction.mockImplementation(async (callback) => callback(transaction));
+    prisma.$transaction.mockImplementation(async (callback) =>
+      callback(transaction),
+    );
 
     await service.deleteAccount('session-token', 'DELETE MY ACCOUNT');
 
-    expect(transaction.saga.updateMany).toHaveBeenCalledWith({ where: { creatorId: 'user-1' }, data: { creatorId: null } });
-    expect(transaction.user.delete).toHaveBeenCalledWith({ where: { id: 'user-1' } });
+    expect(transaction.saga.updateMany).toHaveBeenCalledWith({
+      where: { creatorId: 'user-1' },
+      data: { creatorId: null },
+    });
+    expect(transaction.user.delete).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+    });
   });
 
   it('refuses account deletion while a paid subscription is active', async () => {
     prisma.authSession.findFirst.mockResolvedValue({
-      user: { id: 'user-1', email: 'reader@example.com', displayName: 'Reader', avatarUrl: null },
+      user: {
+        id: 'user-1',
+        email: 'reader@example.com',
+        displayName: 'Reader',
+        avatarUrl: null,
+      },
     });
     prisma.billingSubscription.findFirst.mockResolvedValue({ id: 'sub-1' });
 
-    await expect(service.deleteAccount('session-token', 'DELETE MY ACCOUNT')).rejects.toThrow(
-      'Cancel your active subscription',
-    );
+    await expect(
+      service.deleteAccount('session-token', 'DELETE MY ACCOUNT'),
+    ).rejects.toThrow('Cancel your active subscription');
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 

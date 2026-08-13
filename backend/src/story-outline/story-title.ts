@@ -110,7 +110,9 @@ export function selectDistinctBattleTitle(
   environmentName: string,
   seed: string,
 ): string {
-  const uniqueCandidates = [...new Set(candidates.map((title) => title.trim()))];
+  const uniqueCandidates = [
+    ...new Set(candidates.map((title) => title.trim())),
+  ];
   const selected = uniqueCandidates.find((title) =>
     isDistinctBattleTitle(title, existingTitles),
   );
@@ -120,9 +122,7 @@ export function selectDistinctBattleTitle(
   const digest = createHash('sha256').update(seed).digest();
   for (let offset = 0; offset < DISTINCT_TITLE_FORMS.length; offset += 1) {
     const form =
-      DISTINCT_TITLE_FORMS[
-        (digest[0] + offset) % DISTINCT_TITLE_FORMS.length
-      ];
+      DISTINCT_TITLE_FORMS[(digest[0] + offset) % DISTINCT_TITLE_FORMS.length];
     const fallback = form.replace('{place}', place);
     if (isDistinctBattleTitle(fallback, existingTitles)) return fallback;
   }
@@ -132,7 +132,9 @@ export function selectDistinctBattleTitle(
   for (let offset = 0; offset < words.length * suffixes.length; offset += 1) {
     const word = words[(digest[1] + offset) % words.length];
     const suffix =
-      suffixes[(digest[2] + Math.floor(offset / words.length)) % suffixes.length];
+      suffixes[
+        (digest[2] + Math.floor(offset / words.length)) % suffixes.length
+      ];
     const fallback = `The ${word} ${suffix} of ${place}`;
     if (isDistinctBattleTitle(fallback, existingTitles)) return fallback;
   }

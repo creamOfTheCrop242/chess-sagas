@@ -10,7 +10,16 @@ export interface RequiredWoundEvent {
   inflictedAtPly: number;
   capturedPieceId: string;
   capturedPieceType: FantasyPieceType;
+  causeType: WoundCauseType;
+  sourcePieceId: string | null;
 }
+
+export const WOUND_CAUSE_TYPES = [
+  'victim-retaliation',
+  'environmental-hazard',
+  'self-inflicted-strain',
+] as const;
+export type WoundCauseType = (typeof WOUND_CAUSE_TYPES)[number];
 
 const COMBAT_TIER: Record<FantasyPieceType, number> = {
   king: 5,
@@ -45,12 +54,28 @@ export function selectRequiredWoundEvents(
         woundProbability(event.pieceType, event.capturedPieceType)
       );
     })
-    .map((event) => ({
-      pieceId: event.pieceId,
-      inflictedAtPly: event.ply,
-      capturedPieceId: event.capturedPieceId,
-      capturedPieceType: event.capturedPieceType,
-    }));
+    .map((event) => {
+      const causeType = selectWoundCause(ledger, event);
+      return {
+        pieceId: event.pieceId,
+        inflictedAtPly: event.ply,
+        capturedPieceId: event.capturedPieceId,
+        capturedPieceType: event.capturedPieceType,
+        causeType,
+        sourcePieceId:
+          causeType === 'victim-retaliation' ? event.capturedPieceId : null,
+      };
+    });
+}
+
+export function selectWoundCause(
+  ledger: GameLedger,
+  event: ChessEvent,
+): WoundCauseType {
+  const roll = deterministicSeededRoll(ledger, event, 'wound-cause');
+  if (roll < 0.75) return 'victim-retaliation';
+  if (roll < 0.9) return 'environmental-hazard';
+  return 'self-inflicted-strain';
 }
 
 export function woundProbability(
@@ -83,6 +108,30 @@ export function deterministicWoundRoll(
     event.capturedPieceId ?? '',
     victim?.permanentName ?? '',
   ].join('|');
+  return hashToUnitInterval(seed);
+}
+
+function deterministicSeededRoll(
+  ledger: GameLedger,
+  event: ChessEvent,
+  purpose: string,
+  extra: string[] = [],
+): number {
+  const seed = [
+    purpose,
+    ledger.metadata.date ?? '',
+    ledger.metadata.whitePlayer,
+    ledger.metadata.blackPlayer,
+    ledger.events.map((candidate) => candidate.san).join(' '),
+    event.ply,
+    event.pieceId,
+    event.capturedPieceId ?? '',
+    ...extra,
+  ].join('|');
+  return hashToUnitInterval(seed);
+}
+
+function hashToUnitInterval(seed: string): number {
   let hash = 2166136261;
   for (let index = 0; index < seed.length; index += 1) {
     hash ^= seed.charCodeAt(index);

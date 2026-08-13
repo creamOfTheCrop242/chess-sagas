@@ -17,6 +17,11 @@ export type DeathDisposition =
   | 'devout'
   | 'disbelieving'
   | 'calculating';
+export type KingDisposition =
+  | 'benevolent-guardian'
+  | 'honorable-sovereign'
+  | 'calculating-monarch'
+  | 'selfish-tyrant';
 
 export interface PieceIdentity {
   id: string;
@@ -32,8 +37,10 @@ export interface PieceIdentity {
   viewpointName?: string;
   viewpointRole?: string;
   operatorName?: string;
+  formerRole?: string;
   pronouns?: 'he/him' | 'she/her';
   deathDisposition?: DeathDisposition;
+  kingDisposition?: KingDisposition;
   backstory?: string;
   alive: boolean;
   capturedAtPly?: number;
@@ -51,6 +58,7 @@ export interface ChessEvent {
   pieceType: FantasyPieceType;
   archwizardTravelMode?: 'walk' | 'teleport';
   queenTravelMode?: 'walk' | 'magical-rush';
+  knightCommanderTravelMode?: 'walk' | 'spectral-mount';
   isCapture: boolean;
   capturedPieceId?: string;
   capturedPieceType?: FantasyPieceType;
@@ -58,6 +66,7 @@ export interface ChessEvent {
   isCheckmate: boolean;
   isCastle: boolean;
   castleSide?: 'king' | 'queen';
+  castlingFortressId?: string;
   isPromotion: boolean;
   promotionType?: FantasyPieceType;
   isEnPassant: boolean;

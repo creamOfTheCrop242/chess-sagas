@@ -1,6 +1,7 @@
 import type { FantasyPieceType, GameLedger } from '../chess/models/game-ledger';
 import {
   deterministicWoundRoll,
+  selectWoundCause,
   selectRequiredWoundEvents,
   woundProbability,
 } from './wound-planning';
@@ -84,6 +85,17 @@ describe('wound planning', () => {
         (event) => `${event.pieceId}:${event.inflictedAtPly}`,
       ),
     ).toEqual(expected);
+  });
+
+  it('selects a stable explicit cause for every planned wound', () => {
+    const selected = selectRequiredWoundEvents(ledger);
+    for (const wound of selected) {
+      const event = ledger.events[wound.inflictedAtPly - 1];
+      expect(wound.causeType).toBe(selectWoundCause(ledger, event));
+      expect(wound.sourcePieceId).toBe(
+        wound.causeType === 'victim-retaliation' ? wound.capturedPieceId : null,
+      );
+    }
   });
 });
 

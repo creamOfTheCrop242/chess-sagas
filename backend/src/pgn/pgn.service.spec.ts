@@ -54,8 +54,23 @@ describe('PgnService deterministic ledger', () => {
       pieceId: 'w-k-e1',
       isCastle: true,
       castleSide: 'king',
+      castlingFortressId: 'w-r-h1',
     });
     expect(game.ledger.survivors).toContain('w-r-h1');
+  });
+
+  it('identifies the queen-side Fortress participating in castling', () => {
+    const game = service.parse(
+      '1. d4 d5 2. Nc3 Nc6 3. Bf4 Bf5 4. Qd2 Qd7 5. O-O-O *',
+    );
+    const castle = game.ledger.events.at(-1)!;
+
+    expect(castle).toMatchObject({
+      pieceId: 'w-k-e1',
+      isCastle: true,
+      castleSide: 'queen',
+      castlingFortressId: 'w-r-a1',
+    });
   });
 
   it('tracks an en-passant capture on the victim pawn square', () => {
@@ -71,9 +86,7 @@ describe('PgnService deterministic ledger', () => {
   });
 
   it('assigns Archwizard travel from diagonal move distance', () => {
-    const game = service.parse(
-      '1. d4 d5 2. Be3 Be6 3. Bf4 Bf5 4. Bxc7 Bxc2 *',
-    );
+    const game = service.parse('1. d4 d5 2. Be3 Be6 3. Bf4 Bf5 4. Bxc7 Bxc2 *');
     const archwizardMoves = game.ledger.events.filter(
       (event) => event.pieceType === 'archwizard',
     );
@@ -116,6 +129,20 @@ describe('PgnService deterministic ledger', () => {
       { from: 'h4', to: 'e7', mode: 'magical-rush', capture: false },
       { from: 'e5', to: 'd5', mode: 'walk', capture: false },
     ]);
+  });
+
+  it('assigns spectral mounts to Knight Commander movement', () => {
+    const game = service.parse(
+      '[SetUp "1"]\n[FEN "k7/8/8/8/8/8/8/KN6 w - - 0 1"]\n[Result "*"]\n\n1. Nc3 *',
+    );
+    const commanderMove = game.ledger.events[0];
+
+    expect(commanderMove).toMatchObject({
+      pieceType: 'knight-commander',
+      from: 'b1',
+      to: 'c3',
+      knightCommanderTravelMode: 'spectral-mount',
+    });
   });
 
   it('records when a move blocks an existing check', () => {
@@ -200,23 +227,20 @@ describe('PgnService deterministic ledger', () => {
           left.originalSquare.localeCompare(right.originalSquare),
         )
         .map((piece) => piece.viewpointRole);
-    const requiredRoles = ['company captain', 'field medic'];
     const expandedRoles = new Set([
-      ...requiredRoles,
+      'company captain',
+      'field medic',
       'scout',
       'shield-bearer',
       'spearman',
       'standard-bearer',
-      'sergeant',
       'archer',
-      'sapper',
-      'outrider',
       'quartermaster',
-      'signaler',
-      'skirmisher',
-      'siege engineer',
       'mage acolyte',
       'queen candidate',
+      'chaplain',
+      'beast handler',
+      'swordsman',
     ]);
 
     const northRoles = roles(pgn, 'north');
@@ -228,26 +252,41 @@ describe('PgnService deterministic ledger', () => {
       expect(sideRoles).toHaveLength(8);
       expect(new Set(sideRoles).size).toBe(8);
       expect(sideRoles.every((role) => expandedRoles.has(role!))).toBe(true);
-      requiredRoles.forEach((role) => expect(sideRoles).toContain(role));
     }
     expect(
       [...northRoles, ...southRoles].some((role) =>
         [
           'archer',
-          'sapper',
-          'outrider',
           'quartermaster',
-          'signaler',
-          'skirmisher',
-          'siege engineer',
           'mage acolyte',
           'queen candidate',
+          'chaplain',
+          'beast handler',
+          'swordsman',
         ].includes(role!),
       ),
     ).toBe(true);
     expect(roles(pgn.replace('1. e4 e5', '1. d4 d5'), 'north')).not.toEqual(
       northRoles,
     );
+  });
+
+  it('does not require the followed soldiers to be captains or medics', () => {
+    const roleSets = Array.from({ length: 24 }, (_, index) =>
+      service
+        .parse(
+          `[White "Ada"]\n[Black "Turing"]\n[Date "2027.03.${String(index + 1).padStart(2, '0')}"]\n[Result "*"]\n\n1. e4 e5 *`,
+        )
+        .ledger.pieces.filter(
+          (piece) => piece.chessType === 'p' && piece.side === 'north',
+        )
+        .map((piece) => piece.viewpointRole),
+    );
+
+    expect(roleSets.some((roles) => !roles.includes('company captain'))).toBe(
+      true,
+    );
+    expect(roleSets.some((roles) => !roles.includes('field medic'))).toBe(true);
   });
 
   it('preserves pawn roles already stored in an existing ledger', () => {
@@ -281,6 +320,10 @@ describe('PgnService deterministic ledger', () => {
 
     expect(fortresses).toHaveLength(4);
     expect(fortresses.every((piece) => Boolean(piece.operatorName))).toBe(true);
+    expect(fortresses.every((piece) => Boolean(piece.formerRole))).toBe(true);
+    expect(
+      fortresses.every((piece) => piece.backstory?.includes(piece.formerRole!)),
+    ).toBe(true);
     expect(new Set(fortresses.map((piece) => piece.operatorName)).size).toBe(4);
     expect(new Set(allSoldierNames).size).toBe(allSoldierNames.length);
     expect(repeatedOperators).toEqual(
@@ -292,6 +335,29 @@ describe('PgnService deterministic ledger', () => {
         (piece) =>
           piece.backstory?.includes(piece.operatorName!) &&
           piece.backstory.includes('cannot survive apart'),
+      ),
+    ).toBe(true);
+  });
+
+  it('allows female Queen Candidates to become Fortress pilots', () => {
+    const fortresses = Array.from({ length: 32 }, (_, index) =>
+      service
+        .parse(
+          `[White "Ada"]\n[Black "Turing"]\n[Date "2027.02.${String(index + 1).padStart(2, '0')}"]\n[Result "*"]\n\n1. e4 e5 *`,
+        )
+        .ledger.pieces.filter((piece) => piece.chessType === 'r'),
+    ).flat();
+    const formerCandidates = fortresses.filter(
+      (piece) => piece.formerRole === 'queen candidate',
+    );
+
+    expect(formerCandidates.length).toBeGreaterThan(0);
+    expect(
+      formerCandidates.every(
+        (piece) =>
+          piece.pronouns === 'she/her' &&
+          piece.backstory?.includes('possible replacement') &&
+          piece.backstory.includes('ended any ordinary path to the throne'),
       ),
     ).toBe(true);
   });
@@ -421,7 +487,7 @@ describe('PgnService deterministic ledger', () => {
     expect(story('moving-fortress')).toContain('cannot survive apart');
     expect(story('knight-commander')).toContain('most elite captains');
     expect(story('knight-commander')).toContain('Queen');
-    expect(story('knight-commander')).toContain('magic-powered weapon');
+    expect(story('knight-commander')).toContain('personal Mythic Arm');
   });
 
   it('gives every Queen a persistent and varied combat discipline', () => {
@@ -435,13 +501,12 @@ describe('PgnService deterministic ledger', () => {
     const discipline =
       /combat discipline is (arcane dueling|defensive guardianship|aggressive battlemagic|battlefield control|tactical command)/;
 
-    expect(queens.every((piece) => discipline.test(piece.backstory ?? ''))).toBe(
-      true,
-    );
     expect(
-      new Set(
-        queens.map((piece) => piece.backstory?.match(discipline)?.[1]),
-      ).size,
+      queens.every((piece) => discipline.test(piece.backstory ?? '')),
+    ).toBe(true);
+    expect(
+      new Set(queens.map((piece) => piece.backstory?.match(discipline)?.[1]))
+        .size,
     ).toBe(5);
   });
 
@@ -461,8 +526,8 @@ describe('PgnService deterministic ledger', () => {
         (piece) =>
           /most elite captains/.test(piece.backstory ?? '') &&
           /nowhere near the Queen/.test(piece.backstory ?? '') &&
-          /magic-powered weapon/.test(piece.backstory ?? '') &&
-          /(?:great hammer|greatsword|mace|maul|poleaxe|war flail|glaive|war axe)/.test(
+          /personal Mythic Arm/.test(piece.backstory ?? '') &&
+          /(?:great hammer|greatsword|mace|poleaxe|glaive|war axe|pair of oathbound swords)/.test(
             piece.backstory ?? '',
           ),
       ),
@@ -472,7 +537,7 @@ describe('PgnService deterministic ledger', () => {
         commanders.map(
           (piece) =>
             piece.backstory?.match(
-              /(?:stormbound great hammer|Seal-forged greatsword|gravity mace|rune-headed maul|ward-breaking poleaxe|chain-linked war flail|crescent glaive|two-handed war axe)/,
+              /(?:stormbound great hammer|Seal-forged greatsword|gravity mace|ward-breaking poleaxe|crescent glaive|two-handed war axe|matched pair of oathbound swords)/,
             )?.[0],
         ),
       ).size,
@@ -549,22 +614,31 @@ describe('PgnService deterministic ledger', () => {
     ).flat();
     const histories = kings.map((piece) => piece.backstory ?? '');
 
+    expect(new Set(kings.map((piece) => piece.kingDisposition))).toEqual(
+      new Set([
+        'benevolent-guardian',
+        'honorable-sovereign',
+        'calculating-monarch',
+        'selfish-tyrant',
+      ]),
+    );
+
     expect(
       histories.every(
         (story) =>
-          story.includes('halted his aging') && story.includes('ageless'),
+          story.includes('halted his aging') &&
+          story.includes('ageless') &&
+          /Benevolent Guardian|Honorable Sovereign|Calculating Monarch|Selfish Tyrant/.test(
+            story,
+          ),
       ),
     ).toBe(true);
     expect(
       histories.some((story) =>
-        /measured mercy|patient ruler|honorable surrender/.test(story),
+        /Benevolent Guardian|Honorable Sovereign/.test(story),
       ),
     ).toBe(true);
-    expect(
-      histories.some((story) =>
-        /rejects surrender|public execution|authoritarian/.test(story),
-      ),
-    ).toBe(true);
+    expect(histories.some((story) => /Selfish Tyrant/.test(story))).toBe(true);
     expect(new Set(histories).size).toBeGreaterThan(histories.length / 2);
   });
 
@@ -596,10 +670,12 @@ describe('PgnService deterministic ledger', () => {
       'Ysolde',
       'Zara',
     ]);
-    const ledgers = Array.from({ length: 32 }, (_, index) =>
-      service.parse(
-        `[White "Ada"]\n[Black "Turing"]\n[Date "2027.02.${String(index + 1).padStart(2, '0')}"]\n[Result "*"]\n\n1. e4 e5 *`,
-      ).ledger,
+    const ledgers = Array.from(
+      { length: 32 },
+      (_, index) =>
+        service.parse(
+          `[White "Ada"]\n[Black "Turing"]\n[Date "2027.02.${String(index + 1).padStart(2, '0')}"]\n[Result "*"]\n\n1. e4 e5 *`,
+        ).ledger,
     );
 
     for (const ledger of ledgers) {
@@ -612,9 +688,9 @@ describe('PgnService deterministic ledger', () => {
             !feminineNames.has(piece.characterName ?? ''),
         ),
       ).toBe(true);
-      expect(new Set(ledger.pieces.map((piece) => piece.characterName)).size).toBe(
-        ledger.pieces.length,
-      );
+      expect(
+        new Set(ledger.pieces.map((piece) => piece.characterName)).size,
+      ).toBe(ledger.pieces.length);
     }
   });
 
@@ -646,10 +722,12 @@ describe('PgnService deterministic ledger', () => {
       'Ysolde',
       'Zara',
     ]);
-    const ledgers = Array.from({ length: 32 }, (_, index) =>
-      service.parse(
-        `[White "Ada"]\n[Black "Turing"]\n[Date "2027.03.${String(index + 1).padStart(2, '0')}"]\n[Result "*"]\n\n1. e4 e5 *`,
-      ).ledger,
+    const ledgers = Array.from(
+      { length: 32 },
+      (_, index) =>
+        service.parse(
+          `[White "Ada"]\n[Black "Turing"]\n[Date "2027.03.${String(index + 1).padStart(2, '0')}"]\n[Result "*"]\n\n1. e4 e5 *`,
+        ).ledger,
     );
 
     for (const ledger of ledgers) {
@@ -662,9 +740,9 @@ describe('PgnService deterministic ledger', () => {
             feminineNames.has(piece.characterName ?? ''),
         ),
       ).toBe(true);
-      expect(new Set(ledger.pieces.map((piece) => piece.characterName)).size).toBe(
-        ledger.pieces.length,
-      );
+      expect(
+        new Set(ledger.pieces.map((piece) => piece.characterName)).size,
+      ).toBe(ledger.pieces.length);
     }
   });
 
@@ -701,9 +779,9 @@ describe('PgnService deterministic ledger', () => {
     expect(majorCharacters.every((piece) => Boolean(piece.characterName))).toBe(
       true,
     );
-    expect(new Set(majorCharacters.map((piece) => piece.characterName)).size).toBe(
-      majorCharacters.length,
-    );
+    expect(
+      new Set(majorCharacters.map((piece) => piece.characterName)).size,
+    ).toBe(majorCharacters.length);
     expect(first.map((piece) => piece.characterName)).toEqual(
       second.map((piece) => piece.characterName),
     );

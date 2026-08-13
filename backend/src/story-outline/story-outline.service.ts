@@ -347,6 +347,8 @@ export function normalizeStoryOutlineWounds(
           (left, right) => left - right,
         ),
         recoveryPly: wound.recoveryPly,
+        causeType: wound.causeType,
+        sourcePieceId: wound.sourcePieceId,
       };
     }),
   };

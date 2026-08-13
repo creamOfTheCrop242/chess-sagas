@@ -44,12 +44,33 @@
           </div>
         </dl>
 
+        @if (piece.chessName === "Knight") {
+          <details class="mythic-arms">
+            <summary>Open the Mythic Arms</summary>
+            <p>
+              Each Knight Commander bears one singular relic. Its history and
+              reputation vary between realities, but its form and power remain
+              consistent throughout that saga.
+            </p>
+            <ul>
+              @for (arm of mythicArms; track arm.name) {
+                <li>
+                  <h3>{{ arm.name }}</h3>
+                  <p>{{ arm.description }}</p>
+                </li>
+              }
+            </ul>
+          </details>
+        }
+
         @if (piece.chessName === "Pawn") {
           <details class="pawn-subclasses">
             <summary>Open the soldier subclasses</summary>
             <p>
-              Each kingdom always fields a Company Captain and Field Medic. The
-              other company viewpoints are selected from these specialties.
+              Each entry identifies the named soldier whose viewpoint follows
+              that company. All eight viewpoints on one side use different
+              subclasses, while unseen personnel still fill the company’s other
+              necessary duties.
             </p>
             <ul>
               @for (subclass of pawnSubclasses; track subclass.name) {

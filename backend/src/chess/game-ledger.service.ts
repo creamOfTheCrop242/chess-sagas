@@ -76,8 +76,9 @@ export class GameLedgerService {
         : result.flags.includes('q')
           ? 'queen'
           : undefined;
-      if (isCastle)
-        this.moveCastlingRook(squareToId, result.color, castleSide!);
+      const castlingFortressId = isCastle
+        ? this.moveCastlingRook(squareToId, result.color, castleSide!)
+        : undefined;
 
       const isPromotion = Boolean(result.promotion);
       if (isPromotion) {
@@ -119,6 +120,10 @@ export class GameLedgerService {
           this.identities.fantasyType(result.piece) === 'queen'
             ? distanceBasedTravelMode(result.from, result.to, 'magical-rush')
             : undefined,
+        knightCommanderTravelMode:
+          this.identities.fantasyType(result.piece) === 'knight-commander'
+            ? distanceBasedTravelMode(result.from, result.to, 'spectral-mount')
+            : undefined,
         isCapture: Boolean(result.captured),
         capturedPieceId: captured?.id,
         capturedPieceType: captured?.fantasyType,
@@ -126,6 +131,7 @@ export class GameLedgerService {
         isCheckmate,
         isCastle,
         castleSide,
+        castlingFortressId,
         isPromotion,
         promotionType: result.promotion
           ? this.identities.fantasyType(result.promotion)
@@ -246,7 +252,7 @@ export class GameLedgerService {
     map: Map<string, string>,
     color: 'w' | 'b',
     side: 'king' | 'queen',
-  ): void {
+  ): string {
     const rank = color === 'w' ? '1' : '8';
     const from = `${side === 'king' ? 'h' : 'a'}${rank}`;
     const to = `${side === 'king' ? 'f' : 'd'}${rank}`;
@@ -255,6 +261,7 @@ export class GameLedgerService {
       throw new BadRequestException('Missing castling rook identity');
     map.delete(from);
     map.set(to, rookId);
+    return rookId;
   }
 
   private metadata(
@@ -292,11 +299,9 @@ export class GameLedgerService {
   }
 }
 
-function distanceBasedTravelMode<T extends 'teleport' | 'magical-rush'>(
-  from: string,
-  to: string,
-  longTravelMode: T,
-): 'walk' | T {
+function distanceBasedTravelMode<
+  T extends 'teleport' | 'magical-rush' | 'spectral-mount',
+>(from: string, to: string, longTravelMode: T): 'walk' | T {
   const fileDistance = Math.abs(from.charCodeAt(0) - to.charCodeAt(0));
   const rankDistance = Math.abs(Number(from[1]) - Number(to[1]));
   return Math.max(fileDistance, rankDistance) > 1 ? longTravelMode : 'walk';

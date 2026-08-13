@@ -257,7 +257,8 @@ export class AuthService {
       throw new UnauthorizedException('Type DELETE MY ACCOUNT to confirm');
     }
     const user = await this.currentUser(sessionToken);
-    if (!user) throw new UnauthorizedException('Sign in to delete your account');
+    if (!user)
+      throw new UnauthorizedException('Sign in to delete your account');
 
     const activeSubscription = await this.prisma.billingSubscription.findFirst({
       where: {

@@ -17,6 +17,13 @@ export const routes: Routes = [
         (module) => module.HallOfRecordsComponent,
       ),
   },
+  {
+    path: 'champions',
+    loadComponent: () =>
+      import('./hall-of-champions/hall-of-champions.component').then(
+        (module) => module.HallOfChampionsComponent,
+      ),
+  },
   { path: 'records/:id', component: PgnViewerComponent },
   {
     path: 'chroniclers/:handle',

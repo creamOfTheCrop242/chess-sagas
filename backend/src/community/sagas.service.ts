@@ -80,6 +80,180 @@ export class SagasService {
     });
   }
 
+  async champions(query: { side?: string; type?: string; limit?: string }) {
+    const side =
+      query.side === 'north' || query.side === 'south' ? query.side : undefined;
+    const allowedTypes = new Set([
+      'king',
+      'queen',
+      'moving-fortress',
+      'archwizard',
+      'knight-commander',
+      'grunt',
+    ]);
+    const type =
+      query.type && allowedTypes.has(query.type) ? query.type : undefined;
+    const requestedLimit = Number.parseInt(query.limit ?? '50', 10);
+    const limit = Number.isFinite(requestedLimit)
+      ? Math.min(100, Math.max(1, requestedLimit))
+      : 50;
+    const sagas = await this.prisma.saga.findMany({
+      where: { visibility: 'PUBLIC' },
+      select: {
+        id: true,
+        createdAt: true,
+        game: {
+          select: {
+            id: true,
+            whitePlayer: true,
+            blackPlayer: true,
+            ledger: { select: { data: true } },
+          },
+        },
+        generationRun: {
+          select: {
+            completedAt: true,
+            generatedStory: { select: { title: true } },
+            narrativeAnalysis: { select: { data: true } },
+          },
+        },
+      },
+    });
+
+    return sagas
+      .flatMap((saga) => {
+        const ledger = saga.game.ledger?.data as unknown as GameLedger | null;
+        if (!ledger) return [];
+        const pieces = new Map(ledger.pieces.map((piece) => [piece.id, piece]));
+        const kills = new Map<string, { count: number; lastPly: number }>();
+        for (const event of ledger.events) {
+          if (!event.isCapture || !event.capturedPieceId) continue;
+          const current = kills.get(event.pieceId) ?? { count: 0, lastPly: 0 };
+          kills.set(event.pieceId, {
+            count: current.count + 1,
+            lastPly: event.ply,
+          });
+        }
+        const environment = battlefieldEnvironmentFrom(
+          saga.generationRun.narrativeAnalysis?.data,
+        ) as { name?: string } | null;
+        return [...kills.entries()].flatMap(([pieceId, performance]) => {
+          const piece = pieces.get(pieceId);
+          if (
+            !piece ||
+            (side && piece.side !== side) ||
+            (type && piece.fantasyType !== type)
+          ) {
+            return [];
+          }
+          const killer = piece.capturedAtPly
+            ? ledger.events.find((event) => event.capturedPieceId === piece.id)
+                ?.pieceId
+            : undefined;
+          const killedBy = killer ? pieces.get(killer) : undefined;
+          return [
+            {
+              id: `${saga.id}:${piece.id}`,
+              sagaId: saga.id,
+              gameId: saga.game.id,
+              pieceId: piece.id,
+              name: championName(piece),
+              role: championRole(piece),
+              fantasyType: piece.fantasyType,
+              side: piece.side,
+              kills: performance.count,
+              lastKillPly: performance.lastPly,
+              status: piece.alive ? 'Alive' : 'Dead',
+              killedBy: killedBy ? championName(killedBy) : null,
+              backstory: piece.backstory ?? null,
+              battleTitle: archiveBattleTitle(
+                saga.generationRun.generatedStory?.title,
+                ledger,
+                saga.game.id,
+              ),
+              battlefield: environment?.name ?? null,
+              whitePlayer: saga.game.whitePlayer,
+              blackPlayer: saga.game.blackPlayer,
+              completedAt: saga.generationRun.completedAt ?? saga.createdAt,
+            },
+          ];
+        });
+      })
+      .sort(
+        (left, right) =>
+          right.kills - left.kills ||
+          left.lastKillPly - right.lastKillPly ||
+          right.completedAt.getTime() - left.completedAt.getTime() ||
+          left.id.localeCompare(right.id),
+      )
+      .slice(0, limit)
+      .map((entry, index) => ({ ...entry, rank: index + 1 }));
+  }
+
+  async championStats() {
+    const sagas = await this.prisma.saga.findMany({
+      where: { visibility: 'PUBLIC' },
+      select: {
+        gameId: true,
+        game: {
+          select: {
+            result: true,
+            ledger: { select: { data: true } },
+          },
+        },
+      },
+    });
+    const games = new Map(sagas.map((saga) => [saga.gameId, saga.game]));
+    const stats = {
+      totalBattles: games.size,
+      lightVictories: 0,
+      darkVictories: 0,
+      draws: 0,
+      unfinished: 0,
+      lightCaptures: 0,
+      darkCaptures: 0,
+    };
+    const capturesByType = {
+      north: new Map<string, number>(),
+      south: new Map<string, number>(),
+    };
+
+    for (const game of games.values()) {
+      if (game.result === '1-0') stats.lightVictories += 1;
+      else if (game.result === '0-1') stats.darkVictories += 1;
+      else if (game.result === '1/2-1/2') stats.draws += 1;
+      else stats.unfinished += 1;
+
+      const ledger = game.ledger?.data as unknown as GameLedger | null;
+      if (!ledger) continue;
+      const pieces = new Map(ledger.pieces.map((piece) => [piece.id, piece]));
+      for (const event of ledger.events) {
+        if (!event.isCapture || !event.capturedPieceId) continue;
+        const attacker = pieces.get(event.pieceId);
+        if (!attacker) continue;
+        if (attacker.side === 'north') stats.lightCaptures += 1;
+        else stats.darkCaptures += 1;
+        const realmTypes = capturesByType[attacker.side];
+        realmTypes.set(
+          attacker.fantasyType,
+          (realmTypes.get(attacker.fantasyType) ?? 0) + 1,
+        );
+      }
+    }
+
+    const totalCaptures = stats.lightCaptures + stats.darkCaptures;
+    return {
+      ...stats,
+      totalCaptures,
+      averageCapturesPerBattle:
+        stats.totalBattles === 0
+          ? 0
+          : Number((totalCaptures / stats.totalBattles).toFixed(1)),
+      lightMostLethalType: mostLethalType(capturesByType.north),
+      darkMostLethalType: mostLethalType(capturesByType.south),
+    };
+  }
+
   async bookmark(userId: string, sagaId: string) {
     await this.requirePublicSaga(sagaId);
     await this.prisma.sagaBookmark.upsert({
@@ -241,4 +415,27 @@ export class SagasService {
 function battlefieldEnvironmentFrom(value: unknown): unknown {
   if (!value || typeof value !== 'object') return null;
   return (value as { battlefieldEnvironment?: unknown }).battlefieldEnvironment;
+}
+
+function championName(piece: GameLedger['pieces'][number]): string {
+  return (
+    piece.viewpointName ??
+    piece.operatorName ??
+    piece.characterName ??
+    piece.permanentName
+  );
+}
+
+function championRole(piece: GameLedger['pieces'][number]): string {
+  if (piece.chessType === 'p') return piece.viewpointRole ?? 'company soldier';
+  if (piece.chessType === 'r') return 'Moving Fortress Pilot';
+  return piece.fantasyType;
+}
+
+function mostLethalType(captures: Map<string, number>) {
+  const winner = [...captures.entries()].sort(
+    ([leftType, leftCount], [rightType, rightCount]) =>
+      rightCount - leftCount || leftType.localeCompare(rightType),
+  )[0];
+  return winner ? { fantasyType: winner[0], captures: winner[1] } : null;
 }

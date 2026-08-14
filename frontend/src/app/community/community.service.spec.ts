@@ -30,6 +30,26 @@ describe('CommunityService', () => {
     request.flush({ items: [], nextCursor: null });
   });
 
+  it('passes kingdom and rank filters to the champion endpoint', () => {
+    service
+      .champions({ side: 'north', type: 'archwizard', limit: 25 })
+      .subscribe();
+
+    const request = http.expectOne(
+      '/api/sagas/champions?side=north&type=archwizard&limit=25',
+    );
+    expect(request.request.method).toBe('GET');
+    request.flush([]);
+  });
+
+  it('loads aggregate champion statistics', () => {
+    service.championStats().subscribe();
+
+    const request = http.expectOne('/api/sagas/champions/stats');
+    expect(request.request.method).toBe('GET');
+    request.flush({ totalBattles: 0 });
+  });
+
   it('uses authenticated requests for saved sagas and bookmarks', () => {
     service.saved().subscribe();
     const saved = http.expectOne('/api/sagas/saved');

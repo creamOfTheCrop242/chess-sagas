@@ -1,0 +1,216 @@
+<main class="champions-page">
+  <header class="champions-hero">
+    <nav aria-label="Hall navigation">
+      <a routerLink="/">← Chronicle</a>
+      <a routerLink="/records">Hall of Records</a>
+      <a routerLink="/lore">Piece Codex →</a>
+    </nav>
+    <p class="eyebrow">The greatest deeds across fractured realities</p>
+    <h1>Hall of Champions</h1>
+    <p>
+      Every name below belongs to one character in one battle record. Matching
+      names in other realities remain separate lives and separate legends.
+    </p>
+  </header>
+
+  <section class="champion-filters" aria-label="Leaderboard filters">
+    <label>
+      Kingdom
+      <select [(ngModel)]="side" (change)="load()">
+        <option value="">Both kingdoms</option>
+        <option value="north">Light · North</option>
+        <option value="south">Dark · South</option>
+      </select>
+    </label>
+    <label>
+      Rank
+      <select [(ngModel)]="type" (change)="load()">
+        @for (option of types; track option.value) {
+          <option [value]="option.value">{{ option.label }}</option>
+        }
+      </select>
+    </label>
+  </section>
+
+  @if (loading) {
+    <p class="champions-state">Consulting the kill ledgers…</p>
+  } @else if (error) {
+    <p class="champions-state error" role="alert">{{ error }}</p>
+  } @else {
+    @if (stats) {
+      <section class="war-tally" aria-labelledby="war-tally-title">
+        <div class="tally-heading">
+          <div>
+            <p class="eyebrow">War across realities</p>
+            <h2 id="war-tally-title">The Kingdom Reckoning</h2>
+          </div>
+          <div class="battle-total">
+            <strong>{{ stats.totalBattles }}</strong>
+            <span>public battle records</span>
+          </div>
+        </div>
+
+        <div class="outcome-bar" aria-label="Battle outcomes">
+          <span
+            class="light-wins"
+            [style.width.%]="resultShare(stats.lightVictories)"
+          ></span>
+          <span class="draws" [style.width.%]="resultShare(stats.draws)"></span>
+          <span
+            class="dark-wins"
+            [style.width.%]="resultShare(stats.darkVictories)"
+          ></span>
+        </div>
+        <div class="outcome-key">
+          <span class="light-ink"
+            ><strong>{{ stats.lightVictories }}</strong> Light victories</span
+          >
+          <span
+            ><strong>{{ stats.draws }}</strong> Draws</span
+          >
+          <span class="dark-ink"
+            ><strong>{{ stats.darkVictories }}</strong> Dark victories</span
+          >
+        </div>
+
+        <div class="realm-tallies">
+          <article class="realm-tally light-realm">
+            <p>Light Kingdom · North</p>
+            <strong>{{ stats.lightCaptures }}</strong>
+            <span>enemy pieces taken</span>
+            <small>
+              Most lethal rank:
+              <b>{{
+                statRole(stats.lightMostLethalType?.fantasyType) | titlecase
+              }}</b>
+              @if (stats.lightMostLethalType) {
+                · {{ stats.lightMostLethalType.captures }} captures
+              }
+            </small>
+          </article>
+          <div class="war-average">
+            <strong>{{ stats.averageCapturesPerBattle }}</strong>
+            <span>captures per battle</span>
+            <small>{{ stats.totalCaptures }} recorded deaths</small>
+          </div>
+          <article class="realm-tally dark-realm">
+            <p>Dark Kingdom · South</p>
+            <strong>{{ stats.darkCaptures }}</strong>
+            <span>enemy pieces taken</span>
+            <small>
+              Most lethal rank:
+              <b>{{
+                statRole(stats.darkMostLethalType?.fantasyType) | titlecase
+              }}</b>
+              @if (stats.darkMostLethalType) {
+                · {{ stats.darkMostLethalType.captures }} captures
+              }
+            </small>
+          </article>
+        </div>
+      </section>
+    }
+
+    <div class="ranking-heading">
+      <div>
+        <p class="eyebrow">Deeds remembered</p>
+        <h2>Legendary Champions</h2>
+      </div>
+      <span>Ranked by confirmed kills</span>
+    </div>
+
+    @if (!champions.length) {
+      <p class="champions-state">
+        No champion has earned a recorded kill here yet.
+      </p>
+    } @else {
+      <ol class="champion-list">
+        @for (entry of champions; track entry.id) {
+          <li
+            [class.light]="entry.side === 'north'"
+            [class.dark]="entry.side === 'south'"
+            [class.first-place]="entry.rank === 1"
+            [class.is-open]="selected?.id === entry.id"
+          >
+            <button
+              type="button"
+              class="champion-summary"
+              (click)="select(entry)"
+              [attr.aria-expanded]="selected?.id === entry.id"
+            >
+              <span class="rank" [attr.aria-label]="'Rank ' + entry.rank">
+                <small>Rank</small>
+                {{ entry.rank.toString().padStart(2, "0") }}
+              </span>
+              <span class="piece-emblem" aria-hidden="true">
+                <span>{{ pieceGlyph(entry) }}</span>
+              </span>
+              <span class="champion-copy">
+                <span class="kingdom-mark">
+                  {{
+                    entry.side === "north" ? "Light · North" : "Dark · South"
+                  }}
+                </span>
+                <span class="identity">
+                  <strong>{{ entry.name }}</strong>
+                  <small>{{ role(entry) | titlecase }}</small>
+                </span>
+                <span class="battle-name">{{ entry.battleTitle }}</span>
+              </span>
+              <span class="champion-tally">
+                <span class="kills"
+                  ><strong>{{ entry.kills }}</strong
+                  ><small>confirmed kills</small></span
+                >
+                <span class="fate" [class.dead]="entry.status === 'Dead'">{{
+                  entry.status
+                }}</span>
+                <span class="expand-cue" aria-hidden="true">{{
+                  selected?.id === entry.id ? "−" : "+"
+                }}</span>
+              </span>
+            </button>
+            @if (selected?.id === entry.id) {
+              <section class="champion-detail">
+                @if (entry.backstory) {
+                  <div class="backstory">
+                    <span>Recorded life</span>
+                    <p>{{ entry.backstory }}</p>
+                  </div>
+                }
+                <dl>
+                  @if (entry.battlefield) {
+                    <div>
+                      <dt>Battlefield</dt>
+                      <dd>{{ entry.battlefield }}</dd>
+                    </div>
+                  }
+                  <div>
+                    <dt>Fate</dt>
+                    <dd [class.dead]="entry.status === 'Dead'">
+                      {{ entry.status }}
+                      @if (entry.killedBy) {
+                        · slain by {{ entry.killedBy }}
+                      }
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Players</dt>
+                    <dd>{{ entry.whitePlayer }} vs {{ entry.blackPlayer }}</dd>
+                  </div>
+                  <div>
+                    <dt>Preserved</dt>
+                    <dd>{{ entry.completedAt | date: "longDate" }}</dd>
+                  </div>
+                </dl>
+                <a class="replay-link" [routerLink]="['/records', entry.sagaId]"
+                  >Enter this battle record <span>→</span></a
+                >
+              </section>
+            }
+          </li>
+        }
+      </ol>
+    }
+  }
+</main>

@@ -25,6 +25,42 @@ export interface SagaPage {
   total: number;
 }
 
+export interface ChampionEntry {
+  id: string;
+  rank: number;
+  sagaId: string;
+  gameId: string;
+  pieceId: string;
+  name: string;
+  role: string;
+  fantasyType: string;
+  side: 'north' | 'south';
+  kills: number;
+  lastKillPly: number;
+  status: 'Alive' | 'Dead';
+  killedBy: string | null;
+  backstory: string | null;
+  battleTitle: string;
+  battlefield: string | null;
+  whitePlayer: string;
+  blackPlayer: string;
+  completedAt: string;
+}
+
+export interface ChampionStats {
+  totalBattles: number;
+  lightVictories: number;
+  darkVictories: number;
+  draws: number;
+  unfinished: number;
+  lightCaptures: number;
+  darkCaptures: number;
+  totalCaptures: number;
+  averageCapturesPerBattle: number;
+  lightMostLethalType: { fantasyType: string; captures: number } | null;
+  darkMostLethalType: { fantasyType: string; captures: number } | null;
+}
+
 export interface PublicProfile {
   handle: string;
   displayName: string;

@@ -1,4 +1,4 @@
-export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v21';
+export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v24';
 
 export const STORY_VALIDATION_INSTRUCTIONS = `Validate the supplied story against the complete deterministic chess ledger, narrative analysis, outline, and deterministic findings.
 
@@ -10,6 +10,9 @@ Report:
 - any mage acolyte who remains purely a conventional soldier throughout the story without at least one visible, meaningful use of limited apprentice magic, and any mage acolyte incorrectly given teleportation or Archwizard-level power
 - every missing or invented capture and every wrong captor
 - a quiet event that ignores or contradicts its deterministic quietBeatContext, fails to change knowledge, emotion, preparation, relationship, danger, environment, backstory relevance, observation, humanity, or position as selected, prematurely reveals the outcome at relatedEventPly, or invents combat, injury, or death
+- a featured quiet scene that contains only atmosphere, travel summary, introspection, or a decorative quotation without an immediate desire, complication or uncertainty, consequential choice, and changed dramatic state
+- dialogue with no plausible listener or immediate purpose; non sequitur replies; impossible knowledge; spoken lore exposition aimed at the reader; characters announcing visible action; repeated slogans, cryptic maxims, or interchangeable aphorisms; unnatural repeated names or titles in direct address; or multiple speakers whose lines do not form one causal exchange
+- dialogue whose cadence ignores context, such as leisurely speeches during immediate danger, uniformly ceremonial speech between familiar soldiers, or every dying character delivering a polished final line
 - any captured character returning or survivor being killed
 - incorrect or missing promotions, checks, checkmate, winner, or ending
 - a promotion occurring without the invading soldier commandeering the enemy kingdom's ancient prototype Ascension Seal at the analysis-defined ascensionSite; giving the soldier a personal Seal; linking the prototype to the wrong King; or failing to damage the enemy King and his Royal Seal bond at that exact promotion ply
@@ -18,6 +21,7 @@ Report:
 - revealing the promotion artifact's identity or purpose before its promotion ply, including calling it an Ascension Seal, Seal, prototype, transformation device, royal experiment, artifact made by or linked to a King, or explaining that it chooses what a kingdom needs. Pre-promotion prose may describe only an unidentified ancient artifact or relic and its appearance, power, strange effects, rumors, danger, or hidden location. Its true identity, prototype status, King linkage, and purpose must first be revealed during activation at the exact promotion ply
 - incorrect form-specific Ascension: a Queen without completed augmentation, high sorcery, and fortress-grade armor; a Knight Commander without limited augmentation, command authority, and a magic-powered heavy weapon; an Archwizard without awakened broad high sorcery and teleportation; or a Moving Fortress that invents a preexisting wound instead of constructing an engine around and permanently integrating the soldier
 - treating Queen Candidate status as a guarantee or advance revelation of Queen promotion, replacing a still-living reigning Queen, or failing to give emotional weight when a candidate Ascends into a different recorded form
+- when a Queen Candidate becomes Queen, reducing the exceptionally rare event to armor, magic, rank, or generic tactical dialogue without a crown-level personal payoff during the promotion scene or immediate aftermath: her reaction must connect to her established candidate history, she must speak at least one character-specific line about accepting, questioning, or redefining Queenhood, and an available established character who knew her before Ascension should recognize or challenge the change
 - inconsistent permanent names
 - any claim that the Calamity directly created the multiple realities; they were fractured afterward by the incompatible magic each King siphoned from a different universe
 - any claimed continuity, prior event, relationship, wound, death, promotion, or outcome imported from another battle record; every record is a separate fractured reality
@@ -45,6 +49,7 @@ Report:
 - after a Seal's destruction, omission of the gradual entombment threat facing any surviving defeated-realm Moving Fortress pilot; instantaneous Fortress failure; entombment in the victorious realm; or an invented pilot death
 - a missing or generic defeated-King cause of death; the ending must state the specific physical or magical cause established by the final scene
 - an ending without two distinct movements: immediate aftermath followed by a varied later time jump rooted in this saga's particular characters, imagery, battlefield, and magical consequences; flag repetitive generic rebuilding or an unrelated sequel hook
+- an Immediate Aftermath or Later Chronicle that introduces or reintroduces a named participant using only a bare title or role instead of current title or soldier role plus personal name; also flag ambiguous pronouns after a subject change, paragraph break, or mention of another character with the same role
 - outline setup/payoff or continuity violations
 
 Treat supplied deterministicFindings as authoritative errors that must be repaired. Do not duplicate them in the returned findings array. Use exact piece IDs and plies in new findings, but never add them to prose.

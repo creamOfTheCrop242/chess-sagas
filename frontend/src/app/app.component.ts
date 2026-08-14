@@ -5,6 +5,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
 import { AuthService } from './auth/auth.service';
 import { BillingClientService } from './billing/billing.service';
+import { PgnApiService } from './pgn-viewer/pgn-api.service';
 
 @Component({
   selector: 'app-root',
@@ -45,6 +46,17 @@ import { BillingClientService } from './billing/billing.service';
         }
       </div>
     </nav>
+    @if (pgnApi.activeGenerationGameId(); as gameId) {
+      <a
+        class="generation-return"
+        routerLink="/"
+        [queryParams]="{ generation: gameId }"
+      >
+        <span class="generation-pulse" aria-hidden="true"></span>
+        <span><strong>Saga in progress</strong> — return to the chronicler</span>
+        <span aria-hidden="true">→</span>
+      </a>
+    }
     <router-outlet />
     <footer class="site-footer">
       <a routerLink="/terms">Terms</a>
@@ -158,6 +170,43 @@ import { BillingClientService } from './billing/billing.service';
       .account-loading {
         color: var(--ink-dim);
         font-size: 0.72rem;
+      }
+
+      .generation-return {
+        position: sticky;
+        top: 0;
+        z-index: 900;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.7rem;
+        min-height: 2.7rem;
+        padding: 0.55rem 1rem;
+        border-bottom: 1px solid rgba(196, 168, 98, 0.48);
+        color: var(--gold-bright);
+        background: rgba(10, 18, 28, 0.96);
+        font-family: var(--font-display);
+        font-size: 0.72rem;
+        letter-spacing: 0.06em;
+        text-decoration: none;
+        text-transform: uppercase;
+        box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.28);
+      }
+
+      .generation-pulse {
+        width: 0.55rem;
+        height: 0.55rem;
+        border-radius: 50%;
+        background: var(--seal);
+        box-shadow: 0 0 0.75rem var(--seal);
+        animation: generation-pulse 1.8s ease-in-out infinite;
+      }
+
+      @keyframes generation-pulse {
+        50% {
+          opacity: 0.45;
+          transform: scale(0.72);
+        }
       }
 
       .site-footer {
@@ -305,6 +354,7 @@ import { BillingClientService } from './billing/billing.service';
 export class AppComponent {
   readonly auth = inject(AuthService);
   readonly billing = inject(BillingClientService);
+  readonly pgnApi = inject(PgnApiService);
   readonly updateReady = signal(false);
   readonly billingNotice = signal<string | null>(null);
 

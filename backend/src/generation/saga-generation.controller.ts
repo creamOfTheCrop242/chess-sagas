@@ -44,6 +44,22 @@ export class SagaGenerationController {
   }
 }
 
+@Controller('generation')
+export class ActiveSagaGenerationController {
+  constructor(
+    private readonly generation: SagaGenerationService,
+    private readonly auth: AuthService,
+  ) {}
+
+  @Get('active')
+  async active(@Req() request: Request) {
+    const user = await this.auth.currentUser(
+      readCookie(request, SESSION_COOKIE),
+    );
+    return this.generation.activeForUser(user);
+  }
+}
+
 function requestIp(request: Request): string | null {
   const forwarded = request.headers['x-forwarded-for'];
   const value = Array.isArray(forwarded) ? forwarded[0] : forwarded;

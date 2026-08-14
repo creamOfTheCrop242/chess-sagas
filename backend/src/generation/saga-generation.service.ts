@@ -51,6 +51,11 @@ export interface SagaGenerationStatus {
   };
 }
 
+export interface ActiveSagaGeneration {
+  gameId: string;
+  status: SagaGenerationStatus;
+}
+
 @Injectable()
 export class SagaGenerationService
   implements OnApplicationBootstrap, OnModuleDestroy
@@ -385,6 +390,22 @@ export class SagaGenerationService
         reused: false,
       },
     };
+  }
+
+  async activeForUser(
+    user: AuthenticatedUser | null,
+  ): Promise<ActiveSagaGeneration | null> {
+    if (!user) return null;
+    const job = await this.prisma.sagaGenerationJob.findFirst({
+      where: {
+        requestedByUserId: user.id,
+        status: { in: ['QUEUED', 'RUNNING'] },
+      },
+      orderBy: { updatedAt: 'desc' },
+      select: { gameId: true },
+    });
+    if (!job) return null;
+    return { gameId: job.gameId, status: await this.status(job.gameId) };
   }
 
   private scheduleDrain(): void {

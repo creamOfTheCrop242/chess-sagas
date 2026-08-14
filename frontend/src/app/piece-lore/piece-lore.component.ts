@@ -185,7 +185,7 @@ export class PieceLoreComponent {
       chessName: 'Rook',
       sagaName: 'Moving Fortress',
       sigil: '♜',
-      oath: 'A colossal wheeled war machine commanded by a soldier who was wounded beyond the reach of healing. To preserve their life, the pilot’s broken body was permanently placed within its armored command cradle.',
+      oath: 'A colossal wheeled war machine with exactly one living occupant: a soldier wounded beyond the reach of healing whose body was permanently placed within its armored command cradle. The embedded pilot alone drives, aims, fires, and controls every system through the machine’s magical links.',
       movement:
         'Enchanted wheels drive the Fortress in direct, crushing lines. Its armored mass and reinforced prow make it a devastating ram, but collision is only one of the pilot’s options. The machine never acts alone; every turn and attack is the decision of its named pilot.',
       warfare:

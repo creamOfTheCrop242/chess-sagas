@@ -690,7 +690,7 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       'The transformation saved a life but left the pilot grieving every ordinary sensation the cradle replaced',
       'The pilot treats the fortress as a second body and fears the day its voice becomes easier to hear than human voices',
       'They accepted entombment willingly, though they still resent those who call the machine a gift',
-      'They endure the cradle through fierce loyalty to the crews stationed around the fortress',
+      'They endure the cradle through fierce loyalty to the soldiers who fight outside beside the fortress',
       'They conceal recurring panic beneath precise commands and meticulous maintenance rituals',
       'They consider every shot a debt because the machine consumes magic civilians also need',
     ];
@@ -791,7 +791,7 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       'The Knight Commanders trained her to make speed serve judgment rather than impulse',
       'The Archwizards taught her to channel stolen realm-magic without letting it erase physical instinct',
       'The King insisted she learn defeat by sparring against veterans forbidden to flatter her',
-      'Years among fortress crews taught her to respect the human cost hidden inside enchanted armor',
+      'Years speaking with permanently embedded Fortress pilots taught her the human cost hidden inside enchanted armor',
       'She learned diplomacy by settling disputes between companies that distrusted the royal court',
     ];
     const conflicts = [

@@ -740,22 +740,17 @@ describe('PgnViewerComponent character inspection', () => {
         expect(billing.refresh).toHaveBeenCalledTimes(1);
     });
 
-    it('clears the PGN and does not restore generation after a page refresh', () => {
-        vi.spyOn(performance, 'getEntriesByType').mockReturnValue([
-            { type: 'reload' } as unknown as PerformanceNavigationTiming,
-        ]);
+    it('checks the account for an active generation when local recovery is empty', () => {
         const api = {
-            forgetRecentGeneration: vi.fn().mockName('forgetRecentGeneration'),
-            recentGenerationGameId: vi.fn().mockName('recentGenerationGameId'),
+            recentGenerationGameId: vi.fn().mockReturnValue(null),
+            getActiveGeneration: vi.fn().mockReturnValue(of(null)),
         } as unknown as PgnApiService;
         const viewer = new PgnViewerComponent(api);
-        viewer.pgnText = 'stale PGN';
 
         viewer.ngOnInit();
 
         expect(viewer.pgnText).toBe('');
-        expect(api.forgetRecentGeneration).toHaveBeenCalledTimes(1);
-        expect(api.recentGenerationGameId).not.toHaveBeenCalled();
+        expect(api.getActiveGeneration).toHaveBeenCalledTimes(1);
     });
 
     it('uses the archived saved ledger when replaying a Hall record', () => {

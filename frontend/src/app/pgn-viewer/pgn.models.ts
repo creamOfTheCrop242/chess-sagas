@@ -266,3 +266,8 @@ export interface SagaGenerationStatus {
   error: string | null;
   stages: PipelineStatus;
 }
+
+export interface ActiveSagaGeneration {
+  gameId: string;
+  status: SagaGenerationStatus;
+}

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import {
   filter,
@@ -14,6 +14,7 @@ import {
 } from 'rxjs';
 import {
   ArchivedRecord,
+  ActiveSagaGeneration,
   ArchiveRecordSummary,
   NarrateRequest,
   NarrateResponse,
@@ -30,6 +31,9 @@ import { SagaPushNotificationService } from './saga-push-notification.service';
 @Injectable({ providedIn: 'root' })
 export class PgnApiService {
   private readonly recentGenerationKey = 'chess-sagas:active-game-id';
+  readonly activeGenerationGameId = signal<string | null>(
+    this.storedGenerationGameId(),
+  );
   private readonly apiBase = '/api';
   private readonly parseUrl = `${this.apiBase}/pgn/parse`;
   private readonly narrateUrl = `${this.apiBase}/story/narrate`;
@@ -70,47 +74,75 @@ export class PgnApiService {
     );
   }
 
+  getActiveGeneration(): Observable<ActiveSagaGeneration | null> {
+    return this.http.get<ActiveSagaGeneration | null>(
+      `${this.apiBase}/generation/active`,
+      { withCredentials: true },
+    );
+  }
+
   getGame(gameId: string): Observable<SavedGameRecord> {
     return this.http.get<SavedGameRecord>(`${this.apiBase}/games/${gameId}`);
   }
 
   recentGenerationGameId(): string | null {
-    try {
-      return sessionStorage.getItem(this.recentGenerationKey);
-    } catch {
-      return null;
-    }
+    return this.activeGenerationGameId();
   }
 
   forgetRecentGeneration(): void {
     try {
-      sessionStorage.removeItem(this.recentGenerationKey);
+      localStorage.removeItem(this.recentGenerationKey);
     } catch {
-      // Session restoration is optional.
+      // Durable restoration is optional.
     }
+    this.activeGenerationGameId.set(null);
   }
 
   generateSaga(
     gameId: string,
     onProgress: (stage: SagaStage, state: SagaStageState) => void,
   ): Observable<SceneBreakdownResponse> {
+    return this.observeSaga(gameId, onProgress, true);
+  }
+
+  resumeSaga(
+    gameId: string,
+    onProgress: (stage: SagaStage, state: SagaStageState) => void,
+  ): Observable<SceneBreakdownResponse> {
+    return this.observeSaga(gameId, onProgress, false);
+  }
+
+  rememberGeneration(gameId: string): void {
     try {
-      sessionStorage.setItem(this.recentGenerationKey, gameId);
+      localStorage.setItem(this.recentGenerationKey, gameId);
     } catch {
-      // Session restoration is optional; generation still proceeds.
+      // Durable restoration is optional; generation still proceeds.
     }
+    this.activeGenerationGameId.set(gameId);
+  }
+
+  private observeSaga(
+    gameId: string,
+    onProgress: (stage: SagaStage, state: SagaStageState) => void,
+    start: boolean,
+  ): Observable<SceneBreakdownResponse> {
+    this.rememberGeneration(gameId);
     this.addGenerationListener(gameId, onProgress);
     const active = this.activeGenerations.get(gameId);
     if (active) return active;
 
     const base = `${this.apiBase}/games/${gameId}`;
     this.notifyAllStages(gameId, 'checking');
-    const generation = this.pushNotifications.subscriptionForSaga().pipe(
-      switchMap((pushSubscription) =>
-        this.http.post<SagaGenerationStatus>(`${base}/generation`, {
-          pushSubscription,
-        }),
-      ),
+    const initialStatus = start
+      ? this.pushNotifications.subscriptionForSaga().pipe(
+          switchMap((pushSubscription) =>
+            this.http.post<SagaGenerationStatus>(`${base}/generation`, {
+              pushSubscription,
+            }),
+          ),
+        )
+      : this.getGenerationStatus(gameId);
+    const generation = initialStatus.pipe(
       tap((status) => this.syncGenerationStatus(gameId, status)),
       switchMap(() =>
         timer(0, 2_000).pipe(
@@ -258,12 +290,16 @@ export class PgnApiService {
   }
 
   private clearRecentGeneration(gameId: string): void {
+    if (this.activeGenerationGameId() === gameId) {
+      this.forgetRecentGeneration();
+    }
+  }
+
+  private storedGenerationGameId(): string | null {
     try {
-      if (sessionStorage.getItem(this.recentGenerationKey) === gameId) {
-        sessionStorage.removeItem(this.recentGenerationKey);
-      }
+      return localStorage.getItem(this.recentGenerationKey);
     } catch {
-      // Session restoration is optional.
+      return null;
     }
   }
 }

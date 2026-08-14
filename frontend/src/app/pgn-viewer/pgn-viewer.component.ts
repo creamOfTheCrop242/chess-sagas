@@ -131,18 +131,11 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
     const recordId = this.route?.snapshot.paramMap.get('id');
     if (recordId) {
       this.loadArchivedRecord(recordId);
-    } else if (this.isPageReload()) {
-      this.pgnText = '';
-      this.pgnApi.forgetRecentGeneration();
     } else {
-      this.restoreRecentGeneration();
+      const requestedGeneration =
+        this.route?.snapshot.queryParamMap?.get('generation') ?? null;
+      this.restoreRecentGeneration(requestedGeneration);
     }
-  }
-
-  private isPageReload(): boolean {
-    const navigation = performance.getEntriesByType?.('navigation')[0] as
-      PerformanceNavigationTiming | undefined;
-    return navigation?.type === 'reload';
   }
 
   get currentFen(): string {
@@ -633,7 +626,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
     this.watchSagaGeneration();
   }
 
-  private watchSagaGeneration(): void {
+  private watchSagaGeneration(resume = false): void {
     if (!this.gameId) return;
     this.sagaGenerating = true;
     this.startGenerationTimer();
@@ -641,8 +634,10 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
     this.billingFailure = null;
     this.generationAccessFailure = null;
     this.pipelineState = this.initialPipelineState();
-    this.pgnApi
-      .generateSaga(this.gameId, (stage, state) => {
+    const generation = resume
+      ? this.pgnApi.resumeSaga.bind(this.pgnApi)
+      : this.pgnApi.generateSaga.bind(this.pgnApi);
+    generation(this.gameId, (stage, state) => {
         this.pipelineState = { ...this.pipelineState, [stage]: state };
       })
       .subscribe({
@@ -695,10 +690,27 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
       });
   }
 
-  private restoreRecentGeneration(): void {
-    const gameId = this.pgnApi.recentGenerationGameId();
-    if (!gameId) return;
+  private restoreRecentGeneration(preferredGameId: string | null = null): void {
+    const gameId = preferredGameId ?? this.pgnApi.recentGenerationGameId();
+    if (gameId) {
+      this.restoreGeneration(gameId);
+      return;
+    }
+    this.pgnApi.getActiveGeneration().subscribe({
+      next: (active) => {
+        if (!active) return;
+        this.pgnApi.rememberGeneration(active.gameId);
+        this.restoreGeneration(active.gameId);
+      },
+      error: () => {
+        // Signed-out visitors and temporary lookup failures keep the blank form.
+      },
+    });
+  }
+
+  private restoreGeneration(gameId: string): void {
     this.loading = true;
+    this.recordReplay = false;
     this.pgnApi
       .getGame(gameId)
       .pipe(
@@ -717,10 +729,13 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
           this.readingBookmarkId = saved.id;
           this.currentPly = 0;
           this.loading = false;
-          this.watchSagaGeneration();
+          this.watchSagaGeneration(true);
         },
         error: () => {
           this.loading = false;
+          if (this.pgnApi.recentGenerationGameId() === gameId) {
+            this.pgnApi.forgetRecentGeneration();
+          }
         },
       });
   }

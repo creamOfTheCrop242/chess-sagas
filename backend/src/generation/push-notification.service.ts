@@ -113,7 +113,7 @@ export class PushNotificationService {
           onActionClick: {
             default: {
               operation: 'openWindow',
-              url: '/',
+              url: `/?generation=${encodeURIComponent(gameId)}`,
             },
           },
         },
@@ -137,7 +137,7 @@ export class PushNotificationService {
           onActionClick: {
             default: {
               operation: 'openWindow',
-              url: '/',
+              url: `/?generation=${encodeURIComponent(gameId)}`,
             },
           },
         },

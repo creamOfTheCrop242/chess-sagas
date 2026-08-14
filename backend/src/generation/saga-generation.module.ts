@@ -6,7 +6,10 @@ import { NarrativeAnalysisModule } from '../narrative-analysis/narrative-analysi
 import { SceneBreakdownModule } from '../scene-breakdown/scene-breakdown.module';
 import { StoryOutlineModule } from '../story-outline/story-outline.module';
 import { StoryValidationModule } from '../story-validation/story-validation.module';
-import { SagaGenerationController } from './saga-generation.controller';
+import {
+  ActiveSagaGenerationController,
+  SagaGenerationController,
+} from './saga-generation.controller';
 import { SagaGenerationService } from './saga-generation.service';
 import { PushNotificationController } from './push-notification.controller';
 import { PushNotificationService } from './push-notification.service';
@@ -21,7 +24,11 @@ import { PushNotificationService } from './push-notification.service';
     StoryValidationModule,
     SceneBreakdownModule,
   ],
-  controllers: [SagaGenerationController, PushNotificationController],
+  controllers: [
+    SagaGenerationController,
+    ActiveSagaGenerationController,
+    PushNotificationController,
+  ],
   providers: [SagaGenerationService, PushNotificationService],
 })
 export class SagaGenerationModule {}

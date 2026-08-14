@@ -140,6 +140,46 @@ describe('SagaGenerationService', () => {
     });
   });
 
+  it('returns the signed-in users active generation for recovery', async () => {
+    jest.mocked(prisma.sagaGenerationJob.findFirst).mockResolvedValue({
+      gameId: 'game-1',
+    } as never);
+    jest.mocked(prisma.sagaGenerationJob.findUnique).mockResolvedValue({
+      status: 'RUNNING',
+      currentStage: 'OUTLINE',
+      error: null,
+      billingState: GenerationBillingState.UNLIMITED,
+    } as never);
+
+    await expect(
+      service.activeForUser({
+        id: 'user-1',
+        email: 'reader@example.com',
+        displayName: 'Reader',
+        avatarUrl: null,
+      }),
+    ).resolves.toEqual({
+      gameId: 'game-1',
+      status: expect.objectContaining({
+        state: 'running',
+        currentStage: 'outline',
+      }),
+    });
+    expect(prisma.sagaGenerationJob.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          requestedByUserId: 'user-1',
+          status: { in: ['QUEUED', 'RUNNING'] },
+        }),
+      }),
+    );
+  });
+
+  it('does not expose active generation data to a signed-out visitor', async () => {
+    await expect(service.activeForUser(null)).resolves.toBeNull();
+    expect(prisma.sagaGenerationJob.findFirst).not.toHaveBeenCalled();
+  });
+
   it('runs missing stages in order and reuses scenes persisted with the story', async () => {
     jest.mocked(analysis.generate).mockImplementation(async () => {
       runs.push({

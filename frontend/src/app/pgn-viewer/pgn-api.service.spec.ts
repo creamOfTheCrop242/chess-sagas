@@ -16,6 +16,7 @@ describe('PgnApiService', () => {
     let http: HttpTestingController;
 
     beforeEach(() => {
+        localStorage.removeItem('chess-sagas:active-game-id');
         TestBed.configureTestingModule({
             providers: [
                 PgnApiService,
@@ -132,6 +133,42 @@ describe('PgnApiService', () => {
             status: 'COMPLETED',
             sceneBreakdown: { data: { scenes: [] } },
         });
+    });
+
+    it('persists an active generation across app sessions', () => {
+        api.rememberGeneration('game-persisted');
+
+        expect(api.recentGenerationGameId()).toBe('game-persisted');
+        expect(localStorage.getItem('chess-sagas:active-game-id')).toBe(
+            'game-persisted',
+        );
+
+        api.forgetRecentGeneration();
+        expect(api.recentGenerationGameId()).toBeNull();
+    });
+
+    it('resumes polling without posting a second generation start', async () => {
+        api.resumeSaga('game-resume', () => undefined).subscribe();
+
+        http.expectOne('/api/games/game-resume/generation').flush({
+            state: 'running',
+            currentStage: 'story',
+            error: null,
+            stages: { ...emptyStages, analysis: true, outline: true },
+        });
+        await vi.advanceTimersByTimeAsync(0);
+        http.expectOne('/api/games/game-resume/generation').flush({
+            state: 'completed',
+            currentStage: 'scenes',
+            error: null,
+            stages: completedStages,
+        });
+        http.expectOne('/api/games/game-resume/scenes').flush({
+            status: 'COMPLETED',
+            sceneBreakdown: { data: { scenes: [] } },
+        });
+
+        expect(api.recentGenerationGameId()).toBeNull();
     });
 });
 

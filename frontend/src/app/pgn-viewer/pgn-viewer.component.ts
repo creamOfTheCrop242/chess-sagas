@@ -853,7 +853,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
         'A master of elemental forces, wards, bindings, counterspells, illusions, divination, transmutation, and other high sorcery who uses teleportation to cross the battlefield.',
       'moving-fortress': `A colossal mobile stronghold controlled by ${
         piece.operatorName ?? 'a sworn pilot'
-      }, a soldier wounded beyond healing whose body was permanently placed in its armored command cradle. The pilot cannot live without the machine’s magic life-supporting core and commands its enormous wheels and magic-round weapons from within.`,
+      }, a soldier wounded beyond healing whose body was permanently placed in its armored command cradle. The pilot is the Fortress’s only living occupant, cannot survive without its magic life-supporting core, and alone controls its enormous wheels, magic-round weapons, attachments, and communications from within.`,
       'knight-commander':
         'An elite commander who strikes across the battlefield by unexpected paths.',
     };

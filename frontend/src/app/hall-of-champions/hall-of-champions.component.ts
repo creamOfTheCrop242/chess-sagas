@@ -1,5 +1,5 @@
 import { DatePipe, TitleCasePipe } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
@@ -11,6 +11,7 @@ import { CommunityService } from '../community/community.service';
   standalone: true,
   imports: [DatePipe, FormsModule, RouterLink, TitleCasePipe],
   templateUrl: './hall-of-champions.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './hall-of-champions.component.css',
 })
 export class HallOfChampionsComponent implements OnInit {

@@ -1,5 +1,5 @@
 import { CurrencyPipe, DatePipe, DecimalPipe, PercentPipe } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
@@ -18,6 +18,7 @@ import { ReportingClientService } from './reporting.service';
     RouterLink,
   ],
   templateUrl: './reporting.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './reporting.component.css',
 })
 export class ReportingComponent implements OnInit {

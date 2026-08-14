@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { CommunitySagaSummary, PublicProfile } from './community.models';
@@ -42,6 +42,7 @@ import { CommunityService } from './community.service';
       }
     </main>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './profile-page.css',
 })
 export class CreatorProfileComponent implements OnInit {

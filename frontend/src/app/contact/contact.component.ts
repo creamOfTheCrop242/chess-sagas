@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule, type NgForm } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
@@ -11,6 +11,7 @@ type SupportCategory = 'bug' | 'suggestion' | 'billing' | 'account' | 'other';
   standalone: true,
   imports: [FormsModule, RouterLink],
   templateUrl: './contact.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './contact.component.css',
 })
 export class ContactComponent {

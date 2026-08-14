@@ -81,7 +81,7 @@
             <small>
               Most lethal rank:
               <b>{{
-                statRole(stats.lightMostLethalType?.fantasyType) | titlecase
+                statRole($safeNavigationMigration(stats.lightMostLethalType?.fantasyType)) | titlecase
               }}</b>
               @if (stats.lightMostLethalType) {
                 · {{ stats.lightMostLethalType.captures }} captures
@@ -100,7 +100,7 @@
             <small>
               Most lethal rank:
               <b>{{
-                statRole(stats.darkMostLethalType?.fantasyType) | titlecase
+                statRole($safeNavigationMigration(stats.darkMostLethalType?.fantasyType)) | titlecase
               }}</b>
               @if (stats.darkMostLethalType) {
                 · {{ stats.darkMostLethalType.captures }} captures

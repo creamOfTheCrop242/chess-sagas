@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 
 type LegalPageKey = 'terms' | 'privacy' | 'refunds';
@@ -285,6 +285,7 @@ const PAGES: Record<LegalPageKey, LegalPage> = {
   standalone: true,
   imports: [RouterLink],
   templateUrl: './legal.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './legal.component.css',
 })
 export class LegalComponent {

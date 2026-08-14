@@ -37,11 +37,11 @@ export class AuthService {
   }
 
   signInWithGoogle(): void {
-    window.location.assign('/api/auth/google');
+    window.location.assign('/api/auth/google?acceptLegal=true');
   }
 
   signInWithApple(): void {
-    window.location.assign('/api/auth/apple');
+    window.location.assign('/api/auth/apple?acceptLegal=true');
   }
 
   logout(): void {

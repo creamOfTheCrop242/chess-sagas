@@ -97,24 +97,28 @@ model Game {
 }
 
 model User {
-  id                   String                @id @default(cuid())
-  googleSub            String?               @unique
-  appleSub             String?               @unique
-  email                String                @unique
-  displayName          String
-  avatarUrl            String?
-  stripeCustomerId     String?               @unique
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
-  sessions             AuthSession[]
-  games                Game[]
-  publicProfile        PublicProfile?
-  sagas                Saga[]                @relation("SagaCreator")
-  sagaBookmarks        SagaBookmark[]
-  creditEntries        CreditLedgerEntry[]
-  creditReservations   CreditReservation[]
-  billingSubscriptions BillingSubscription[]
-  requestedSagaJobs    SagaGenerationJob[]   @relation("SagaJobRequester")
+  id                    String                @id @default(cuid())
+  googleSub             String?               @unique
+  appleSub              String?               @unique
+  email                 String                @unique
+  displayName           String
+  avatarUrl             String?
+  stripeCustomerId      String?               @unique
+  termsAcceptedAt       DateTime?
+  termsVersion          String?
+  privacyAcknowledgedAt DateTime?
+  privacyVersion        String?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  sessions              AuthSession[]
+  games                 Game[]
+  publicProfile         PublicProfile?
+  sagas                 Saga[]                @relation("SagaCreator")
+  sagaBookmarks         SagaBookmark[]
+  creditEntries         CreditLedgerEntry[]
+  creditReservations    CreditReservation[]
+  billingSubscriptions  BillingSubscription[]
+  requestedSagaJobs     SagaGenerationJob[]   @relation("SagaJobRequester")
 }
 
 model PublicProfile {

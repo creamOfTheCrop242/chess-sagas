@@ -32,9 +32,21 @@
           <button type="button" (click)="auth.logout()">Sign out</button>
         </div>
       } @else {
+        <label class="legal-consent">
+          <input
+            type="checkbox"
+            [checked]="legalAccepted()"
+            (change)="setLegalAccepted($event)"
+          />
+          <span>
+            I agree to the <a routerLink="/terms">Terms of Service</a> and
+            acknowledge the <a routerLink="/privacy">Privacy Policy</a>.
+          </span>
+        </label>
         <button
           class="google-button"
           type="button"
+          [disabled]="!legalAccepted()"
           (click)="auth.signInWithGoogle()"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -60,6 +72,7 @@
         <button
           class="apple-button"
           type="button"
+          [disabled]="!legalAccepted()"
           (click)="auth.signInWithApple()"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">

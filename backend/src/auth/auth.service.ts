@@ -11,6 +11,15 @@ import { PrismaService } from '../database/prisma.service';
 
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
 
+export const CURRENT_TERMS_VERSION = '2026-08-11';
+export const CURRENT_PRIVACY_VERSION = '2026-08-11';
+
+export interface LegalAcceptance {
+  acceptedAt: Date;
+  termsVersion: string;
+  privacyVersion: string;
+}
+
 export interface AuthenticatedUser {
   id: string;
   email: string;
@@ -100,6 +109,7 @@ export class AuthService {
     code: string | undefined,
     returnedState: string | undefined,
     expectedState: string | undefined,
+    legalAcceptance: LegalAcceptance,
   ): Promise<{ sessionToken: string; user: AuthenticatedUser }> {
     if (!code || !this.statesMatch(returnedState, expectedState)) {
       throw new UnauthorizedException('Invalid Google authentication response');
@@ -143,6 +153,7 @@ export class AuthService {
       displayName: profile.name?.trim() || profile.email.split('@')[0],
       avatarUrl: profile.picture ?? null,
     });
+    await this.recordLegalAcceptance(user.id, legalAcceptance);
     return this.createSession(user);
   }
 
@@ -151,6 +162,7 @@ export class AuthService {
     returnedState: string | undefined,
     expectedState: string | undefined,
     submittedUserJson: string | undefined,
+    legalAcceptance: LegalAcceptance,
   ): Promise<{ sessionToken: string; user: AuthenticatedUser }> {
     if (!code || !this.statesMatch(returnedState, expectedState)) {
       throw new UnauthorizedException('Invalid Apple authentication response');
@@ -209,6 +221,7 @@ export class AuthService {
       displayName: submittedName || email.split('@')[0],
       avatarUrl: null,
     });
+    await this.recordLegalAcceptance(user.id, legalAcceptance);
     return this.createSession(user);
   }
 
@@ -396,6 +409,28 @@ export class AuthService {
       },
     });
     return { sessionToken, user };
+  }
+
+  private async recordLegalAcceptance(
+    userId: string,
+    acceptance: LegalAcceptance,
+  ): Promise<void> {
+    if (
+      acceptance.termsVersion !== CURRENT_TERMS_VERSION ||
+      acceptance.privacyVersion !== CURRENT_PRIVACY_VERSION ||
+      Number.isNaN(acceptance.acceptedAt.getTime())
+    ) {
+      throw new UnauthorizedException('Current legal terms must be accepted');
+    }
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        termsAcceptedAt: acceptance.acceptedAt,
+        termsVersion: acceptance.termsVersion,
+        privacyAcknowledgedAt: acceptance.acceptedAt,
+        privacyVersion: acceptance.privacyVersion,
+      },
+    });
   }
 
   private parseAppleUser(value: string | undefined): AppleSubmittedUser | null {

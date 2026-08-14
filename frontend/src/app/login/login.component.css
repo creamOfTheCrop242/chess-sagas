@@ -76,6 +76,38 @@ h1 {
   text-decoration: none;
 }
 
+.google-button:disabled,
+.apple-button:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.65);
+  opacity: 0.46;
+}
+
+.legal-consent {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+  padding: 0.9rem;
+  border: 1px solid rgba(196, 168, 98, 0.28);
+  color: var(--ink-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  text-align: left;
+}
+
+.legal-consent input {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-top: 0.15rem;
+  accent-color: var(--gold);
+}
+
+.legal-consent a {
+  color: var(--gold-bright);
+}
+
 .google-button svg {
   width: 1.35rem;
   margin-right: 0.75rem;

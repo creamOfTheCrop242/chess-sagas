@@ -1,4 +1,9 @@
-import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  inject,
+  ChangeDetectionStrategy,
+  signal,
+} from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 
@@ -12,7 +17,12 @@ import { AuthService } from '../auth/auth.service';
 })
 export class LoginComponent {
   readonly auth = inject(AuthService);
+  readonly legalAccepted = signal(false);
   readonly authenticationFailed =
     inject(ActivatedRoute).snapshot.queryParamMap.get('error') ===
     'authentication_failed';
+
+  setLegalAccepted(event: Event): void {
+    this.legalAccepted.set((event.target as HTMLInputElement).checked);
+  }
 }

@@ -11,12 +11,19 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { AuthService } from './auth.service';
+import {
+  AuthService,
+  CURRENT_PRIVACY_VERSION,
+  CURRENT_TERMS_VERSION,
+  type LegalAcceptance,
+} from './auth.service';
 import { readCookie, SESSION_COOKIE } from './session-cookie';
 
 const OAUTH_STATE_COOKIE = 'chess_sagas_oauth_state';
 const APPLE_STATE_COOKIE = 'chess_sagas_apple_oauth_state';
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const GOOGLE_LEGAL_COOKIE = 'chess_sagas_google_legal_acceptance';
+const APPLE_LEGAL_COOKIE = 'chess_sagas_apple_legal_acceptance';
 
 @Controller('auth')
 export class AuthController {
@@ -26,9 +33,20 @@ export class AuthController {
 
   @Get('google')
   @Header('Cache-Control', 'no-store')
-  beginGoogleLogin(@Res() response: Response): void {
+  beginGoogleLogin(
+    @Query('acceptLegal') acceptLegal: string | undefined,
+    @Res() response: Response,
+  ): void {
+    if (acceptLegal !== 'true') {
+      response.redirect(`${this.auth.appUrl}/login?error=acceptance_required`);
+      return;
+    }
     const request = this.auth.createAuthorizationRequest();
     response.cookie(OAUTH_STATE_COOKIE, request.state, {
+      ...this.cookieOptions(),
+      maxAge: 10 * 60 * 1000,
+    });
+    response.cookie(GOOGLE_LEGAL_COOKIE, this.serializeLegalAcceptance(), {
       ...this.cookieOptions(),
       maxAge: 10 * 60 * 1000,
     });
@@ -37,9 +55,20 @@ export class AuthController {
 
   @Get('apple')
   @Header('Cache-Control', 'no-store')
-  beginAppleLogin(@Res() response: Response): void {
+  beginAppleLogin(
+    @Query('acceptLegal') acceptLegal: string | undefined,
+    @Res() response: Response,
+  ): void {
+    if (acceptLegal !== 'true') {
+      response.redirect(`${this.auth.appUrl}/login?error=acceptance_required`);
+      return;
+    }
     const request = this.auth.createAppleAuthorizationRequest();
     response.cookie(APPLE_STATE_COOKIE, request.state, {
+      ...this.appleStateCookieOptions(),
+      maxAge: 10 * 60 * 1000,
+    });
+    response.cookie(APPLE_LEGAL_COOKIE, this.serializeLegalAcceptance(), {
       ...this.appleStateCookieOptions(),
       maxAge: 10 * 60 * 1000,
     });
@@ -61,8 +90,10 @@ export class AuthController {
         code,
         state,
         readCookie(request, OAUTH_STATE_COOKIE),
+        this.readLegalAcceptance(request, GOOGLE_LEGAL_COOKIE),
       );
       response.clearCookie(OAUTH_STATE_COOKIE, this.cookieOptions());
+      response.clearCookie(GOOGLE_LEGAL_COOKIE, this.cookieOptions());
       response.cookie(SESSION_COOKIE, result.sessionToken, {
         ...this.cookieOptions(),
         maxAge: SESSION_MAX_AGE_MS,
@@ -72,6 +103,7 @@ export class AuthController {
       const message = caught instanceof Error ? caught.message : String(caught);
       this.logger.warn(`Google login failed: ${message}`);
       response.clearCookie(OAUTH_STATE_COOKIE, this.cookieOptions());
+      response.clearCookie(GOOGLE_LEGAL_COOKIE, this.cookieOptions());
       response.redirect(
         `${this.auth.appUrl}/login?error=authentication_failed`,
       );
@@ -98,8 +130,10 @@ export class AuthController {
         body.state,
         readCookie(request, APPLE_STATE_COOKIE),
         body.user,
+        this.readLegalAcceptance(request, APPLE_LEGAL_COOKIE),
       );
       response.clearCookie(APPLE_STATE_COOKIE, this.appleStateCookieOptions());
+      response.clearCookie(APPLE_LEGAL_COOKIE, this.appleStateCookieOptions());
       response.cookie(SESSION_COOKIE, result.sessionToken, {
         ...this.cookieOptions(),
         maxAge: SESSION_MAX_AGE_MS,
@@ -109,6 +143,7 @@ export class AuthController {
       const message = caught instanceof Error ? caught.message : String(caught);
       this.logger.warn(`Apple login failed: ${message}`);
       response.clearCookie(APPLE_STATE_COOKIE, this.appleStateCookieOptions());
+      response.clearCookie(APPLE_LEGAL_COOKIE, this.appleStateCookieOptions());
       response.redirect(
         `${this.auth.appUrl}/login?error=authentication_failed`,
       );
@@ -178,5 +213,37 @@ export class AuthController {
       secure: true,
       path: '/',
     };
+  }
+
+  private serializeLegalAcceptance(): string {
+    return Buffer.from(
+      JSON.stringify({
+        termsVersion: CURRENT_TERMS_VERSION,
+        privacyVersion: CURRENT_PRIVACY_VERSION,
+      }),
+    ).toString('base64url');
+  }
+
+  private readLegalAcceptance(
+    request: Request,
+    cookieName: string,
+  ): LegalAcceptance {
+    const encoded = readCookie(request, cookieName);
+    if (!encoded) throw new Error('Legal acceptance is missing or expired');
+    try {
+      const value = JSON.parse(
+        Buffer.from(encoded, 'base64url').toString('utf8'),
+      ) as {
+        termsVersion?: string;
+        privacyVersion?: string;
+      };
+      return {
+        acceptedAt: new Date(),
+        termsVersion: value.termsVersion ?? '',
+        privacyVersion: value.privacyVersion ?? '',
+      };
+    } catch {
+      throw new Error('Legal acceptance is invalid');
+    }
   }
 }

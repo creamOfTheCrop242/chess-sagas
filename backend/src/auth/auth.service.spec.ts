@@ -2,6 +2,11 @@ import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 
 describe('AuthService', () => {
+  const legalAcceptance = {
+    acceptedAt: new Date('2026-08-14T16:00:00.000Z'),
+    termsVersion: '2026-08-11',
+    privacyVersion: '2026-08-11',
+  };
   const configValues: Record<string, string> = {
     GOOGLE_CLIENT_ID: 'client-id',
     GOOGLE_CLIENT_SECRET: 'client-secret',
@@ -73,7 +78,12 @@ describe('AuthService', () => {
   it('rejects a callback whose state does not match before calling Google', async () => {
     const fetchSpy = jest.spyOn(global, 'fetch');
     await expect(
-      service.completeGoogleLogin('code', 'returned-state', 'expected-state'),
+      service.completeGoogleLogin(
+        'code',
+        'returned-state',
+        'expected-state',
+        legalAcceptance,
+      ),
     ).rejects.toThrow('Invalid Google authentication response');
     expect(fetchSpy).not.toHaveBeenCalled();
   });
@@ -86,6 +96,7 @@ describe('AuthService', () => {
         'returned-state',
         'expected-state',
         undefined,
+        legalAcceptance,
       ),
     ).rejects.toThrow('Invalid Apple authentication response');
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -127,11 +138,21 @@ describe('AuthService', () => {
       'authorization-code',
       authorization.state,
       authorization.state,
+      legalAcceptance,
     );
 
     expect(result.user).toEqual(user);
     expect(result.sessionToken).toHaveLength(43);
     expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      data: {
+        termsAcceptedAt: legalAcceptance.acceptedAt,
+        termsVersion: legalAcceptance.termsVersion,
+        privacyAcknowledgedAt: legalAcceptance.acceptedAt,
+        privacyVersion: legalAcceptance.privacyVersion,
+      },
+    });
     expect(prisma.authSession.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         tokenHash: expect.stringMatching(/^[a-f0-9]{64}$/),

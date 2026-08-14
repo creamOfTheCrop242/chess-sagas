@@ -2,6 +2,8 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
+  ChampionEntry,
+  ChampionStats,
   EditableProfile,
   ProfileUpdate,
   PublicProfile,
@@ -23,6 +25,24 @@ export class CommunityService {
     return this.http.get<SagaPage>('/api/sagas', {
       params: this.params(query),
     });
+  }
+
+  champions(
+    query: {
+      side?: 'north' | 'south';
+      type?: string;
+      limit?: number;
+    } = {},
+  ): Observable<ChampionEntry[]> {
+    let params = new HttpParams();
+    if (query.side) params = params.set('side', query.side);
+    if (query.type) params = params.set('type', query.type);
+    if (query.limit) params = params.set('limit', query.limit);
+    return this.http.get<ChampionEntry[]>('/api/sagas/champions', { params });
+  }
+
+  championStats(): Observable<ChampionStats> {
+    return this.http.get<ChampionStats>('/api/sagas/champions/stats');
   }
 
   mine(query: SagaQuery = {}): Observable<SagaPage> {
@@ -48,10 +68,9 @@ export class CommunityService {
   }
 
   unsave(sagaId: string): Observable<{ saved: false }> {
-    return this.http.delete<{ saved: false }>(
-      `/api/sagas/${sagaId}/bookmark`,
-      { withCredentials: true },
-    );
+    return this.http.delete<{ saved: false }>(`/api/sagas/${sagaId}/bookmark`, {
+      withCredentials: true,
+    });
   }
 
   profile(handle: string): Observable<PublicProfile> {

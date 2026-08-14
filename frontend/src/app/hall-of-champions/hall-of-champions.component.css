@@ -1,0 +1,681 @@
+:host {
+  display: block;
+  min-height: 100%;
+}
+.champions-page {
+  width: min(1120px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 3rem 0 6rem;
+  color: #e8e2d5;
+}
+.champions-hero,
+.champion-filters {
+  border: 1px solid rgba(199, 164, 83, 0.42);
+  background: rgba(7, 16, 27, 0.9);
+}
+.champions-hero {
+  padding: clamp(1.5rem, 4vw, 3.5rem);
+  text-align: center;
+}
+.champions-hero nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+a {
+  color: #e8cf8e;
+  text-decoration: none;
+}
+.eyebrow {
+  margin-top: 2.5rem;
+  color: #78c7bd;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+h1 {
+  margin: 0.5rem 0 1rem;
+  color: #efd99d;
+  font-size: clamp(2.3rem, 7vw, 4.8rem);
+  font-variant: small-caps;
+  letter-spacing: 0.08em;
+}
+.champions-hero > p:last-child {
+  max-width: 760px;
+  margin-inline: auto;
+  color: #aeb5c0;
+  font-size: 1.15rem;
+  line-height: 1.7;
+}
+.champion-filters {
+  display: flex;
+  gap: 1rem;
+  margin: 1.25rem 0;
+  padding: 1.25rem;
+}
+.champion-filters label {
+  flex: 1;
+  color: #d7bd77;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+select {
+  display: block;
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.8rem;
+  color: #e8e2d5;
+  border: 1px solid #6e5d35;
+  background: #08111e;
+}
+.war-tally {
+  margin: 1.5rem 0 2.25rem;
+  padding: clamp(1.25rem, 3vw, 2.25rem);
+  border: 1px solid rgba(199, 164, 83, 0.5);
+  background:
+    radial-gradient(circle at 5% 50%, rgba(75, 180, 201, 0.1), transparent 30%),
+    radial-gradient(circle at 95% 50%, rgba(198, 82, 49, 0.1), transparent 30%),
+    rgba(6, 15, 26, 0.94);
+  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.2);
+}
+.tally-heading,
+.ranking-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+.tally-heading .eyebrow,
+.ranking-heading .eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.68rem;
+}
+.tally-heading h2,
+.ranking-heading h2 {
+  margin: 0;
+  color: #eee4ce;
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  font-variant: small-caps;
+  letter-spacing: 0.05em;
+}
+.battle-total {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+  color: #929ba7;
+  text-align: right;
+}
+.battle-total strong {
+  color: #efd47f;
+  font-size: 2.2rem;
+}
+.battle-total span {
+  font-size: 0.72rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.outcome-bar {
+  height: 0.55rem;
+  display: flex;
+  margin-top: 1.75rem;
+  overflow: hidden;
+  border: 1px solid rgba(199, 164, 83, 0.2);
+  background: #111927;
+}
+.outcome-bar span {
+  min-width: 0;
+}
+.light-wins {
+  background: #72c3d1;
+}
+.draws {
+  background: #8d866f;
+}
+.dark-wins {
+  background: #bd5538;
+}
+.outcome-key {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-top: 0.65rem;
+  color: #9099a6;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-transform: uppercase;
+}
+.outcome-key span:first-child {
+  text-align: left;
+}
+.outcome-key span:last-child {
+  text-align: right;
+}
+.outcome-key strong {
+  color: #e9dfc9;
+  font-size: 1rem;
+}
+.light-ink {
+  color: #72c3d1 !important;
+}
+.dark-ink {
+  color: #cf694b !important;
+}
+.realm-tallies {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: stretch;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+.realm-tally,
+.war-average {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 1.25rem;
+  border: 1px solid rgba(199, 164, 83, 0.2);
+  background: rgba(5, 12, 21, 0.72);
+}
+.realm-tally p {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.light-realm p {
+  color: #72c3d1;
+}
+.dark-realm p {
+  color: #cf694b;
+}
+.realm-tally > strong,
+.war-average strong {
+  margin-top: 0.45rem;
+  color: #f0ddaa;
+  font-size: 2.6rem;
+  line-height: 1;
+}
+.realm-tally > span,
+.war-average span {
+  margin-top: 0.3rem;
+  color: #969eaa;
+  font-size: 0.67rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.realm-tally small,
+.war-average small {
+  margin-top: 1rem;
+  color: #8e97a3;
+  line-height: 1.45;
+}
+.realm-tally b {
+  color: #d9c486;
+  font-weight: normal;
+}
+.dark-realm {
+  text-align: right;
+}
+.war-average {
+  min-width: 10rem;
+  align-items: center;
+  text-align: center;
+}
+.war-average strong {
+  font-size: 1.9rem;
+}
+.ranking-heading {
+  margin: 0 0 1rem;
+  padding: 0 0.25rem;
+}
+.ranking-heading > span {
+  color: #89929f;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.champion-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  padding: 0;
+  list-style: none;
+}
+.champion-list > li {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(199, 164, 83, 0.34);
+  background: linear-gradient(
+    145deg,
+    rgba(10, 21, 35, 0.97),
+    rgba(5, 12, 22, 0.95)
+  );
+  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.18);
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.champion-list > li::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  content: "";
+  background: var(--realm-color);
+  box-shadow: 0 0 18px var(--realm-glow);
+}
+.champion-list > li.light {
+  --realm-color: #76c9d5;
+  --realm-glow: rgba(118, 201, 213, 0.38);
+}
+.champion-list > li.dark {
+  --realm-color: #c65d3e;
+  --realm-glow: rgba(198, 93, 62, 0.38);
+}
+.champion-list > li.first-place {
+  grid-column: 1 / -1;
+  border-color: rgba(224, 190, 101, 0.64);
+  background:
+    radial-gradient(
+      circle at 82% 15%,
+      rgba(204, 164, 74, 0.13),
+      transparent 34%
+    ),
+    linear-gradient(145deg, rgba(13, 25, 40, 0.98), rgba(6, 13, 23, 0.97));
+}
+.champion-list > li:hover,
+.champion-list > li.is-open {
+  border-color: rgba(224, 190, 101, 0.72);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.3);
+}
+.champion-list > li.is-open {
+  grid-column: 1 / -1;
+}
+.champion-list > li:hover {
+  transform: translateY(-2px);
+}
+.champion-summary {
+  width: 100%;
+  min-height: 12rem;
+  display: grid;
+  grid-template-columns: 4.25rem 5rem minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 1.25rem;
+  padding: 1.35rem 1.4rem;
+  color: inherit;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.first-place .champion-summary {
+  min-height: 10.5rem;
+  grid-template-columns: 5.5rem 6.5rem minmax(0, 1fr) 10rem;
+  padding: 1.6rem 1.8rem;
+}
+.rank {
+  align-self: center;
+  color: #9a8653;
+  font-size: 2.35rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.rank small {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: #6f7783;
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.piece-emblem {
+  position: relative;
+  display: grid;
+  place-items: center;
+  color: var(--realm-color);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 4.5rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 12px var(--realm-glow));
+}
+.piece-emblem::after {
+  position: absolute;
+  right: 8%;
+  bottom: 12%;
+  left: 8%;
+  height: 8px;
+  content: "";
+  border-radius: 50%;
+  background: var(--realm-color);
+  opacity: 0.13;
+  filter: blur(5px);
+  animation: champion-shadow 3.2s ease-in-out infinite;
+}
+.piece-emblem span {
+  display: block;
+  animation: champion-float 3.2s ease-in-out infinite;
+}
+.dark .piece-emblem span {
+  animation-delay: -1.1s;
+}
+.first-place .piece-emblem {
+  font-size: 5.7rem;
+}
+.champion-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.kingdom-mark {
+  color: var(--realm-color);
+  font-size: 0.7rem;
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+}
+.identity {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  margin-top: 0.55rem;
+}
+.identity strong {
+  color: #f1eadb;
+  font-size: clamp(1.35rem, 2.3vw, 1.8rem);
+  line-height: 1.1;
+}
+.identity small {
+  color: #c2a85f;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.battle-name {
+  overflow: hidden;
+  margin-top: 0.8rem;
+  color: #87919f;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.champion-tally {
+  min-width: 6.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  padding-left: 1.2rem;
+  border-left: 1px solid rgba(199, 164, 83, 0.18);
+}
+.kills {
+  text-align: right;
+}
+.kills strong {
+  display: block;
+  color: #efd47f;
+  font-size: 2.5rem;
+  line-height: 0.9;
+}
+.kills small {
+  display: block;
+  margin-top: 0.5rem;
+  color: #8f98a5;
+  font-size: 0.62rem;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+.fate {
+  margin-top: 0.9rem;
+  color: #75c4af;
+  font-size: 0.68rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+.fate.dead {
+  color: #cf705d;
+}
+.expand-cue {
+  width: 1.35rem;
+  height: 1.35rem;
+  display: grid;
+  place-items: center;
+  margin-top: 0.7rem;
+  color: #d8bd74;
+  border: 1px solid rgba(216, 189, 116, 0.38);
+  font-family: sans-serif;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+.champion-detail {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.4rem;
+  padding: 1.65rem 2rem 1.8rem;
+  border-top: 1px solid rgba(199, 164, 83, 0.24);
+  background: rgba(2, 8, 15, 0.46);
+}
+.first-place .champion-detail {
+  padding-left: 2rem;
+}
+.backstory {
+  max-width: 76ch;
+}
+.backstory > span {
+  color: #c2a85f;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.backstory p {
+  margin: 0.55rem 0 0;
+  color: #c1c6cc;
+  line-height: 1.65;
+}
+dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: start;
+  gap: 1rem;
+  margin: 0;
+}
+dl div {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid rgba(199, 164, 83, 0.2);
+  background: rgba(8, 18, 30, 0.72);
+}
+dt {
+  margin-bottom: 0.4rem;
+  color: #78c7bd;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+dd {
+  margin: 0;
+  color: #b9c0ca;
+}
+dd.dead {
+  color: #cf705d;
+}
+.replay-link {
+  grid-column: 1 / -1;
+  width: fit-content;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid rgba(232, 207, 142, 0.45);
+  letter-spacing: 0.07em;
+}
+.replay-link span {
+  display: inline-block;
+  margin-left: 0.35rem;
+  transition: transform 0.2s ease;
+}
+.replay-link:hover span {
+  transform: translateX(0.25rem);
+}
+.champions-state {
+  padding: 3rem;
+  text-align: center;
+  border: 1px solid #5d5033;
+  background: #08111e;
+}
+@keyframes champion-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(1deg);
+  }
+}
+@keyframes champion-shadow {
+  0%,
+  100% {
+    transform: scaleX(0.82);
+    opacity: 0.11;
+  }
+  50% {
+    transform: scaleX(1.08);
+    opacity: 0.2;
+  }
+}
+.error {
+  color: #e47d6f;
+}
+@media (max-width: 620px) {
+  .champions-page {
+    width: min(100% - 1rem, 1120px);
+    padding-top: 0.5rem;
+  }
+  .champion-filters {
+    flex-direction: column;
+  }
+  .champions-hero nav {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.45rem;
+    margin: -0.75rem -0.75rem 0;
+  }
+  .champions-hero nav a {
+    min-height: 3rem;
+    display: grid;
+    place-items: center;
+    padding: 0.55rem 0.35rem;
+    border: 1px solid rgba(199, 164, 83, 0.35);
+    background: rgba(5, 13, 23, 0.72);
+    font-size: 0.72rem;
+    line-height: 1.2;
+    letter-spacing: 0.05em;
+    text-align: center;
+  }
+  .tally-heading,
+  .ranking-heading {
+    align-items: start;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .battle-total {
+    text-align: left;
+  }
+  .outcome-key {
+    gap: 0.35rem;
+    font-size: 0.56rem;
+  }
+  .outcome-key strong {
+    display: block;
+  }
+  .realm-tallies {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+  }
+  .realm-tally {
+    padding: 1rem 0.8rem;
+  }
+  .realm-tally > strong {
+    font-size: 2.1rem;
+  }
+  .dark-realm {
+    text-align: right;
+  }
+  .war-average {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    min-width: 0;
+    padding: 0.8rem;
+  }
+  .war-average small {
+    margin-top: 0.4rem;
+  }
+  .champion-list {
+    grid-template-columns: 1fr;
+    gap: 0.7rem;
+  }
+  .champion-list > li.first-place {
+    grid-column: auto;
+  }
+  .champion-summary,
+  .first-place .champion-summary {
+    min-height: 8.5rem;
+    grid-template-columns: 2.7rem 3.2rem minmax(0, 1fr) 4.5rem;
+    gap: 0.7rem;
+    padding: 1rem 0.8rem;
+  }
+  .rank {
+    font-size: 1.65rem;
+  }
+  .rank small {
+    font-size: 0.52rem;
+  }
+  .piece-emblem,
+  .first-place .piece-emblem {
+    font-size: 3.1rem;
+  }
+  .identity {
+    display: block;
+  }
+  .identity strong {
+    display: block;
+    font-size: 1.25rem;
+  }
+  .identity small {
+    display: block;
+    margin-top: 0.35rem;
+  }
+  .battle-name {
+    font-size: 0.78rem;
+    white-space: normal;
+  }
+  .champion-tally {
+    min-width: 0;
+    padding-left: 0.65rem;
+  }
+  .kills strong {
+    font-size: 1.9rem;
+  }
+  .kills small {
+    font-size: 0.52rem;
+    text-align: right;
+  }
+  .champion-detail,
+  .first-place .champion-detail {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+    padding: 1.1rem 1rem 1.3rem;
+  }
+  dl {
+    grid-template-columns: 1fr;
+  }
+  dl div {
+    padding: 0.8rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .piece-emblem span,
+  .piece-emblem::after {
+    animation: none;
+  }
+  .champion-list > li {
+    transition: none;
+  }
+}

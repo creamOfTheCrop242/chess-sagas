@@ -128,4 +128,138 @@ describe('SagasService', () => {
       update: {},
     });
   });
+
+  it('ranks each character performance within its own public saga', async () => {
+    prisma.saga.findMany.mockResolvedValue([
+      {
+        ...sagaRow(),
+        game: {
+          ...sagaRow().game,
+          ledger: {
+            data: {
+              pieces: [
+                {
+                  id: 'w-p-a2',
+                  side: 'north',
+                  chessType: 'p',
+                  fantasyType: 'grunt',
+                  permanentName: 'Elara',
+                  viewpointName: 'Elara',
+                  viewpointRole: 'archer',
+                  alive: true,
+                  backstory: 'Elara guarded the frostward roads.',
+                },
+                {
+                  id: 'b-p-a7',
+                  side: 'south',
+                  chessType: 'p',
+                  fantasyType: 'grunt',
+                  permanentName: 'Merek',
+                  viewpointName: 'Merek',
+                  viewpointRole: 'spearman',
+                  alive: false,
+                  capturedAtPly: 3,
+                },
+              ],
+              events: [
+                {
+                  ply: 1,
+                  pieceId: 'w-p-a2',
+                  isCapture: true,
+                  capturedPieceId: 'b-p-a7',
+                },
+                {
+                  ply: 3,
+                  pieceId: 'w-p-a2',
+                  isCapture: true,
+                  capturedPieceId: 'b-p-a7',
+                },
+              ],
+            },
+          },
+        },
+        generationRun: {
+          ...sagaRow().generationRun,
+          narrativeAnalysis: {
+            data: { battlefieldEnvironment: { name: 'Frostward Road' } },
+          },
+        },
+      },
+    ]);
+    const service = new SagasService(prisma as never);
+
+    const result = await service.champions({ side: 'north', limit: '10' });
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        rank: 1,
+        id: 'saga-1:w-p-a2',
+        sagaId: 'saga-1',
+        name: 'Elara',
+        role: 'archer',
+        kills: 2,
+        battlefield: 'Frostward Road',
+      }),
+    ]);
+  });
+
+  it('summarizes kingdom results and captures once per public game', async () => {
+    const ledger = {
+      pieces: [
+        {
+          id: 'w-q-d1',
+          side: 'north',
+          fantasyType: 'queen',
+        },
+        {
+          id: 'b-r-a8',
+          side: 'south',
+          fantasyType: 'moving-fortress',
+        },
+      ],
+      events: [
+        {
+          ply: 1,
+          pieceId: 'w-q-d1',
+          isCapture: true,
+          capturedPieceId: 'b-r-a8',
+        },
+        {
+          ply: 2,
+          pieceId: 'b-r-a8',
+          isCapture: true,
+          capturedPieceId: 'w-q-d1',
+        },
+      ],
+    };
+    prisma.saga.findMany.mockResolvedValue([
+      {
+        gameId: 'game-1',
+        game: { result: '1-0', ledger: { data: ledger } },
+      },
+      {
+        gameId: 'game-1',
+        game: { result: '1-0', ledger: { data: ledger } },
+      },
+      {
+        gameId: 'game-2',
+        game: { result: '1/2-1/2', ledger: { data: ledger } },
+      },
+    ]);
+    const service = new SagasService(prisma as never);
+
+    await expect(service.championStats()).resolves.toEqual({
+      totalBattles: 2,
+      lightVictories: 1,
+      darkVictories: 0,
+      draws: 1,
+      unfinished: 0,
+      lightCaptures: 2,
+      darkCaptures: 2,
+      totalCaptures: 4,
+      averageCapturesPerBattle: 2,
+      lightMostLethalType: { fantasyType: 'queen', captures: 2 },
+      darkMostLethalType: { fantasyType: 'moving-fortress', captures: 2 },
+    });
+  });
 });

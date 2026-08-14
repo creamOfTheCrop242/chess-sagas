@@ -42,6 +42,20 @@ export class SagasController {
     return this.sagas.listSaved(user.id, parseSagaListQuery(query));
   }
 
+  @Get('champions')
+  champions(
+    @Query('side') side?: string,
+    @Query('type') type?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.sagas.champions({ side, type, limit });
+  }
+
+  @Get('champions/stats')
+  championStats() {
+    return this.sagas.championStats();
+  }
+
   @Post(':id/bookmark')
   async bookmark(@Param('id') id: string, @Req() request: Request) {
     const user = await this.requireUser(request, 'Sign in to save sagas');

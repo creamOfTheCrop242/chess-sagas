@@ -1,4 +1,4 @@
-export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v32';
+export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v33';
 
 export const STORY_VALIDATION_INSTRUCTIONS = `Validate the supplied story against the complete deterministic chess ledger, narrative analysis, outline, and deterministic findings.
 
@@ -14,6 +14,7 @@ Report:
 - dialogue with no plausible listener or immediate purpose; non sequitur replies; impossible knowledge; spoken lore exposition aimed at the reader; characters announcing visible action; repeated slogans, cryptic maxims, or interchangeable aphorisms; unnatural repeated names or titles in direct address; or multiple speakers whose lines do not form one causal exchange
 - dialogue whose cadence ignores context, such as leisurely speeches during immediate danger, uniformly ceremonial speech between familiar soldiers, or every dying character delivering a polished final line
 - dialogue that exists primarily to explain a character's abstract fear, motivation, theme, or identity conflict to the reader instead of using earned subtext; an intimate confession during an exposed crossing, charge, active spell, or incoming attack; or a reply that replaces engagement with generic advice, a maxim, or a philosophical slogan
+- excessive or unearned dialogue inserted to decorate routine movement, observation, travel, preparation, quiet beats, relationships, deaths, or lore; requiring every important character to speak; giving routine deaths polished final quotations; or using speech where action, sensory detail, memory, silence, or environmental tension would communicate the beat more naturally. Dialogue is justified only when spoken words uniquely issue an urgent order or warning, force a consequential decision, change or pay off a relationship, reveal conflict through subtext, mark Ascension, negotiate surrender, or carry an earned emotional disclosure
 - narration or dialogue that defaults to faux-medieval diction, ornamental or ceremonial cadence, compressed semicolon-heavy summary, vague abstraction, or explicit psychological labeling instead of clear contemporary English and observable behavior; allow heightened language only for an actual oath, ritual, judgment, coronation, formal surrender, or royal address
 - any captured character returning or survivor being killed
 - incorrect or missing promotions, checks, checkmate, winner, or ending

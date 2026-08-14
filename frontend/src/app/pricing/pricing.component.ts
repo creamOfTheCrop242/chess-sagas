@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import {
@@ -21,6 +21,7 @@ type Offer = {
   standalone: true,
   imports: [RouterLink],
   templateUrl: './pricing.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './pricing.component.css',
 })
 export class PricingComponent {

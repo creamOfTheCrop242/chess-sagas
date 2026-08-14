@@ -6,1048 +6,1000 @@ import { BillingClientService } from '../billing/billing.service';
 import { AuthService } from '../auth/auth.service';
 
 describe('PgnViewerComponent character inspection', () => {
-  let component: PgnViewerComponent;
+    let component: PgnViewerComponent;
 
-  beforeEach(() => {
-    component = new PgnViewerComponent({} as PgnApiService);
-    component.game = structuredClone(game);
-  });
-
-  it('does not reveal the PGN result in the saga title', () => {
-    component.game!.headers['Result'] = '0-1';
-
-    expect(component.gameTitle).toBe('Light Kingdom vs Dark Kingdom');
-    expect(component.gameTitle).not.toContain('0-1');
-  });
-
-  it('puts White at the top by default and flips on request', () => {
-    expect(component.boardOrientation).toBe('black');
-
-    component.flipBoard();
-
-    expect(component.boardOrientation).toBe('white');
-  });
-
-  it('opens and closes the battlefield description', () => {
-    component.battlefieldEnvironment = {
-      id: 'glasswind',
-      name: 'The Glasswind Expanse',
-      description: 'Mirrored dunes scatter hostile light across the field.',
-    };
-
-    component.openBattlefieldDescription();
-    expect(component.battlefieldDescriptionOpen).toBeTrue();
-
-    component.closeBattlefieldDescription();
-    expect(component.battlefieldDescriptionOpen).toBeFalse();
-  });
-
-  it('keeps a tapped piece pinned instead of letting stale hover override it', () => {
-    component.currentPly = 2;
-    component.inspectPieceAt('d5');
-    expect(component.hoveredPieceId).toBe('b-p-d7');
-
-    component.selectPieceAt('e4');
-
-    expect(component.hoveredPieceId).toBeNull();
-    expect(component.selectedPieceId).toBe('w-p-e2');
-    expect(component.inspectedPiece?.id).toBe('w-p-e2');
-
-    component.inspectPieceAt('d5');
-    expect(component.inspectedPiece?.id).toBe('w-p-e2');
-  });
-
-  it('keeps repeated taps open and lets the close action fully dismiss the card', () => {
-    component.currentPly = 1;
-
-    component.selectPieceAt('e4');
-    component.selectPieceAt('e4');
-    expect(component.selectedPieceId).toBe('w-p-e2');
-
-    component.hoveredPieceId = 'b-p-d7';
-    component.clearSelectedPiece();
-    expect(component.selectedPieceId).toBeNull();
-    expect(component.hoveredPieceId).toBeNull();
-    expect(component.inspectedPiece).toBeNull();
-  });
-
-  it('ignores the compatibility backdrop click from the tap that opened a piece', () => {
-    component.currentPly = 1;
-
-    component.selectPieceAt('e4');
-    component.dismissSelectedPieceFromBackdrop();
-
-    expect(component.selectedPieceId).toBe('w-p-e2');
-
-    (
-      component as unknown as { ignorePieceBackdropUntil: number }
-    ).ignorePieceBackdropUntil = 0;
-    component.dismissSelectedPieceFromBackdrop();
-    expect(component.selectedPieceId).toBeNull();
-  });
-
-  it('highlights only the acting piece on a move beat', () => {
-    expect(component.currentBeatSquare).toBeNull();
-
-    component.currentPly = 1;
-    expect(component.currentBeatSquare).toBe('e4');
-
-    component.epilogue = 'The surviving kingdoms counted the cost.';
-    component.currentPly = component.game!.positions.length + 1;
-    expect(component.currentBeatSquare).toBeNull();
-  });
-
-  it('tracks a stable pawn identity across moves and counts only past kills', () => {
-    component.currentPly = 1;
-    component.inspectPieceAt('e4');
-
-    expect(component.inspectedPiece?.permanentName).toBe('Mara');
-    expect(component.pieceRole(component.inspectedPiece!)).toBe('Field Medic');
-    expect(component.inspectedPieceKills).toBe(0);
-
-    component.currentPly = 3;
-    component.inspectPieceAt('d5');
-
-    expect(component.inspectedPiece?.id).toBe('w-p-e2');
-    expect(component.inspectedPieceKills).toBe(1);
-  });
-
-  it('does not expose a captured character on its former square', () => {
-    component.currentPly = 3;
-    component.inspectPieceAt('d5');
-    expect(component.inspectedPiece?.id).toBe('w-p-e2');
-
-    component.inspectPieceAt('d7');
-    expect(component.inspectedPiece).toBeNull();
-  });
-
-  it('reveals a lasting injury only when its infliction beat is reached', () => {
-    component.wounds = [
-      {
-        pieceId: 'w-p-e2',
-        inflictedAtPly: 3,
-        injury: 'Her left hand is severed.',
-        lastingEffects: ['She must work and fight one-handed.'],
-        recoveryPly: null,
-      },
-    ];
-    component.currentPly = 2;
-    component.inspectPieceAt('e4');
-
-    expect(component.inspectedPieceStatus.label).toBe('Unharmed');
-
-    component.currentPly = 3;
-    component.inspectPieceAt('d5');
-
-    expect(component.inspectedPieceStatus).toEqual({
-      label: 'Maimed',
-      detail: 'Her left hand is severed. · She must work and fight one-handed.',
-      tone: 'maimed',
+    beforeEach(() => {
+        component = new PgnViewerComponent({} as PgnApiService);
+        component.game = structuredClone(game);
     });
-  });
 
-  it('accumulates deterministic strain each time a king is checked', () => {
-    const southernKing = {
-      id: 'b-k-e8',
-      chessColor: 'b' as const,
-      side: 'south' as const,
-      originalSquare: 'e8',
-      chessType: 'k' as const,
-      currentChessType: 'k' as const,
-      fantasyType: 'king' as const,
-      permanentName: 'Southern King',
-      alive: true,
-    };
-    component.game!.ledger.pieces.push(southernKing);
-    component.game!.ledger.events.forEach((event) => {
-      event.isPromotion = false;
+    it('does not reveal the PGN result in the saga title', () => {
+        component.game!.headers['Result'] = '0-1';
+
+        expect(component.gameTitle).toBe('Light Kingdom vs Dark Kingdom');
+        expect(component.gameTitle).not.toContain('0-1');
     });
-    component.game!.ledger.events[0].isCheck = true;
-    component.game!.ledger.events[2].isCheck = true;
-    component.game!.ledger.events[3].isCheck = true;
 
-    component.currentPly = 1;
-    expect(component.pieceStatus(southernKing).label).toBe('Strained');
+    it('puts White at the top by default and flips on request', () => {
+        expect(component.boardOrientation).toBe('black');
 
-    component.currentPly = 4;
-    expect(component.pieceStatus(southernKing)).toEqual({
-      label: 'Wounded',
-      detail:
-        "3 magical assaults have damaged the King's wards and strained his connection to the Royal Seal.",
-      tone: 'wounded',
+        component.flipBoard();
+
+        expect(component.boardOrientation).toBe('white');
     });
-    component.selectedPieceId = southernKing.id;
-    expect(component.inspectedPieceWoundHistory).toHaveSize(3);
-    expect(component.inspectedPieceWoundHistory[0].inflictedAtPly).toBe(4);
-  });
 
-  it('damages the defending King when an enemy soldier promotes', () => {
-    const northernKing = {
-      id: 'w-k-e1',
-      chessColor: 'w' as const,
-      side: 'north' as const,
-      originalSquare: 'e1',
-      chessType: 'k' as const,
-      currentChessType: 'k' as const,
-      fantasyType: 'king' as const,
-      permanentName: 'Northern King',
-      alive: true,
-    };
-    component.game!.ledger.pieces.push(northernKing);
-    component.game!.ledger.events[2].isPromotion = true;
-    component.game!.ledger.events[2].side = 'south';
-    component.currentPly = 3;
+    it('opens and closes the battlefield description', () => {
+        component.battlefieldEnvironment = {
+            id: 'glasswind',
+            name: 'The Glasswind Expanse',
+            description: 'Mirrored dunes scatter hostile light across the field.',
+        };
 
-    expect(component.pieceStatus(northernKing)).toEqual({
-      label: 'Strained',
-      detail:
-        "1 magical assault has damaged the King's wards and strained his connection to the Royal Seal.",
-      tone: 'wounded',
+        component.openBattlefieldDescription();
+        expect(component.battlefieldDescriptionOpen).toBe(true);
+
+        component.closeBattlefieldDescription();
+        expect(component.battlefieldDescriptionOpen).toBe(false);
     });
-    component.selectedPieceId = northernKing.id;
-    expect(component.inspectedPieceWoundHistory[0]).toEqual(
-      jasmine.objectContaining({
-        inflictedAtPly: 3,
-        injury: 'An enemy commandeered an Ascension Seal linked to the King.',
-      }),
-    );
-  });
 
-  it('hides cross-character names and piece IDs in malformed wound status data', () => {
-    component.wounds = [
-      {
-        pieceId: 'w-p-e2',
-        inflictedAtPly: 3,
-        injury: "Nessa's spell burns Mara while w-b-c1 collapses.",
-        lastingEffects: [
-          'Her left hand remains partially numb.',
-          'Nessa watches the scar worsen.',
-        ],
-        recoveryPly: null,
-      },
-    ];
-    component.currentPly = 3;
-    component.inspectPieceAt('d5');
+    it('keeps a tapped piece pinned instead of letting stale hover override it', () => {
+        component.currentPly = 2;
+        component.inspectPieceAt('d5');
+        expect(component.hoveredPieceId).toBe('b-p-d7');
 
-    expect(component.inspectedPieceStatus.detail).toBe(
-      'Injured during the capture at beat 3. · Her left hand remains partially numb.',
-    );
-    expect(component.inspectedPieceStatus.detail).not.toContain('Nessa');
-    expect(component.inspectedPieceStatus.detail).not.toContain('w-b-c1');
-  });
+        component.selectPieceAt('e4');
 
-  it('shows a recovered wound as scarred and a captured character as dead', () => {
-    component.wounds = [
-      {
-        pieceId: 'w-p-e2',
-        inflictedAtPly: 3,
-        injury: 'Her ribs are broken.',
-        lastingEffects: ['Breathing remains painful.'],
-        recoveryPly: 4,
-      },
-    ];
-    component.currentPly = 4;
-    component.inspectPieceAt('d6');
+        expect(component.hoveredPieceId).toBeNull();
+        expect(component.selectedPieceId).toBe('w-p-e2');
+        expect(component.inspectedPiece?.id).toBe('w-p-e2');
 
-    expect(component.inspectedPieceStatus.label).toBe('Scarred');
-
-    component.hoveredPieceId = null;
-    component.selectedPieceId = 'b-p-d7';
-
-    expect(component.inspectedPieceStatus).toEqual({
-      label: 'Dead',
-      detail: 'Fell at beat 3.',
-      tone: 'dead',
+        component.inspectPieceAt('d5');
+        expect(component.inspectedPiece?.id).toBe('w-p-e2');
     });
-  });
 
-  it('marks the defeated King dead when the checkmate beat is reached', () => {
-    component.game!.headers['Result'] = '1-0';
-    component.game!.ledger.metadata['result'] = '1-0';
-    component.game!.ledger.metadata['termination'] = 'checkmate';
-    component.game!.ledger.pieces.push({
-      id: 'b-k-e8',
-      chessColor: 'b',
-      side: 'south',
-      originalSquare: 'e8',
-      chessType: 'k',
-      currentChessType: 'k',
-      fantasyType: 'king',
-      permanentName: 'Southern King',
-      alive: true,
+    it('keeps repeated taps open and lets the close action fully dismiss the card', () => {
+        component.currentPly = 1;
+
+        component.selectPieceAt('e4');
+        component.selectPieceAt('e4');
+        expect(component.selectedPieceId).toBe('w-p-e2');
+
+        component.hoveredPieceId = 'b-p-d7';
+        component.clearSelectedPiece();
+        expect(component.selectedPieceId).toBeNull();
+        expect(component.hoveredPieceId).toBeNull();
+        expect(component.inspectedPiece).toBeNull();
     });
-    component.game!.ledger.events[2].isCheckmate = true;
-    component.selectedPieceId = 'b-k-e8';
 
-    component.currentPly = 2;
-    expect(component.inspectedPieceStatus.label).toBe('Unharmed');
+    it('ignores the compatibility backdrop click from the tap that opened a piece', () => {
+        component.currentPly = 1;
 
-    component.currentPly = 3;
-    component.defeatedKingDeathDescription =
-      'The Queen’s spell shattered his heart as the Royal Seal collapsed.';
-    expect(component.inspectedPieceStatus).toEqual({
-      label: 'Dead',
-      detail:
-        'The Queen’s spell shattered his heart as the Royal Seal collapsed.',
-      tone: 'dead',
+        component.selectPieceAt('e4');
+        component.dismissSelectedPieceFromBackdrop();
+
+        expect(component.selectedPieceId).toBe('w-p-e2');
+
+        (component as unknown as {
+            ignorePieceBackdropUntil: number;
+        }).ignorePieceBackdropUntil = 0;
+        component.dismissSelectedPieceFromBackdrop();
+        expect(component.selectedPieceId).toBeNull();
     });
-  });
 
-  it('accumulates active wounds while retaining recovered scars', () => {
-    component.wounds = [
-      {
-        pieceId: 'w-p-e2',
-        inflictedAtPly: 1,
-        injury: 'Her shoulder is cut.',
-        lastingEffects: ['A pale scar crosses the joint.'],
-        recoveryPly: 3,
-      },
-      {
-        pieceId: 'w-p-e2',
-        inflictedAtPly: 3,
-        injury: 'Her ribs are broken.',
-        lastingEffects: ['Breathing remains painful.'],
-        recoveryPly: null,
-      },
-      {
-        pieceId: 'w-p-e2',
-        inflictedAtPly: 4,
-        injury: 'Her left hand is severed.',
-        lastingEffects: ['She must fight one-handed.'],
-        recoveryPly: null,
-      },
-    ];
-    component.currentPly = 4;
-    component.inspectPieceAt('d6');
+    it('highlights only the acting piece on a move beat', () => {
+        expect(component.currentBeatSquare).toBeNull();
 
-    expect(component.inspectedPieceStatus).toEqual({
-      label: 'Maimed',
-      detail: '2 active injuries · 1 healed scar',
-      tone: 'maimed',
+        component.currentPly = 1;
+        expect(component.currentBeatSquare).toBe('e4');
+
+        component.epilogue = 'The surviving kingdoms counted the cost.';
+        component.currentPly = component.game!.positions.length + 1;
+        expect(component.currentBeatSquare).toBeNull();
     });
-    expect(component.inspectedPieceWoundHistory).toEqual([
-      jasmine.objectContaining({
-        inflictedAtPly: 4,
-        state: 'active',
-      }),
-      jasmine.objectContaining({
-        inflictedAtPly: 3,
-        state: 'active',
-      }),
-      jasmine.objectContaining({
-        inflictedAtPly: 1,
-        state: 'recovered',
-        recoveryPly: 3,
-      }),
-    ]);
-  });
 
-  it('shows the defeated realm’s surviving Fortress entombment threat', () => {
-    component.game!.ledger.metadata['result'] = '0-1';
-    component.game!.ledger.metadata['termination'] = 'checkmate';
-    component.epilogue = 'The Light Kingdom’s stored magic began to fade.';
-    component.currentPly = component.game!.positions.length + 1;
-    component.selectedPieceId = 'w-p-e2';
+    it('tracks a stable pawn identity across moves and counts only past kills', () => {
+        component.currentPly = 1;
+        component.inspectPieceAt('e4');
 
-    expect(component.inspectedPieceStatus.label).toBe('Entombment Threat');
-    expect(component.inspectedPieceStatus.tone).toBe('entombed');
-  });
+        expect(component.inspectedPiece?.permanentName).toBe('Mara');
+        expect(component.pieceRole(component.inspectedPiece!)).toBe('Field Medic');
+        expect(component.inspectedPieceKills).toBe(0);
 
-  it('does not reveal a pawn promotion before its promotion ply', () => {
-    component.currentPly = 3;
-    component.inspectPieceAt('d5');
+        component.currentPly = 3;
+        component.inspectPieceAt('d5');
 
-    expect(component.pieceRole(component.inspectedPiece!)).toBe('Field Medic');
-    expect(component.pieceDescription(component.inspectedPiece!)).not.toContain(
-      'transformed',
-    );
-
-    component.currentPly = 4;
-    component.inspectPieceAt('d6');
-
-    expect(component.pieceRole(component.inspectedPiece!)).toBe(
-      'Ascended Moving Fortress',
-    );
-    expect(component.pieceDescription(component.inspectedPiece!)).toContain(
-      'transformed',
-    );
-  });
-
-  it('lists fallen pieces with their killers without revealing future losses', () => {
-    component.currentPly = 2;
-
-    expect(component.darkKingdomFallen).toEqual([]);
-
-    component.currentPly = 3;
-
-    expect(component.darkKingdomFallen).toEqual([
-      {
-        victim: jasmine.objectContaining({
-          id: 'b-p-d7',
-          permanentName: 'Nessa',
-        }),
-        killer: jasmine.objectContaining({
-          id: 'w-p-e2',
-          permanentName: 'Mara',
-        }),
-        ply: 3,
-      },
-    ]);
-    expect(component.lightKingdomFallen).toEqual([]);
-  });
-
-  it('opens and closes the Hall of the Fallen', () => {
-    component.toggleFallenRoster();
-    expect(component.fallenRosterOpen).toBeTrue();
-
-    component.closeFallenRoster();
-    expect(component.fallenRosterOpen).toBeFalse();
-  });
-
-  it('lists every character in the Book of Heroes with current health', () => {
-    component.currentPly = 2;
-
-    expect(component.lightKingdomRoster).toHaveSize(1);
-    expect(component.darkKingdomRoster).toHaveSize(1);
-    expect(component.pieceStatus(component.darkKingdomRoster[0]).label).toBe(
-      'Unharmed',
-    );
-
-    component.currentPly = 3;
-
-    expect(component.pieceStatus(component.darkKingdomRoster[0]).label).toBe(
-      'Dead',
-    );
-  });
-
-  it('orders the Book of Heroes by piece hierarchy', () => {
-    component.game!.ledger.pieces.push(
-      {
-        ...structuredClone(component.game!.ledger.pieces[0]),
-        id: 'w-k-e1',
-        originalSquare: 'e1',
-        chessType: 'k',
-        currentChessType: 'k',
-        fantasyType: 'king',
-        permanentName: 'Northern King',
-        characterName: 'Ormund',
-      },
-      {
-        ...structuredClone(component.game!.ledger.pieces[0]),
-        id: 'w-q-d1',
-        originalSquare: 'd1',
-        chessType: 'q',
-        currentChessType: 'q',
-        fantasyType: 'queen',
-        permanentName: 'Northern Queen',
-        characterName: 'Seraphine',
-      },
-      {
-        ...structuredClone(component.game!.ledger.pieces[0]),
-        id: 'w-p-a2',
-        originalSquare: 'a2',
-        chessType: 'p',
-        currentChessType: 'p',
-        fantasyType: 'grunt',
-        permanentName: 'Falk',
-        viewpointName: 'Falk',
-      },
-    );
-
-    expect(component.lightKingdomRoster.map((piece) => piece.fantasyType)).toEqual([
-      'king',
-      'queen',
-      'moving-fortress',
-      'grunt',
-    ]);
-  });
-
-  it('keeps an ascended Queen Candidate with the pawn companies', () => {
-    component.game!.ledger.pieces.push(
-      {
-        ...structuredClone(component.game!.ledger.pieces[0]),
-        id: 'w-q-d1',
-        originalSquare: 'd1',
-        chessType: 'q',
-        currentChessType: 'q',
-        fantasyType: 'queen',
-        permanentName: 'Northern Queen',
-        characterName: 'Seraphine',
-      },
-      {
-        ...structuredClone(component.game!.ledger.pieces[0]),
-        id: 'w-p-a7',
-        originalSquare: 'a7',
-        chessType: 'p',
-        currentChessType: 'q',
-        fantasyType: 'queen',
-        permanentName: 'Elowen',
-        viewpointName: 'Elowen',
-        viewpointRole: 'queen candidate',
-        promotedFromPawnId: 'w-p-a7',
-      },
-      {
-        ...structuredClone(component.game!.ledger.pieces[0]),
-        id: 'w-p-b2',
-        originalSquare: 'b2',
-        chessType: 'p',
-        currentChessType: 'p',
-        fantasyType: 'grunt',
-        permanentName: 'Falk',
-        viewpointName: 'Falk',
-      },
-    );
-
-    const roster = component.lightKingdomRoster;
-    expect(roster.findIndex((piece) => piece.id === 'w-q-d1')).toBeLessThan(
-      roster.findIndex((piece) => piece.id === 'w-p-a7'),
-    );
-    expect(Math.abs(
-      roster.findIndex((piece) => piece.id === 'w-p-a7') -
-        roster.findIndex((piece) => piece.id === 'w-p-b2'),
-    )).toBe(1);
-  });
-
-  it('uses a character backstory in the board inspector and roster', () => {
-    const piece = component.game!.ledger.pieces[0];
-    piece.backstory = 'Mara enlisted after defending her village ward.';
-
-    expect(component.pieceDescription(piece)).toBe(piece.backstory);
-    component.toggleRosterPiece(piece);
-    expect(component.rosterPieceId).toBe(piece.id);
-    component.toggleRosterPiece(piece);
-    expect(component.rosterPieceId).toBeNull();
-  });
-
-  it('reveals a fallen character fate only after the death beat', () => {
-    const victim = component.darkKingdomRoster[0];
-    component.scenes = [
-      {
-        id: 'scene-3',
-        actNumber: 1,
-        sceneNumber: 3,
-        startPly: 3,
-        endPly: 3,
-        involvedMoves: ['exd5'],
-        fantasyNarration:
-          'Mara broke through the shield wall, and Nessa fell defending her company standard.',
-        chessExplanation: 'The white pawn captures the black pawn.',
-        characters: ['w-p-e2', 'b-p-d7'],
-        locations: [],
-        deaths: ['b-p-d7'],
-        captureActorId: 'w-p-e2',
-        captureVictimId: 'b-p-d7',
-        promotions: [],
-        visualPrompt: '',
-        videoPrompt: '',
-        estimatedDurationSeconds: 8,
-        continuityNotes: [],
-      },
-    ];
-    component.currentPly = 2;
-    expect(component.pieceFate(victim)).toBeNull();
-
-    component.currentPly = 3;
-    expect(component.pieceFate(victim)).toEqual({
-      killerName: 'Mara',
-      beat: 3,
-      account:
-        'Mara broke through the shield wall, and Nessa fell defending her company standard.',
-      finalCondition: null,
+        expect(component.inspectedPiece?.id).toBe('w-p-e2');
+        expect(component.inspectedPieceKills).toBe(1);
     });
-  });
 
-  it('presents the epilogue as a final playback page', () => {
-    component.epilogue =
-      'The surviving kingdoms counted the cost. The banners lowered. The healers crossed the field. Dawn found them still working. No herald named it peace.';
-    component.laterEpilogueHeading = 'Nine Winters Later';
-    component.laterEpilogue =
-      'A traveler crossed the nameless field. Beneath the mud, a dying ward answered his lantern.';
-    component.currentPly = game.positions.length;
+    it('does not expose a captured character on its former square', () => {
+        component.currentPly = 3;
+        component.inspectPieceAt('d5');
+        expect(component.inspectedPiece?.id).toBe('w-p-e2');
 
-    expect(component.canGoForward).toBeTrue();
-
-    component.forward();
-
-    expect(component.isAftermathPage).toBeTrue();
-    expect(component.isEpiloguePage).toBeTrue();
-    expect(component.currentMoveLabel).toBe('Immediate Aftermath');
-    expect(component.currentStory).toBe(component.epilogue);
-    expect(component.epilogueParagraphs).toEqual([
-      'The surviving kingdoms counted the cost. The banners lowered.',
-      'The healers crossed the field. Dawn found them still working.',
-      'No herald named it peace.',
-    ]);
-    expect(component.laterEpilogueParagraphs).toEqual([
-      'A traveler crossed the nameless field. Beneath the mud, a dying ward answered his lantern.',
-    ]);
-    expect(component.currentFen).toBe(game.ledger.finalFen);
-    expect(component.canGoForward).toBeTrue();
-
-    component.forward();
-
-    expect(component.isAftermathPage).toBeFalse();
-    expect(component.isLaterChroniclePage).toBeTrue();
-    expect(component.currentMoveLabel).toBe('Later Chronicles');
-    expect(component.currentStory).toBe(component.laterEpilogue);
-    expect(component.canGoForward).toBeFalse();
-
-    component.back();
-
-    expect(component.isAftermathPage).toBeTrue();
-    expect(component.isLaterChroniclePage).toBeFalse();
-
-    component.back();
-
-    expect(component.currentPly).toBe(game.positions.length);
-    expect(component.isEpiloguePage).toBeFalse();
-  });
-
-  it('lists every saga page and jumps directly to the selected page', () => {
-    component.epilogue = 'The armies counted the cost.';
-    component.laterEpilogue = 'Years later, the battlefield was remembered.';
-
-    expect(component.sagaPageOptions).toEqual([
-      { ply: 0, label: 'Start position' },
-      { ply: 1, label: 'Beat 1 · 1. e4' },
-      { ply: 2, label: 'Beat 2 · 1... d5' },
-      { ply: 3, label: 'Beat 3 · 2. exd5' },
-      { ply: 4, label: 'Immediate Aftermath' },
-      { ply: 5, label: 'Later Chronicles' },
-    ]);
-
-    component.selectedPieceId = 'w-p-e2';
-    component.selectSagaPage(4);
-
-    expect(component.isAftermathPage).toBeTrue();
-    expect(component.selectedPieceId).toBeNull();
-  });
-
-  it('uses saved identities instead of transient parse identities', () => {
-    const parsed = structuredClone(game);
-    parsed.ledger.pieces[0].permanentName = 'Transient Mara';
-    const savedLedger = structuredClone(game.ledger);
-    savedLedger.pieces[0].permanentName = 'Saved Mara';
-    const api = {
-      parse: () => of(parsed),
-      createGame: () => of({ id: 'saved-game', ledger: { data: savedLedger } }),
-    } as unknown as PgnApiService;
-    const submitted = new PgnViewerComponent(api);
-    submitted.pgnText = '1. e4 d5 2. exd5';
-
-    submitted.submit();
-
-    expect(submitted.gameId).toBe('saved-game');
-    expect(submitted.game?.ledger.pieces[0].permanentName).toBe('Saved Mara');
-  });
-
-  it('stops a zero-credit user at Begin the Saga for a new PGN', () => {
-    const api = {
-      parse: () => of(structuredClone(game)),
-      createGame: () =>
-        of({ id: 'new-game', ledger: { data: structuredClone(game.ledger) } }),
-      getGenerationStatus: () =>
-        of({
-          state: 'idle',
-          currentStage: 'analysis',
-          error: null,
-          stages: {
-            analysis: false,
-            outline: false,
-            story: false,
-            validation: false,
-            scenes: false,
-          },
-        }),
-    } as unknown as PgnApiService;
-    const billing = {
-      status: () => ({
-        configured: true,
-        enforcementEnabled: true,
-        unlimited: false,
-        balance: 0,
-        reserved: 0,
-        available: 0,
-        subscription: null,
-      }),
-    } as unknown as BillingClientService;
-    const viewer = new PgnViewerComponent(api, undefined, billing);
-    viewer.pgnText = '1. e4 e5';
-
-    viewer.submit();
-
-    expect(viewer.game).toBeNull();
-    expect(viewer.billingFailure).toBe('credits');
-    expect(viewer.loading).toBeFalse();
-  });
-
-  it('stops a signed-out user at Begin the Saga for a new PGN', () => {
-    const api = {
-      parse: () => of(structuredClone(game)),
-      createGame: () =>
-        of({
-          id: 'anonymous-game',
-          ledger: { data: structuredClone(game.ledger) },
-        }),
-      getGenerationStatus: () =>
-        of({
-          state: 'idle',
-          currentStage: 'analysis',
-          error: null,
-          stages: {
-            analysis: false,
-            outline: false,
-            story: false,
-            validation: false,
-            scenes: false,
-          },
-        }),
-    } as unknown as PgnApiService;
-    const auth = {
-      user: () => null,
-    } as unknown as AuthService;
-    const viewer = new PgnViewerComponent(api, undefined, undefined, auth);
-    viewer.pgnText = '1. e4 e5';
-
-    viewer.submit();
-
-    expect(viewer.game).toBeNull();
-    expect(viewer.billingFailure).toBe('signin');
-    expect(viewer.loading).toBeFalse();
-  });
-
-  it('lets a zero-credit user open a completed reusable saga', () => {
-    const api = {
-      parse: () => of(structuredClone(game)),
-      createGame: () =>
-        of({
-          id: 'reusable-game',
-          ledger: { data: structuredClone(game.ledger) },
-        }),
-      getGenerationStatus: () =>
-        of({
-          state: 'completed',
-          currentStage: 'scenes',
-          error: null,
-          stages: {
-            analysis: true,
-            outline: true,
-            story: true,
-            validation: true,
-            scenes: true,
-          },
-        }),
-    } as unknown as PgnApiService;
-    const billing = {
-      status: () => ({
-        configured: true,
-        enforcementEnabled: true,
-        unlimited: false,
-        balance: 0,
-        reserved: 0,
-        available: 0,
-        subscription: null,
-      }),
-    } as unknown as BillingClientService;
-    const viewer = new PgnViewerComponent(api, undefined, billing);
-    viewer.pgnText = '1. e4 e5';
-
-    viewer.submit();
-
-    expect(viewer.gameId).toBe('reusable-game');
-    expect(viewer.billingFailure).toBeNull();
-  });
-
-  it('refreshes the displayed credit balance when saga generation completes', () => {
-    const api = {
-      generateSaga: () =>
-        of({
-          sceneBreakdown: {
-            data: { scenes: [] },
-          },
-        }),
-    } as unknown as PgnApiService;
-    const billing = {
-      refresh: jasmine.createSpy('refresh'),
-    } as unknown as BillingClientService;
-    const viewer = new PgnViewerComponent(api, undefined, billing);
-    viewer.gameId = 'generated-game';
-
-    viewer.generateSaga();
-
-    expect(billing.refresh).toHaveBeenCalledTimes(1);
-  });
-
-  it('clears the PGN and does not restore generation after a page refresh', () => {
-    spyOn(performance, 'getEntriesByType').and.returnValue([
-      { type: 'reload' } as unknown as PerformanceNavigationTiming,
-    ]);
-    const api = {
-      forgetRecentGeneration: jasmine.createSpy('forgetRecentGeneration'),
-      recentGenerationGameId: jasmine.createSpy('recentGenerationGameId'),
-    } as unknown as PgnApiService;
-    const viewer = new PgnViewerComponent(api);
-    viewer.pgnText = 'stale PGN';
-
-    viewer.ngOnInit();
-
-    expect(viewer.pgnText).toBe('');
-    expect(api.forgetRecentGeneration).toHaveBeenCalledTimes(1);
-    expect(api.recentGenerationGameId).not.toHaveBeenCalled();
-  });
-
-  it('uses the archived saved ledger when replaying a Hall record', () => {
-    const parsed = structuredClone(game);
-    parsed.ledger.pieces[0].permanentName = 'Transient Mara';
-    const savedLedger = structuredClone(game.ledger);
-    savedLedger.pieces[0].permanentName = 'Archived Mara';
-    const api = {
-      getRecord: () =>
-        of({
-          id: 'record-1',
-          rawPgn: '1. e4 d5 2. exd5',
-          whitePlayer: 'Ada',
-          blackPlayer: 'Turing',
-          result: '1-0',
-          createdAt: '2026-08-01',
-          completedAt: '2026-08-01',
-          ledger: { data: savedLedger },
-          sceneBreakdown: { data: { scenes: [] } },
-        }),
-      parse: () => of(parsed),
-    } as unknown as PgnApiService;
-    const route = {
-      snapshot: { paramMap: { get: () => 'record-1' } },
-    } as never;
-    const replay = new PgnViewerComponent(api, route);
-
-    replay.ngOnInit();
-
-    expect(replay.recordReplay).toBeTrue();
-    expect(replay.game?.ledger.pieces[0].permanentName).toBe('Archived Mara');
-  });
-
-  it('restores the last viewed move when an archived saga is reopened', () => {
-    const bookmarkKey = 'chess-sagas:reading-bookmark:v1:record-bookmark';
-    localStorage.setItem(bookmarkKey, JSON.stringify({ page: 'move', ply: 2 }));
-    const api = {
-      getRecord: () =>
-        of({
-          id: 'record-bookmark',
-          rawPgn: '1. e4 d5 2. exd5',
-          whitePlayer: 'Ada',
-          blackPlayer: 'Turing',
-          result: '1-0',
-          createdAt: '2026-08-01',
-          completedAt: '2026-08-01',
-          ledger: { data: structuredClone(game.ledger) },
-          sceneBreakdown: { data: { scenes: [] } },
-        }),
-      parse: () => of(structuredClone(game)),
-    } as unknown as PgnApiService;
-    const route = {
-      snapshot: { paramMap: { get: () => 'record-bookmark' } },
-    } as never;
-
-    const replay = new PgnViewerComponent(api, route);
-    replay.ngOnInit();
-
-    expect(replay.currentPly).toBe(2);
-    localStorage.removeItem(bookmarkKey);
-  });
-
-  it('saves reading progress whenever playback advances', () => {
-    const bookmarkKey = 'chess-sagas:reading-bookmark:v1:saved-bookmark';
-    localStorage.removeItem(bookmarkKey);
-    const api = {
-      parse: () => of(structuredClone(game)),
-      createGame: () =>
-        of({
-          id: 'saved-bookmark',
-          ledger: { data: structuredClone(game.ledger) },
-        }),
-    } as unknown as PgnApiService;
-    const viewer = new PgnViewerComponent(api);
-    viewer.pgnText = '1. e4 d5 2. exd5';
-    viewer.submit();
-
-    viewer.forward();
-
-    expect(JSON.parse(localStorage.getItem(bookmarkKey) ?? '{}')).toEqual({
-      page: 'move',
-      ply: 1,
+        component.inspectPieceAt('d7');
+        expect(component.inspectedPiece).toBeNull();
     });
-    localStorage.removeItem(bookmarkKey);
-  });
 
-  it('restores an epilogue bookmark by page instead of a fragile ply number', () => {
-    const bookmarkKey = 'chess-sagas:reading-bookmark:v1:record-epilogue';
-    localStorage.setItem(bookmarkKey, JSON.stringify({ page: 'aftermath' }));
-    const api = {
-      getRecord: () =>
-        of({
-          id: 'record-epilogue',
-          rawPgn: '1. e4 d5 2. exd5',
-          whitePlayer: 'Ada',
-          blackPlayer: 'Turing',
-          result: '1-0',
-          createdAt: '2026-08-01',
-          completedAt: '2026-08-01',
-          ledger: { data: structuredClone(game.ledger) },
-          sceneBreakdown: {
-            data: {
-              scenes: [],
-              epilogue: 'The surviving armies counted the cost.',
+    it('reveals a lasting injury only when its infliction beat is reached', () => {
+        component.wounds = [
+            {
+                pieceId: 'w-p-e2',
+                inflictedAtPly: 3,
+                injury: 'Her left hand is severed.',
+                lastingEffects: ['She must work and fight one-handed.'],
+                recoveryPly: null,
             },
-          },
-        }),
-      parse: () => of(structuredClone(game)),
-    } as unknown as PgnApiService;
-    const route = {
-      snapshot: { paramMap: { get: () => 'record-epilogue' } },
-    } as never;
+        ];
+        component.currentPly = 2;
+        component.inspectPieceAt('e4');
 
-    const replay = new PgnViewerComponent(api, route);
-    replay.ngOnInit();
+        expect(component.inspectedPieceStatus.label).toBe('Unharmed');
 
-    expect(replay.isAftermathPage).toBeTrue();
-    expect(replay.currentMoveLabel).toBe('Immediate Aftermath');
-    localStorage.removeItem(bookmarkKey);
-  });
+        component.currentPly = 3;
+        component.inspectPieceAt('d5');
+
+        expect(component.inspectedPieceStatus).toEqual({
+            label: 'Maimed',
+            detail: 'Her left hand is severed. · She must work and fight one-handed.',
+            tone: 'maimed',
+        });
+    });
+
+    it('accumulates deterministic strain each time a king is checked', () => {
+        const southernKing = {
+            id: 'b-k-e8',
+            chessColor: 'b' as const,
+            side: 'south' as const,
+            originalSquare: 'e8',
+            chessType: 'k' as const,
+            currentChessType: 'k' as const,
+            fantasyType: 'king' as const,
+            permanentName: 'Southern King',
+            alive: true,
+        };
+        component.game!.ledger.pieces.push(southernKing);
+        component.game!.ledger.events.forEach((event) => {
+            event.isPromotion = false;
+        });
+        component.game!.ledger.events[0].isCheck = true;
+        component.game!.ledger.events[2].isCheck = true;
+        component.game!.ledger.events[3].isCheck = true;
+
+        component.currentPly = 1;
+        expect(component.pieceStatus(southernKing).label).toBe('Strained');
+
+        component.currentPly = 4;
+        expect(component.pieceStatus(southernKing)).toEqual({
+            label: 'Wounded',
+            detail: "3 magical assaults have damaged the King's wards and strained his connection to the Royal Seal.",
+            tone: 'wounded',
+        });
+        component.selectedPieceId = southernKing.id;
+        expect(component.inspectedPieceWoundHistory).toHaveLength(3);
+        expect(component.inspectedPieceWoundHistory[0].inflictedAtPly).toBe(4);
+    });
+
+    it('damages the defending King when an enemy soldier promotes', () => {
+        const northernKing = {
+            id: 'w-k-e1',
+            chessColor: 'w' as const,
+            side: 'north' as const,
+            originalSquare: 'e1',
+            chessType: 'k' as const,
+            currentChessType: 'k' as const,
+            fantasyType: 'king' as const,
+            permanentName: 'Northern King',
+            alive: true,
+        };
+        component.game!.ledger.pieces.push(northernKing);
+        component.game!.ledger.events[2].isPromotion = true;
+        component.game!.ledger.events[2].side = 'south';
+        component.currentPly = 3;
+
+        expect(component.pieceStatus(northernKing)).toEqual({
+            label: 'Strained',
+            detail: "1 magical assault has damaged the King's wards and strained his connection to the Royal Seal.",
+            tone: 'wounded',
+        });
+        component.selectedPieceId = northernKing.id;
+        expect(component.inspectedPieceWoundHistory[0]).toEqual(expect.objectContaining({
+            inflictedAtPly: 3,
+            injury: 'An enemy commandeered an Ascension Seal linked to the King.',
+        }));
+    });
+
+    it('hides cross-character names and piece IDs in malformed wound status data', () => {
+        component.wounds = [
+            {
+                pieceId: 'w-p-e2',
+                inflictedAtPly: 3,
+                injury: "Nessa's spell burns Mara while w-b-c1 collapses.",
+                lastingEffects: [
+                    'Her left hand remains partially numb.',
+                    'Nessa watches the scar worsen.',
+                ],
+                recoveryPly: null,
+            },
+        ];
+        component.currentPly = 3;
+        component.inspectPieceAt('d5');
+
+        expect(component.inspectedPieceStatus.detail).toBe('Injured during the capture at beat 3. · Her left hand remains partially numb.');
+        expect(component.inspectedPieceStatus.detail).not.toContain('Nessa');
+        expect(component.inspectedPieceStatus.detail).not.toContain('w-b-c1');
+    });
+
+    it('shows a recovered wound as scarred and a captured character as dead', () => {
+        component.wounds = [
+            {
+                pieceId: 'w-p-e2',
+                inflictedAtPly: 3,
+                injury: 'Her ribs are broken.',
+                lastingEffects: ['Breathing remains painful.'],
+                recoveryPly: 4,
+            },
+        ];
+        component.currentPly = 4;
+        component.inspectPieceAt('d6');
+
+        expect(component.inspectedPieceStatus.label).toBe('Scarred');
+
+        component.hoveredPieceId = null;
+        component.selectedPieceId = 'b-p-d7';
+
+        expect(component.inspectedPieceStatus).toEqual({
+            label: 'Dead',
+            detail: 'Fell at beat 3.',
+            tone: 'dead',
+        });
+    });
+
+    it('marks the defeated King dead when the checkmate beat is reached', () => {
+        component.game!.headers['Result'] = '1-0';
+        component.game!.ledger.metadata['result'] = '1-0';
+        component.game!.ledger.metadata['termination'] = 'checkmate';
+        component.game!.ledger.pieces.push({
+            id: 'b-k-e8',
+            chessColor: 'b',
+            side: 'south',
+            originalSquare: 'e8',
+            chessType: 'k',
+            currentChessType: 'k',
+            fantasyType: 'king',
+            permanentName: 'Southern King',
+            alive: true,
+        });
+        component.game!.ledger.events[2].isCheckmate = true;
+        component.selectedPieceId = 'b-k-e8';
+
+        component.currentPly = 2;
+        expect(component.inspectedPieceStatus.label).toBe('Unharmed');
+
+        component.currentPly = 3;
+        component.defeatedKingDeathDescription =
+            'The Queen’s spell shattered his heart as the Royal Seal collapsed.';
+        expect(component.inspectedPieceStatus).toEqual({
+            label: 'Dead',
+            detail: 'The Queen’s spell shattered his heart as the Royal Seal collapsed.',
+            tone: 'dead',
+        });
+    });
+
+    it('accumulates active wounds while retaining recovered scars', () => {
+        component.wounds = [
+            {
+                pieceId: 'w-p-e2',
+                inflictedAtPly: 1,
+                injury: 'Her shoulder is cut.',
+                lastingEffects: ['A pale scar crosses the joint.'],
+                recoveryPly: 3,
+            },
+            {
+                pieceId: 'w-p-e2',
+                inflictedAtPly: 3,
+                injury: 'Her ribs are broken.',
+                lastingEffects: ['Breathing remains painful.'],
+                recoveryPly: null,
+            },
+            {
+                pieceId: 'w-p-e2',
+                inflictedAtPly: 4,
+                injury: 'Her left hand is severed.',
+                lastingEffects: ['She must fight one-handed.'],
+                recoveryPly: null,
+            },
+        ];
+        component.currentPly = 4;
+        component.inspectPieceAt('d6');
+
+        expect(component.inspectedPieceStatus).toEqual({
+            label: 'Maimed',
+            detail: '2 active injuries · 1 healed scar',
+            tone: 'maimed',
+        });
+        expect(component.inspectedPieceWoundHistory).toEqual([
+            expect.objectContaining({
+                inflictedAtPly: 4,
+                state: 'active',
+            }),
+            expect.objectContaining({
+                inflictedAtPly: 3,
+                state: 'active',
+            }),
+            expect.objectContaining({
+                inflictedAtPly: 1,
+                state: 'recovered',
+                recoveryPly: 3,
+            }),
+        ]);
+    });
+
+    it('shows the defeated realm’s surviving Fortress entombment threat', () => {
+        component.game!.ledger.metadata['result'] = '0-1';
+        component.game!.ledger.metadata['termination'] = 'checkmate';
+        component.epilogue = 'The Light Kingdom’s stored magic began to fade.';
+        component.currentPly = component.game!.positions.length + 1;
+        component.selectedPieceId = 'w-p-e2';
+
+        expect(component.inspectedPieceStatus.label).toBe('Entombment Threat');
+        expect(component.inspectedPieceStatus.tone).toBe('entombed');
+    });
+
+    it('does not reveal a pawn promotion before its promotion ply', () => {
+        component.currentPly = 3;
+        component.inspectPieceAt('d5');
+
+        expect(component.pieceRole(component.inspectedPiece!)).toBe('Field Medic');
+        expect(component.pieceDescription(component.inspectedPiece!)).not.toContain('transformed');
+
+        component.currentPly = 4;
+        component.inspectPieceAt('d6');
+
+        expect(component.pieceRole(component.inspectedPiece!)).toBe('Ascended Moving Fortress');
+        expect(component.pieceDescription(component.inspectedPiece!)).toContain('transformed');
+    });
+
+    it('lists fallen pieces with their killers without revealing future losses', () => {
+        component.currentPly = 2;
+
+        expect(component.darkKingdomFallen).toEqual([]);
+
+        component.currentPly = 3;
+
+        expect(component.darkKingdomFallen).toEqual([
+            {
+                victim: expect.objectContaining({
+                    id: 'b-p-d7',
+                    permanentName: 'Nessa',
+                }),
+                killer: expect.objectContaining({
+                    id: 'w-p-e2',
+                    permanentName: 'Mara',
+                }),
+                ply: 3,
+            },
+        ]);
+        expect(component.lightKingdomFallen).toEqual([]);
+    });
+
+    it('opens and closes the Hall of the Fallen', () => {
+        component.toggleFallenRoster();
+        expect(component.fallenRosterOpen).toBe(true);
+
+        component.closeFallenRoster();
+        expect(component.fallenRosterOpen).toBe(false);
+    });
+
+    it('lists every character in the Book of Heroes with current health', () => {
+        component.currentPly = 2;
+
+        expect(component.lightKingdomRoster).toHaveLength(1);
+        expect(component.darkKingdomRoster).toHaveLength(1);
+        expect(component.pieceStatus(component.darkKingdomRoster[0]).label).toBe('Unharmed');
+
+        component.currentPly = 3;
+
+        expect(component.pieceStatus(component.darkKingdomRoster[0]).label).toBe('Dead');
+    });
+
+    it('orders the Book of Heroes by piece hierarchy', () => {
+        component.game!.ledger.pieces.push({
+            ...structuredClone(component.game!.ledger.pieces[0]),
+            id: 'w-k-e1',
+            originalSquare: 'e1',
+            chessType: 'k',
+            currentChessType: 'k',
+            fantasyType: 'king',
+            permanentName: 'Northern King',
+            characterName: 'Ormund',
+        }, {
+            ...structuredClone(component.game!.ledger.pieces[0]),
+            id: 'w-q-d1',
+            originalSquare: 'd1',
+            chessType: 'q',
+            currentChessType: 'q',
+            fantasyType: 'queen',
+            permanentName: 'Northern Queen',
+            characterName: 'Seraphine',
+        }, {
+            ...structuredClone(component.game!.ledger.pieces[0]),
+            id: 'w-p-a2',
+            originalSquare: 'a2',
+            chessType: 'p',
+            currentChessType: 'p',
+            fantasyType: 'grunt',
+            permanentName: 'Falk',
+            viewpointName: 'Falk',
+        });
+
+        expect(component.lightKingdomRoster.map((piece) => piece.fantasyType)).toEqual([
+            'king',
+            'queen',
+            'grunt',
+            'moving-fortress',
+        ]);
+    });
+
+    it('keeps an ascended Queen Candidate with the pawn companies', () => {
+        component.game!.ledger.pieces.push({
+            ...structuredClone(component.game!.ledger.pieces[0]),
+            id: 'w-q-d1',
+            originalSquare: 'd1',
+            chessType: 'q',
+            currentChessType: 'q',
+            fantasyType: 'queen',
+            permanentName: 'Northern Queen',
+            characterName: 'Seraphine',
+        }, {
+            ...structuredClone(component.game!.ledger.pieces[0]),
+            id: 'w-p-a7',
+            originalSquare: 'a7',
+            chessType: 'p',
+            currentChessType: 'q',
+            fantasyType: 'queen',
+            permanentName: 'Elowen',
+            viewpointName: 'Elowen',
+            viewpointRole: 'queen candidate',
+            promotedFromPawnId: 'w-p-a7',
+        }, {
+            ...structuredClone(component.game!.ledger.pieces[0]),
+            id: 'w-p-b2',
+            originalSquare: 'b2',
+            chessType: 'p',
+            currentChessType: 'p',
+            fantasyType: 'grunt',
+            permanentName: 'Falk',
+            viewpointName: 'Falk',
+        });
+
+        const roster = component.lightKingdomRoster;
+        expect(roster.findIndex((piece) => piece.id === 'w-q-d1')).toBeLessThan(roster.findIndex((piece) => piece.id === 'w-p-a7'));
+        expect(Math.abs(roster.findIndex((piece) => piece.id === 'w-p-a7') -
+            roster.findIndex((piece) => piece.id === 'w-p-b2'))).toBe(1);
+    });
+
+    it('uses a character backstory in the board inspector and roster', () => {
+        const piece = component.game!.ledger.pieces[0];
+        piece.backstory = 'Mara enlisted after defending her village ward.';
+
+        expect(component.pieceDescription(piece)).toBe(piece.backstory);
+        component.toggleRosterPiece(piece);
+        expect(component.rosterPieceId).toBe(piece.id);
+        component.toggleRosterPiece(piece);
+        expect(component.rosterPieceId).toBeNull();
+    });
+
+    it('reveals a fallen character fate only after the death beat', () => {
+        const victim = component.darkKingdomRoster[0];
+        component.scenes = [
+            {
+                id: 'scene-3',
+                actNumber: 1,
+                sceneNumber: 3,
+                startPly: 3,
+                endPly: 3,
+                involvedMoves: ['exd5'],
+                fantasyNarration: 'Mara broke through the shield wall, and Nessa fell defending her company standard.',
+                chessExplanation: 'The white pawn captures the black pawn.',
+                characters: ['w-p-e2', 'b-p-d7'],
+                locations: [],
+                deaths: ['b-p-d7'],
+                captureActorId: 'w-p-e2',
+                captureVictimId: 'b-p-d7',
+                promotions: [],
+                visualPrompt: '',
+                videoPrompt: '',
+                estimatedDurationSeconds: 8,
+                continuityNotes: [],
+            },
+        ];
+        component.currentPly = 2;
+        expect(component.pieceFate(victim)).toBeNull();
+
+        component.currentPly = 3;
+        expect(component.pieceFate(victim)).toEqual({
+            killerName: 'Mara',
+            beat: 3,
+            account: 'Mara broke through the shield wall, and Nessa fell defending her company standard.',
+            finalCondition: null,
+        });
+    });
+
+    it('presents the epilogue as a final playback page', () => {
+        component.epilogue =
+            'The surviving kingdoms counted the cost. The banners lowered. The healers crossed the field. Dawn found them still working. No herald named it peace.';
+        component.laterEpilogueHeading = 'Nine Winters Later';
+        component.laterEpilogue =
+            'A traveler crossed the nameless field. Beneath the mud, a dying ward answered his lantern.';
+        component.currentPly = game.positions.length;
+
+        expect(component.canGoForward).toBe(true);
+
+        component.forward();
+
+        expect(component.isAftermathPage).toBe(true);
+        expect(component.isEpiloguePage).toBe(true);
+        expect(component.currentMoveLabel).toBe('Immediate Aftermath');
+        expect(component.currentStory).toBe(component.epilogue);
+        expect(component.epilogueParagraphs).toEqual([
+            'The surviving kingdoms counted the cost. The banners lowered.',
+            'The healers crossed the field. Dawn found them still working.',
+            'No herald named it peace.',
+        ]);
+        expect(component.laterEpilogueParagraphs).toEqual([
+            'A traveler crossed the nameless field. Beneath the mud, a dying ward answered his lantern.',
+        ]);
+        expect(component.currentFen).toBe(game.ledger.finalFen);
+        expect(component.canGoForward).toBe(true);
+
+        component.forward();
+
+        expect(component.isAftermathPage).toBe(false);
+        expect(component.isLaterChroniclePage).toBe(true);
+        expect(component.currentMoveLabel).toBe('Later Chronicles');
+        expect(component.currentStory).toBe(component.laterEpilogue);
+        expect(component.canGoForward).toBe(false);
+
+        component.back();
+
+        expect(component.isAftermathPage).toBe(true);
+        expect(component.isLaterChroniclePage).toBe(false);
+
+        component.back();
+
+        expect(component.currentPly).toBe(game.positions.length);
+        expect(component.isEpiloguePage).toBe(false);
+    });
+
+    it('lists every saga page and jumps directly to the selected page', () => {
+        component.epilogue = 'The armies counted the cost.';
+        component.laterEpilogue = 'Years later, the battlefield was remembered.';
+
+        expect(component.sagaPageOptions).toEqual([
+            { ply: 0, label: 'Start position' },
+            { ply: 1, label: 'Beat 1 · 1. e4' },
+            { ply: 2, label: 'Beat 2 · 1... d5' },
+            { ply: 3, label: 'Beat 3 · 2. exd5' },
+            { ply: 4, label: 'Immediate Aftermath' },
+            { ply: 5, label: 'Later Chronicles' },
+        ]);
+
+        component.selectedPieceId = 'w-p-e2';
+        component.selectSagaPage(4);
+
+        expect(component.isAftermathPage).toBe(true);
+        expect(component.selectedPieceId).toBeNull();
+    });
+
+    it('uses saved identities instead of transient parse identities', () => {
+        const parsed = structuredClone(game);
+        parsed.ledger.pieces[0].permanentName = 'Transient Mara';
+        const savedLedger = structuredClone(game.ledger);
+        savedLedger.pieces[0].permanentName = 'Saved Mara';
+        const api = {
+            parse: () => of(parsed),
+            createGame: () => of({ id: 'saved-game', ledger: { data: savedLedger } }),
+        } as unknown as PgnApiService;
+        const submitted = new PgnViewerComponent(api);
+        submitted.pgnText = '1. e4 d5 2. exd5';
+
+        submitted.submit();
+
+        expect(submitted.gameId).toBe('saved-game');
+        expect(submitted.game?.ledger.pieces[0].permanentName).toBe('Saved Mara');
+    });
+
+    it('stops a zero-credit user at Begin the Saga for a new PGN', () => {
+        const api = {
+            parse: () => of(structuredClone(game)),
+            createGame: () => of({ id: 'new-game', ledger: { data: structuredClone(game.ledger) } }),
+            getGenerationStatus: () => of({
+                state: 'idle',
+                currentStage: 'analysis',
+                error: null,
+                stages: {
+                    analysis: false,
+                    outline: false,
+                    story: false,
+                    validation: false,
+                    scenes: false,
+                },
+            }),
+        } as unknown as PgnApiService;
+        const billing = {
+            status: () => ({
+                configured: true,
+                enforcementEnabled: true,
+                unlimited: false,
+                balance: 0,
+                reserved: 0,
+                available: 0,
+                subscription: null,
+            }),
+        } as unknown as BillingClientService;
+        const viewer = new PgnViewerComponent(api, undefined, billing);
+        viewer.pgnText = '1. e4 e5';
+
+        viewer.submit();
+
+        expect(viewer.game).toBeNull();
+        expect(viewer.billingFailure).toBe('credits');
+        expect(viewer.loading).toBe(false);
+    });
+
+    it('stops a signed-out user at Begin the Saga for a new PGN', () => {
+        const api = {
+            parse: () => of(structuredClone(game)),
+            createGame: () => of({
+                id: 'anonymous-game',
+                ledger: { data: structuredClone(game.ledger) },
+            }),
+            getGenerationStatus: () => of({
+                state: 'idle',
+                currentStage: 'analysis',
+                error: null,
+                stages: {
+                    analysis: false,
+                    outline: false,
+                    story: false,
+                    validation: false,
+                    scenes: false,
+                },
+            }),
+        } as unknown as PgnApiService;
+        const auth = {
+            user: () => null,
+        } as unknown as AuthService;
+        const viewer = new PgnViewerComponent(api, undefined, undefined, auth);
+        viewer.pgnText = '1. e4 e5';
+
+        viewer.submit();
+
+        expect(viewer.game).toBeNull();
+        expect(viewer.billingFailure).toBe('signin');
+        expect(viewer.loading).toBe(false);
+    });
+
+    it('lets a zero-credit user open a completed reusable saga', () => {
+        const api = {
+            parse: () => of(structuredClone(game)),
+            createGame: () => of({
+                id: 'reusable-game',
+                ledger: { data: structuredClone(game.ledger) },
+            }),
+            getGenerationStatus: () => of({
+                state: 'completed',
+                currentStage: 'scenes',
+                error: null,
+                stages: {
+                    analysis: true,
+                    outline: true,
+                    story: true,
+                    validation: true,
+                    scenes: true,
+                },
+            }),
+        } as unknown as PgnApiService;
+        const billing = {
+            status: () => ({
+                configured: true,
+                enforcementEnabled: true,
+                unlimited: false,
+                balance: 0,
+                reserved: 0,
+                available: 0,
+                subscription: null,
+            }),
+        } as unknown as BillingClientService;
+        const viewer = new PgnViewerComponent(api, undefined, billing);
+        viewer.pgnText = '1. e4 e5';
+
+        viewer.submit();
+
+        expect(viewer.gameId).toBe('reusable-game');
+        expect(viewer.billingFailure).toBeNull();
+    });
+
+    it('refreshes the displayed credit balance when saga generation completes', () => {
+        const api = {
+            generateSaga: () => of({
+                sceneBreakdown: {
+                    data: { scenes: [] },
+                },
+            }),
+        } as unknown as PgnApiService;
+        const billing = {
+            refresh: vi.fn().mockName('refresh'),
+        } as unknown as BillingClientService;
+        const viewer = new PgnViewerComponent(api, undefined, billing);
+        viewer.gameId = 'generated-game';
+
+        viewer.generateSaga();
+
+        expect(billing.refresh).toHaveBeenCalledTimes(1);
+    });
+
+    it('clears the PGN and does not restore generation after a page refresh', () => {
+        vi.spyOn(performance, 'getEntriesByType').mockReturnValue([
+            { type: 'reload' } as unknown as PerformanceNavigationTiming,
+        ]);
+        const api = {
+            forgetRecentGeneration: vi.fn().mockName('forgetRecentGeneration'),
+            recentGenerationGameId: vi.fn().mockName('recentGenerationGameId'),
+        } as unknown as PgnApiService;
+        const viewer = new PgnViewerComponent(api);
+        viewer.pgnText = 'stale PGN';
+
+        viewer.ngOnInit();
+
+        expect(viewer.pgnText).toBe('');
+        expect(api.forgetRecentGeneration).toHaveBeenCalledTimes(1);
+        expect(api.recentGenerationGameId).not.toHaveBeenCalled();
+    });
+
+    it('uses the archived saved ledger when replaying a Hall record', () => {
+        const parsed = structuredClone(game);
+        parsed.ledger.pieces[0].permanentName = 'Transient Mara';
+        const savedLedger = structuredClone(game.ledger);
+        savedLedger.pieces[0].permanentName = 'Archived Mara';
+        const api = {
+            getRecord: () => of({
+                id: 'record-1',
+                rawPgn: '1. e4 d5 2. exd5',
+                whitePlayer: 'Ada',
+                blackPlayer: 'Turing',
+                result: '1-0',
+                createdAt: '2026-08-01',
+                completedAt: '2026-08-01',
+                ledger: { data: savedLedger },
+                sceneBreakdown: { data: { scenes: [] } },
+            }),
+            parse: () => of(parsed),
+        } as unknown as PgnApiService;
+        const route = {
+            snapshot: { paramMap: { get: () => 'record-1' } },
+        } as never;
+        const replay = new PgnViewerComponent(api, route);
+
+        replay.ngOnInit();
+
+        expect(replay.recordReplay).toBe(true);
+        expect(replay.game?.ledger.pieces[0].permanentName).toBe('Archived Mara');
+    });
+
+    it('restores the last viewed move when an archived saga is reopened', () => {
+        const bookmarkKey = 'chess-sagas:reading-bookmark:v1:record-bookmark';
+        localStorage.setItem(bookmarkKey, JSON.stringify({ page: 'move', ply: 2 }));
+        const api = {
+            getRecord: () => of({
+                id: 'record-bookmark',
+                rawPgn: '1. e4 d5 2. exd5',
+                whitePlayer: 'Ada',
+                blackPlayer: 'Turing',
+                result: '1-0',
+                createdAt: '2026-08-01',
+                completedAt: '2026-08-01',
+                ledger: { data: structuredClone(game.ledger) },
+                sceneBreakdown: { data: { scenes: [] } },
+            }),
+            parse: () => of(structuredClone(game)),
+        } as unknown as PgnApiService;
+        const route = {
+            snapshot: { paramMap: { get: () => 'record-bookmark' } },
+        } as never;
+
+        const replay = new PgnViewerComponent(api, route);
+        replay.ngOnInit();
+
+        expect(replay.currentPly).toBe(2);
+        localStorage.removeItem(bookmarkKey);
+    });
+
+    it('saves reading progress whenever playback advances', () => {
+        const bookmarkKey = 'chess-sagas:reading-bookmark:v1:saved-bookmark';
+        localStorage.removeItem(bookmarkKey);
+        const api = {
+            parse: () => of(structuredClone(game)),
+            createGame: () => of({
+                id: 'saved-bookmark',
+                ledger: { data: structuredClone(game.ledger) },
+            }),
+        } as unknown as PgnApiService;
+        const viewer = new PgnViewerComponent(api);
+        viewer.pgnText = '1. e4 d5 2. exd5';
+        viewer.submit();
+
+        viewer.forward();
+
+        expect(JSON.parse(localStorage.getItem(bookmarkKey) ?? '{}')).toEqual({
+            page: 'move',
+            ply: 1,
+        });
+        localStorage.removeItem(bookmarkKey);
+    });
+
+    it('restores an epilogue bookmark by page instead of a fragile ply number', () => {
+        const bookmarkKey = 'chess-sagas:reading-bookmark:v1:record-epilogue';
+        localStorage.setItem(bookmarkKey, JSON.stringify({ page: 'aftermath' }));
+        const api = {
+            getRecord: () => of({
+                id: 'record-epilogue',
+                rawPgn: '1. e4 d5 2. exd5',
+                whitePlayer: 'Ada',
+                blackPlayer: 'Turing',
+                result: '1-0',
+                createdAt: '2026-08-01',
+                completedAt: '2026-08-01',
+                ledger: { data: structuredClone(game.ledger) },
+                sceneBreakdown: {
+                    data: {
+                        scenes: [],
+                        epilogue: 'The surviving armies counted the cost.',
+                    },
+                },
+            }),
+            parse: () => of(structuredClone(game)),
+        } as unknown as PgnApiService;
+        const route = {
+            snapshot: { paramMap: { get: () => 'record-epilogue' } },
+        } as never;
+
+        const replay = new PgnViewerComponent(api, route);
+        replay.ngOnInit();
+
+        expect(replay.isAftermathPage).toBe(true);
+        expect(replay.currentMoveLabel).toBe('Immediate Aftermath');
+        localStorage.removeItem(bookmarkKey);
+    });
 });
 
 const game: ParsedPgn = {
-  headers: { Result: '*' },
-  startFen: '8/3p4/8/8/8/8/4P3/8 w - - 0 1',
-  positions: [
-    {
-      ply: 1,
-      san: 'e4',
-      fen: '8/3p4/8/8/4P3/8/8/8 b - - 0 1',
-      color: 'w',
-      piece: 'p',
-      from: 'e2',
-      to: 'e4',
-      isCapture: false,
-      isCheck: false,
-      isCheckmate: false,
-      isCastle: false,
-      nearbyEnemies: [],
-      targetedEnemies: [],
-    },
-    {
-      ply: 2,
-      san: 'd5',
-      fen: '8/8/8/3p4/4P3/8/8/8 w - - 0 2',
-      color: 'b',
-      piece: 'p',
-      from: 'd7',
-      to: 'd5',
-      isCapture: false,
-      isCheck: false,
-      isCheckmate: false,
-      isCastle: false,
-      nearbyEnemies: [],
-      targetedEnemies: [],
-    },
-    {
-      ply: 3,
-      san: 'exd5',
-      fen: '8/8/8/3P4/8/8/8/8 b - - 0 2',
-      color: 'w',
-      piece: 'p',
-      from: 'e4',
-      to: 'd5',
-      captured: 'p',
-      isCapture: true,
-      isCheck: false,
-      isCheckmate: false,
-      isCastle: false,
-      nearbyEnemies: [],
-      targetedEnemies: [],
-    },
-  ],
-  realms: { white: 'Light Kingdom', black: 'Dark Kingdom' },
-  ledger: {
-    metadata: { result: '*' },
-    initialFen: '8/3p4/8/8/8/8/4P3/8 w - - 0 1',
-    finalFen: '8/8/8/3P4/8/8/8/8 b - - 0 2',
-    pieces: [
-      {
-        id: 'w-p-e2',
-        chessColor: 'w',
-        side: 'north',
-        originalSquare: 'e2',
-        chessType: 'p',
-        currentChessType: 'r',
-        fantasyType: 'moving-fortress',
-        permanentName: 'Mara',
-        companyName: 'Northern Ember Company',
-        viewpointName: 'Mara',
-        viewpointRole: 'field medic',
-        alive: true,
-      },
-      {
-        id: 'b-p-d7',
-        chessColor: 'b',
-        side: 'south',
-        originalSquare: 'd7',
-        chessType: 'p',
-        currentChessType: 'p',
-        fantasyType: 'grunt',
-        permanentName: 'Nessa',
-        companyName: 'Southern Iron Company',
-        viewpointName: 'Nessa',
-        viewpointRole: 'sergeant',
-        alive: false,
-        capturedAtPly: 3,
-      },
+    headers: { Result: '*' },
+    startFen: '8/3p4/8/8/8/8/4P3/8 w - - 0 1',
+    positions: [
+        {
+            ply: 1,
+            san: 'e4',
+            fen: '8/3p4/8/8/4P3/8/8/8 b - - 0 1',
+            color: 'w',
+            piece: 'p',
+            from: 'e2',
+            to: 'e4',
+            isCapture: false,
+            isCheck: false,
+            isCheckmate: false,
+            isCastle: false,
+            nearbyEnemies: [],
+            targetedEnemies: [],
+        },
+        {
+            ply: 2,
+            san: 'd5',
+            fen: '8/8/8/3p4/4P3/8/8/8 w - - 0 2',
+            color: 'b',
+            piece: 'p',
+            from: 'd7',
+            to: 'd5',
+            isCapture: false,
+            isCheck: false,
+            isCheckmate: false,
+            isCastle: false,
+            nearbyEnemies: [],
+            targetedEnemies: [],
+        },
+        {
+            ply: 3,
+            san: 'exd5',
+            fen: '8/8/8/3P4/8/8/8/8 b - - 0 2',
+            color: 'w',
+            piece: 'p',
+            from: 'e4',
+            to: 'd5',
+            captured: 'p',
+            isCapture: true,
+            isCheck: false,
+            isCheckmate: false,
+            isCastle: false,
+            nearbyEnemies: [],
+            targetedEnemies: [],
+        },
     ],
-    events: [
-      event(1, 'north', 'e2', 'e4', 'w-p-e2'),
-      event(2, 'south', 'd7', 'd5', 'b-p-d7'),
-      {
-        ...event(3, 'north', 'e4', 'd5', 'w-p-e2'),
-        isCapture: true,
-        capturedPieceId: 'b-p-d7',
-        capturedPieceType: 'grunt',
-      },
-      {
-        ...event(4, 'north', 'd5', 'd6', 'w-p-e2'),
-        isPromotion: true,
-        promotionType: 'moving-fortress',
-        isQuietMove: false,
-      },
-    ],
-    survivors: ['w-p-e2'],
-    capturedPieces: ['b-p-d7'],
-    promotedPieces: [],
-  },
+    realms: { white: 'Light Kingdom', black: 'Dark Kingdom' },
+    ledger: {
+        metadata: { result: '*' },
+        initialFen: '8/3p4/8/8/8/8/4P3/8 w - - 0 1',
+        finalFen: '8/8/8/3P4/8/8/8/8 b - - 0 2',
+        pieces: [
+            {
+                id: 'w-p-e2',
+                chessColor: 'w',
+                side: 'north',
+                originalSquare: 'e2',
+                chessType: 'p',
+                currentChessType: 'r',
+                fantasyType: 'moving-fortress',
+                permanentName: 'Mara',
+                companyName: 'Northern Ember Company',
+                viewpointName: 'Mara',
+                viewpointRole: 'field medic',
+                alive: true,
+            },
+            {
+                id: 'b-p-d7',
+                chessColor: 'b',
+                side: 'south',
+                originalSquare: 'd7',
+                chessType: 'p',
+                currentChessType: 'p',
+                fantasyType: 'grunt',
+                permanentName: 'Nessa',
+                companyName: 'Southern Iron Company',
+                viewpointName: 'Nessa',
+                viewpointRole: 'sergeant',
+                alive: false,
+                capturedAtPly: 3,
+            },
+        ],
+        events: [
+            event(1, 'north', 'e2', 'e4', 'w-p-e2'),
+            event(2, 'south', 'd7', 'd5', 'b-p-d7'),
+            {
+                ...event(3, 'north', 'e4', 'd5', 'w-p-e2'),
+                isCapture: true,
+                capturedPieceId: 'b-p-d7',
+                capturedPieceType: 'grunt',
+            },
+            {
+                ...event(4, 'north', 'd5', 'd6', 'w-p-e2'),
+                isPromotion: true,
+                promotionType: 'moving-fortress',
+                isQuietMove: false,
+            },
+        ],
+        survivors: ['w-p-e2'],
+        capturedPieces: ['b-p-d7'],
+        promotedPieces: [],
+    },
 };
 
-function event(
-  ply: number,
-  side: 'north' | 'south',
-  from: string,
-  to: string,
-  pieceId: string,
-): ParsedPgn['ledger']['events'][number] {
-  return {
-    ply,
-    moveNumber: Math.ceil(ply / 2),
-    side,
-    san: '',
-    from,
-    to,
-    pieceId,
-    pieceType: 'grunt',
-    isCapture: false,
-    isCheck: false,
-    isCheckmate: false,
-    isCastle: false,
-    isPromotion: false,
-    isEnPassant: false,
-    isQuietMove: true,
-    boardFenAfterMove: '',
-  };
+function event(ply: number, side: 'north' | 'south', from: string, to: string, pieceId: string): ParsedPgn['ledger']['events'][number] {
+    return {
+        ply,
+        moveNumber: Math.ceil(ply / 2),
+        side,
+        san: '',
+        from,
+        to,
+        pieceId,
+        pieceType: 'grunt',
+        isCapture: false,
+        isCheck: false,
+        isCheckmate: false,
+        isCastle: false,
+        isPromotion: false,
+        isEnPassant: false,
+        isQuietMove: true,
+        boardFenAfterMove: '',
+    };
 }

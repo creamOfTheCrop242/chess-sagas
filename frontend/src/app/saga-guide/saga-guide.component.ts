@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 type SagaFeature = {
@@ -13,6 +13,7 @@ type SagaFeature = {
   standalone: true,
   imports: [RouterLink],
   templateUrl: './saga-guide.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './saga-guide.component.css',
 })
 export class SagaGuideComponent {

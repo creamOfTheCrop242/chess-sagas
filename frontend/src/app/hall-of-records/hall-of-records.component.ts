@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
@@ -14,6 +14,7 @@ type RecordView = 'public' | 'mine' | 'saved';
   standalone: true,
   imports: [DatePipe, FormsModule, RouterLink],
   templateUrl: './hall-of-records.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './hall-of-records.component.css',
 })
 export class HallOfRecordsComponent implements OnInit {

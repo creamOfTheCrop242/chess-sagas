@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 type CalamityChapter = {
@@ -12,6 +12,7 @@ type CalamityChapter = {
   standalone: true,
   imports: [RouterLink],
   templateUrl: './calamity-lore.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './calamity-lore.component.css',
 })
 export class CalamityLoreComponent {

@@ -9,6 +9,7 @@ import {
   Output,
   SimpleChanges,
   ViewChild,
+  ChangeDetectionStrategy
 } from '@angular/core';
 import { Chessground } from 'chessground';
 import { Api } from 'chessground/api';
@@ -30,6 +31,7 @@ import type { Key, KeyedNode } from 'chessground/types';
     (focusout)="pieceHovered.emit(null)"
     (keydown)="selectFocusedPiece($event)"
   ></div>`,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [
     `
       :host {

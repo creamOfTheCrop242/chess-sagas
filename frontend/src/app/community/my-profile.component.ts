@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
@@ -48,6 +48,7 @@ import { CommunityService } from './community.service';
       </section>
     </main>
   `,
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './profile-page.css',
 })
 export class MyProfileComponent implements OnInit {

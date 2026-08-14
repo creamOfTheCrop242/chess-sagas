@@ -5,6 +5,7 @@ import {
   OnDestroy,
   OnInit,
   Optional,
+  ChangeDetectionStrategy
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -73,6 +74,7 @@ type SagaPageOption = {
   standalone: true,
   imports: [FormsModule, RouterLink, ChessboardComponent],
   templateUrl: './pgn-viewer.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './pgn-viewer.component.css',
 })
 export class PgnViewerComponent implements OnInit, OnDestroy {

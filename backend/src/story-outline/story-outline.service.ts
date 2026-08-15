@@ -93,6 +93,10 @@ export class StoryOutlineService {
         candidate = normalizeStoryOutlineEndingSequence(candidate, ledger);
         candidate = normalizeStoryOutlineRequiredEvents(candidate, ledger);
         candidate = normalizeStoryOutlineCharacters(candidate, ledger);
+        candidate = normalizeStoryOutlineRelationshipIds(
+          candidate,
+          narrativeAnalysis,
+        );
         candidate = normalizeStoryOutlineRelationshipScenes(
           candidate,
           narrativeAnalysis,
@@ -205,6 +209,51 @@ export class StoryOutlineService {
     }
     return run;
   }
+}
+
+export function normalizeStoryOutlineRelationshipIds(
+  outline: StoryOutline,
+  analysis: NarrativeAnalysis,
+): StoryOutline {
+  const plannedRelationships = analysis.relationshipPlans ?? [];
+  const plannedIds = new Set(
+    plannedRelationships.map((relationship) => relationship.id),
+  );
+  const plansByCharacterPair = new Map<
+    string,
+    NarrativeAnalysis['relationshipPlans']
+  >();
+
+  for (const relationship of plannedRelationships) {
+    const pair = relationshipPairKey(relationship.characterIds);
+    const matches = plansByCharacterPair.get(pair) ?? [];
+    matches.push(relationship);
+    plansByCharacterPair.set(pair, matches);
+  }
+
+  return {
+    ...outline,
+    relationshipBeats: outline.relationshipBeats.map((relationship) => {
+      if (plannedIds.has(relationship.relationshipId)) return relationship;
+
+      const matches =
+        plansByCharacterPair.get(
+          relationshipPairKey(relationship.characterIds),
+        ) ?? [];
+      if (matches.length !== 1) return relationship;
+
+      const [planned] = matches;
+      return {
+        ...relationship,
+        relationshipId: planned.id,
+        characterIds: [...planned.characterIds] as [string, string],
+      };
+    }),
+  };
+}
+
+function relationshipPairKey(characterIds: string[]): string {
+  return [...characterIds].sort().join('\u0000');
 }
 
 export function normalizeStoryOutlineRelationshipScenes(

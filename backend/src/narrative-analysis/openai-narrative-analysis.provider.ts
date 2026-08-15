@@ -9,10 +9,12 @@ import OpenAI from 'openai';
 import { zodTextFormat } from 'openai/helpers/zod';
 import {
   createOpenAiGenerationClient,
-  compactGameLedgerForModel,
   logOpenAiGeneration,
   logOpenAiGenerationFailure,
+  losslessPayloadCompactionEnabled,
+  type ModelPayloadOptions,
   promptCacheOptions,
+  safelyCompactGameLedgerForModel,
 } from '../openai/openai-generation';
 import { OpenAiTelemetryService } from '../openai/openai-telemetry.service';
 import type {
@@ -31,6 +33,7 @@ export class OpenAiNarrativeAnalysisProvider implements NarrativeAnalysisProvide
   readonly model: string;
   private readonly logger = new Logger(OpenAiNarrativeAnalysisProvider.name);
   private readonly client: OpenAI | null;
+  private readonly payloadOptions: ModelPayloadOptions;
 
   constructor(
     config: ConfigService,
@@ -40,6 +43,9 @@ export class OpenAiNarrativeAnalysisProvider implements NarrativeAnalysisProvide
     this.model =
       config.get<string>('NARRATIVE_ANALYSIS_MODEL') || 'gpt-5.6-luna';
     this.client = apiKey ? createOpenAiGenerationClient(apiKey, config) : null;
+    this.payloadOptions = {
+      deduplicateBoardSnapshots: losslessPayloadCompactionEnabled(config),
+    };
   }
 
   async analyze({
@@ -59,7 +65,11 @@ export class OpenAiNarrativeAnalysisProvider implements NarrativeAnalysisProvide
       ledger.pieces.map((piece) => piece.id),
     );
     const input = JSON.stringify({
-      completeLedger: compactGameLedgerForModel(ledger),
+      completeLedger: safelyCompactGameLedgerForModel(
+        ledger,
+        true,
+        this.payloadOptions,
+      ),
       requiredWoundEvents,
       battlefieldEnvironment,
       surrenderContext,

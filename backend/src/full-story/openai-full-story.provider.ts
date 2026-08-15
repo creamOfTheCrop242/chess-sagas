@@ -12,6 +12,8 @@ import {
   createOpenAiGenerationClient,
   logOpenAiGeneration,
   logOpenAiGenerationFailure,
+  losslessPayloadCompactionEnabled,
+  type ModelPayloadOptions,
   promptCacheOptions,
   serializeRequestWithCharacterRegistry,
 } from '../openai/openai-generation';
@@ -37,6 +39,7 @@ export class OpenAiFullStoryProvider implements FullStoryProvider {
   private readonly woundRepairModel: string;
   private readonly logger = new Logger(OpenAiFullStoryProvider.name);
   private readonly client: OpenAI | null;
+  private readonly payloadOptions: ModelPayloadOptions;
 
   constructor(
     config: ConfigService,
@@ -47,6 +50,9 @@ export class OpenAiFullStoryProvider implements FullStoryProvider {
     this.woundRepairModel =
       config.get<string>('WOUND_SCENE_REPAIR_MODEL') || 'gpt-5.6-luna';
     this.client = apiKey ? createOpenAiGenerationClient(apiKey, config) : null;
+    this.payloadOptions = {
+      deduplicateBoardSnapshots: losslessPayloadCompactionEnabled(config),
+    };
   }
 
   async generate(request: FullStoryRequest): Promise<GeneratedStoryPackage> {
@@ -54,7 +60,10 @@ export class OpenAiFullStoryProvider implements FullStoryProvider {
       throw new ServiceUnavailableException('OPENAI_API_KEY is not configured');
     }
     const startedAt = Date.now();
-    const input = serializeRequestWithCharacterRegistry(request);
+    const input = serializeRequestWithCharacterRegistry(
+      request,
+      this.payloadOptions,
+    );
     const callTelemetry = {
       ...request.telemetry,
       payloadBytes: Buffer.byteLength(input, 'utf8'),

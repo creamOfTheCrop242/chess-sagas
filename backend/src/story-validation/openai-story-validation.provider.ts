@@ -11,6 +11,8 @@ import {
   createOpenAiGenerationClient,
   logOpenAiGeneration,
   logOpenAiGenerationFailure,
+  losslessPayloadCompactionEnabled,
+  type ModelPayloadOptions,
   promptCacheOptions,
   serializeRequestWithoutTelemetry,
 } from '../openai/openai-generation';
@@ -33,6 +35,7 @@ export class OpenAiStoryValidationProvider implements StoryValidationProvider {
   readonly model: string;
   private readonly logger = new Logger(OpenAiStoryValidationProvider.name);
   private readonly client: OpenAI | null;
+  private readonly payloadOptions: ModelPayloadOptions;
 
   constructor(
     config: ConfigService,
@@ -41,6 +44,9 @@ export class OpenAiStoryValidationProvider implements StoryValidationProvider {
     const apiKey = config.get<string>('OPENAI_API_KEY');
     this.model = config.get<string>('STORY_VALIDATION_MODEL') || 'gpt-5.6-sol';
     this.client = apiKey ? createOpenAiGenerationClient(apiKey, config) : null;
+    this.payloadOptions = {
+      deduplicateBoardSnapshots: losslessPayloadCompactionEnabled(config),
+    };
   }
 
   async validate(
@@ -49,7 +55,10 @@ export class OpenAiStoryValidationProvider implements StoryValidationProvider {
     if (!this.client)
       throw new ServiceUnavailableException('OPENAI_API_KEY is not configured');
     const startedAt = Date.now();
-    const input = serializeRequestWithoutTelemetry(request);
+    const input = serializeRequestWithoutTelemetry(
+      request,
+      this.payloadOptions,
+    );
     const callTelemetry = {
       ...request.telemetry,
       payloadBytes: Buffer.byteLength(input, 'utf8'),

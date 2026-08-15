@@ -6,6 +6,7 @@ import {
   estimateOpenAiCostMicros,
   serializeRequestWithoutTelemetry,
   serializeRequestWithCharacterRegistry,
+  safelyCompactGameLedgerForModel,
 } from './openai-generation';
 
 describe('OpenAI generation request serialization', () => {
@@ -118,6 +119,67 @@ describe('OpenAI generation request serialization', () => {
       JSON.stringify(ledger).length,
     );
     expect(compact.events).toHaveLength(ledger.events.length);
+  });
+
+  it('deduplicates intermediate capture and check board snapshots without changing event facts', () => {
+    const compact = safelyCompactGameLedgerForModel(ledger, true, {
+      deduplicateBoardSnapshots: true,
+    });
+
+    expect(compact.events).toHaveLength(ledger.events.length);
+    expect(compact.events[2].isCapture).toBe(true);
+    expect(compact.events[2].capturedPieceId).toBe(
+      ledger.events[2].capturedPieceId,
+    );
+    expect(compact.events[2].boardFenAfterMove).toBeUndefined();
+    expect(compact.events[3].isCapture).toBe(true);
+    expect(compact.events[3].boardFenAfterMove).toBeUndefined();
+    expect(compact.events.at(-1)?.boardFenAfterMove).toBe(ledger.finalFen);
+    expect(compact.events.map(withoutBoardSnapshot)).toEqual(
+      ledger.events.map(withoutBoardSnapshot),
+    );
+  });
+
+  it('retains exact promotion and checkmate board geometry in deduplicated mode', () => {
+    const promotionLedger = pgn.parse(
+      '[SetUp "1"]\n[FEN "7k/P7/8/8/8/8/8/7K w - - 0 1"]\n[Result "*"]\n\n1. a8=Q+ *',
+    ).ledger;
+    const mateLedger = pgn.parse(
+      '[Result "0-1"]\n\n1. f3 e5 2. g4 Qh4# 0-1',
+    ).ledger;
+    const compactPromotion = safelyCompactGameLedgerForModel(
+      promotionLedger,
+      true,
+      { deduplicateBoardSnapshots: true },
+    );
+    const compactMate = safelyCompactGameLedgerForModel(mateLedger, true, {
+      deduplicateBoardSnapshots: true,
+    });
+
+    expect(compactPromotion.events.at(-1)?.boardFenAfterMove).toBe(
+      promotionLedger.finalFen,
+    );
+    expect(compactMate.events.at(-1)?.boardFenAfterMove).toBe(
+      mateLedger.finalFen,
+    );
+    expect(compactMate.events.at(-1)?.checkmateExplanation).toEqual(
+      mateLedger.events.at(-1)?.checkmateExplanation,
+    );
+  });
+
+  it('keeps the existing payload unchanged unless compaction is enabled', () => {
+    const current = serializeRequestWithoutTelemetry({ ledger });
+    const explicitCurrent = serializeRequestWithoutTelemetry(
+      { ledger },
+      { deduplicateBoardSnapshots: false },
+    );
+    const compact = serializeRequestWithoutTelemetry(
+      { ledger },
+      { deduplicateBoardSnapshots: true },
+    );
+
+    expect(explicitCurrent).toBe(current);
+    expect(compact.length).toBeLessThan(current.length);
   });
 });
 

@@ -8,6 +8,7 @@ import {
   normalizeStoryOutlineEndingSequence,
   normalizeStoryOutlineNumbering,
   normalizeStoryOutlineRevengePayoffs,
+  normalizeStoryOutlineRelationshipIds,
   normalizeStoryOutlineRelationshipScenes,
   normalizeStoryOutlineRequiredEvents,
   normalizeStoryOutlineSetupPayoffs,
@@ -190,11 +191,8 @@ describe('StoryOutlineValidator', () => {
     ];
 
     expect(
-      normalizeStoryOutlineRevengePayoffs(
-        selected,
-        revengeLedger,
-        analysis,
-      ).selectedRevengePayoffs,
+      normalizeStoryOutlineRevengePayoffs(selected, revengeLedger, analysis)
+        .selectedRevengePayoffs,
     ).toEqual([{ deathPly: 1, payoffPly: 2 }]);
   });
 
@@ -223,11 +221,8 @@ describe('StoryOutlineValidator', () => {
     selected.selectedRevengePayoffs = [{ deathPly: 99, payoffPly: 100 }];
 
     expect(
-      normalizeStoryOutlineRevengePayoffs(
-        selected,
-        revengeLedger,
-        analysis,
-      ).selectedRevengePayoffs,
+      normalizeStoryOutlineRevengePayoffs(selected, revengeLedger, analysis)
+        .selectedRevengePayoffs,
     ).toEqual([{ deathPly: 1, payoffPly: 2 }]);
   });
 
@@ -456,6 +451,37 @@ describe('StoryOutlineValidator', () => {
     expect(() =>
       new StoryOutlineValidator().validate(normalized, ledger, analysis),
     ).not.toThrow();
+  });
+
+  it('repairs an unknown relationship ID from one exact character-pair match', () => {
+    const uniquePairAnalysis = structuredClone(analysis);
+    uniquePairAnalysis.relationshipPlans[1].characterIds = ['w-q-d1', 'w-r-a1'];
+    const misspelled = structuredClone(outline);
+    misspelled.relationshipBeats[0].relationshipId = 'queen-soldier-rivlary';
+
+    const normalized = normalizeStoryOutlineRelationshipIds(
+      misspelled,
+      uniquePairAnalysis,
+    );
+
+    expect(normalized.relationshipBeats[0]).toMatchObject({
+      relationshipId: 'queen-soldier-rivalry',
+      characterIds: ['w-q-d1', 'b-p-f7'],
+    });
+  });
+
+  it('does not guess an unknown relationship ID when the pair is ambiguous', () => {
+    const misspelled = structuredClone(outline);
+    misspelled.relationshipBeats[0].relationshipId = 'queen-soldier-rivlary';
+
+    const normalized = normalizeStoryOutlineRelationshipIds(
+      misspelled,
+      analysis,
+    );
+
+    expect(normalized.relationshipBeats[0].relationshipId).toBe(
+      'queen-soldier-rivlary',
+    );
   });
 
   it('rejects an outline that omits a significant event', () => {

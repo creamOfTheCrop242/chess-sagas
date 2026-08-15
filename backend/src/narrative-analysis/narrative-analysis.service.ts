@@ -65,11 +65,13 @@ export class NarrativeAnalysisService {
           },
         }),
       );
-      const analysis = normalizeDeterministicAnalysisFacts(
-        generatedAnalysis,
-        battlefieldEnvironment,
-        surrenderContext,
-        endingContract,
+      const analysis = normalizeRelationshipChronology(
+        normalizeDeterministicAnalysisFacts(
+          generatedAnalysis,
+          battlefieldEnvironment,
+          surrenderContext,
+          endingContract,
+        ),
       );
       this.validator.validate(analysis, ledger);
       const data = JSON.parse(
@@ -136,6 +138,32 @@ export class NarrativeAnalysisService {
     }
     return run;
   }
+}
+
+export function normalizeRelationshipChronology(
+  analysis: NarrativeAnalysis,
+): NarrativeAnalysis {
+  return {
+    ...analysis,
+    relationshipPlans: analysis.relationshipPlans.map((relationship) => {
+      const developmentPlies = [...new Set(relationship.developmentPlies)]
+        .sort((left, right) => left - right)
+        .filter(
+          (ply) =>
+            relationship.payoffPly === null || ply < relationship.payoffPly,
+        );
+
+      if (developmentPlies.length > 0 || relationship.payoffPly === null) {
+        return { ...relationship, developmentPlies };
+      }
+
+      return {
+        ...relationship,
+        developmentPlies: [relationship.payoffPly],
+        payoffPly: null,
+      };
+    }),
+  };
 }
 
 function normalizeDeterministicAnalysisFacts(

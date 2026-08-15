@@ -1,4 +1,4 @@
-import { BadGatewayException, NotFoundException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { GameLedgerService } from '../chess/game-ledger.service';
 import type { GameLedger } from '../chess/models/game-ledger';
 import { PieceIdentityService } from '../chess/piece-identity.service';
@@ -7,7 +7,10 @@ import { GenerationPreparationService } from '../generation/generation-preparati
 import { PgnService } from '../pgn/pgn.service';
 import type { NarrativeAnalysisProvider } from './llm-provider';
 import type { NarrativeAnalysis } from './models/narrative-analysis';
-import { NarrativeAnalysisService } from './narrative-analysis.service';
+import {
+  NarrativeAnalysisService,
+  normalizeRelationshipChronology,
+} from './narrative-analysis.service';
 import { NarrativeAnalysisValidator } from './narrative-analysis.validator';
 import { selectRequiredWoundEvents } from './wound-planning';
 import { selectBattlefieldEnvironment } from '../chess/battlefield-environment';
@@ -160,6 +163,59 @@ describe('NarrativeAnalysisService', () => {
     });
   });
 
+  it('repairs relationship chronology before ledger validation', async () => {
+    const analysis = makeAnalysis(ledger);
+    analysis.relationshipPlans[0].developmentPlies = [7, 5, 5, 6];
+    analysis.relationshipPlans[0].payoffPly = 7;
+    analysis.relationshipPlans[1].developmentPlies = [8];
+    analysis.relationshipPlans[1].payoffPly = 7;
+    jest.mocked(provider.analyze).mockResolvedValue(analysis);
+
+    await expect(service.generate('game-1')).resolves.toMatchObject({
+      status: 'COMPLETED',
+    });
+
+    expect(runUpdate).toHaveBeenCalledWith({
+      where: { id: 'run-1' },
+      data: expect.objectContaining({
+        status: 'COMPLETED',
+        narrativeAnalysis: {
+          create: {
+            schemaVersion: 1,
+            data: expect.objectContaining({
+              relationshipPlans: [
+                expect.objectContaining({
+                  id: 'queen-king-rivalry',
+                  developmentPlies: [5, 6],
+                  payoffPly: 7,
+                }),
+                expect.objectContaining({
+                  id: 'bishop-queen-trust',
+                  developmentPlies: [7],
+                  payoffPly: null,
+                }),
+              ],
+            }),
+          },
+        },
+      }),
+    });
+    expect(provider.analyze).toHaveBeenCalledTimes(1);
+  });
+
+  it('sorts and deduplicates open-ended relationship development', () => {
+    const analysis = makeAnalysis(ledger);
+    analysis.relationshipPlans[0].developmentPlies = [7, 3, 7, 5];
+    analysis.relationshipPlans[0].payoffPly = null;
+
+    expect(
+      normalizeRelationshipChronology(analysis).relationshipPlans[0],
+    ).toMatchObject({
+      developmentPlies: [3, 5, 7],
+      payoffPly: null,
+    });
+  });
+
   it('rejects a lasting wound that is not anchored to the character’s capture', () => {
     const analysis = makeAnalysis(ledger);
     analysis.woundPlans = [
@@ -291,7 +347,7 @@ function makeAnalysis(ledger: GameLedger): NarrativeAnalysis {
         characterIds: [queenId, southernKingId],
         relationshipType: 'rivalry',
         startingDynamic: 'The King dismisses the approaching champion.',
-        developmentPlies: [5, 7],
+        developmentPlies: [5],
         payoffPly: 7,
         intendedChange: 'Dismissal becomes fatal recognition.',
       },

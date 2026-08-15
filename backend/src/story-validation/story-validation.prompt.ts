@@ -1,4 +1,4 @@
-export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v38';
+export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v39';
 
 export const STORY_VALIDATION_INSTRUCTIONS = `Validate the supplied story against the complete deterministic chess ledger, narrative analysis, outline, and deterministic findings.
 

@@ -954,8 +954,6 @@ describe('DeterministicStoryValidator', () => {
         revengeLedger,
         [
           {
-            avengerPieceId: 'w-n-b1',
-            victimPieceId: 'w-q-d1',
             deathPly: 1,
             payoffPly: 2,
           },
@@ -981,8 +979,6 @@ describe('DeterministicStoryValidator', () => {
         revengeLedger,
         [
           {
-            avengerPieceId: 'w-n-b1',
-            victimPieceId: 'w-q-d1',
             deathPly: 1,
             payoffPly: 2,
           },

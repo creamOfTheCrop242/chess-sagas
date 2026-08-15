@@ -200,12 +200,9 @@ export class DeterministicStoryValidator {
       );
       if (!event) continue;
       const debts = (event.interactionContext?.avengesDeaths ?? []).filter(
-        (debt) =>
-          debt.victimPieceId === selected.victimPieceId &&
-          debt.deathPly === selected.deathPly,
+        (debt) => debt.deathPly === selected.deathPly,
       );
-      if (debts.length === 0 || event.pieceId !== selected.avengerPieceId)
-        continue;
+      if (debts.length === 0) continue;
       const scene = sceneByPly.get(event.ply);
       const avenger = pieces.get(event.pieceId);
       if (!scene || !avenger) continue;

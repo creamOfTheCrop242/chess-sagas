@@ -128,8 +128,6 @@ describe('StoryOutlineValidator', () => {
     const invalid = structuredClone(outline);
     invalid.selectedRevengePayoffs = [
       {
-        avengerPieceId: 'w-q-d1',
-        victimPieceId: 'w-q-d1',
         deathPly: 1,
         payoffPly: 2,
       },
@@ -138,6 +136,29 @@ describe('StoryOutlineValidator', () => {
     expect(() =>
       new StoryOutlineValidator().validate(invalid, ledger, analysis),
     ).toThrow('is not authorized by the ledger');
+  });
+
+  it('derives revenge participants from the death and payoff plies', () => {
+    const revengeLedger = structuredClone(ledger);
+    revengeLedger.pieces.push(
+      { id: 'b-k-e8' } as GameLedger['pieces'][number],
+      { id: 'b-q-d8' } as GameLedger['pieces'][number],
+    );
+    revengeLedger.events[1] = {
+      ...revengeLedger.events[1],
+      pieceId: 'b-k-e8',
+      capturedPieceId: 'w-q-d1',
+      interactionContext: {
+        adjacentAllyPieceIds: [],
+        avengesDeaths: [{ victimPieceId: 'b-q-d8', deathPly: 1 }],
+      },
+    };
+    const selected = structuredClone(outline);
+    selected.selectedRevengePayoffs = [{ deathPly: 1, payoffPly: 2 }];
+
+    expect(() =>
+      new StoryOutlineValidator().validate(selected, revengeLedger, analysis),
+    ).not.toThrow();
   });
 
   it('preserves a planned nonfatal wound in the outline', () => {

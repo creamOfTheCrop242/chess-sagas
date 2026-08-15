@@ -55,8 +55,6 @@ const woundBeatSchema = z.object({
 });
 
 const selectedRevengePayoffSchema = z.object({
-  avengerPieceId: z.string().min(1),
-  victimPieceId: z.string().min(1),
   deathPly: z.number().int().positive(),
   payoffPly: z.number().int().positive(),
 });

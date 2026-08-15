@@ -154,13 +154,10 @@ export class StoryOutlineValidator {
         (candidate) => candidate.ply === payoff.payoffPly,
       );
       const authorized =
-        event?.pieceId === payoff.avengerPieceId &&
-        (event.interactionContext?.avengesDeaths ?? []).some(
-          (debt) =>
-            debt.victimPieceId === payoff.victimPieceId &&
-            debt.deathPly === payoff.deathPly,
-        );
-      const key = `${payoff.avengerPieceId}:${payoff.victimPieceId}:${payoff.deathPly}:${payoff.payoffPly}`;
+        event?.interactionContext?.avengesDeaths?.some(
+          (debt) => debt.deathPly === payoff.deathPly,
+        ) ?? false;
+      const key = `${payoff.deathPly}:${payoff.payoffPly}`;
       if (!authorized) {
         errors.push(
           `Selected revenge payoff ${key} is not authorized by the ledger`,

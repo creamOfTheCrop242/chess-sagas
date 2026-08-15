@@ -367,6 +367,15 @@ export class FullStoryService {
             storyPackage.wounds,
             ledger,
           ),
+          ...this.deterministic.validateWoundOwnershipTransfers(
+            candidateScenes.map((scene) => ({
+              ply: scene.startPly,
+              fantasyNarration: scene.fantasyNarration,
+              characters: scene.characters,
+            })),
+            storyPackage.wounds,
+            ledger,
+          ),
         ];
       let timedWoundFindings = findTimedWounds(scenes);
       const initialWoundErrors = timedWoundFindings.filter(

@@ -378,6 +378,111 @@ export class DeterministicStoryValidator {
     }
     return findings;
   }
+
+  validateWoundOwnershipTransfers(
+    scenes: Array<{
+      ply: number;
+      fantasyNarration: string;
+      characters: string[];
+    }>,
+    wounds: GeneratedStoryPackage['wounds'],
+    ledger: GameLedger,
+  ): ValidationFinding[] {
+    const pieces = new Map(ledger.pieces.map((piece) => [piece.id, piece]));
+    const findings: ValidationFinding[] = [];
+
+    for (const scene of scenes) {
+      const event = ledger.events[scene.ply - 1];
+      const activeWounds = wounds.filter(
+        (wound) =>
+          wound.inflictedAtPly <= scene.ply &&
+          (wound.recoveryPly === null || wound.recoveryPly >= scene.ply),
+      );
+      if (activeWounds.length === 0) continue;
+
+      for (const targetId of scene.characters) {
+        const target = pieces.get(targetId);
+        if (!target || target.fantasyType === 'king') continue;
+        if (event?.isCapture && event.capturedPieceId === targetId) continue;
+        const targetAliases = characterAliases(target);
+        if (!mentionsCharacter(scene.fantasyNarration, targetAliases)) continue;
+        const targetWoundTexts = activeWounds
+          .filter((wound) => wound.pieceId === targetId)
+          .map((wound) => [wound.injury, ...wound.lastingEffects].join(' '));
+        const otherAliases = ledger.pieces
+          .filter((piece) => piece.id !== targetId)
+          .flatMap((piece) => characterAliases(piece));
+        const sentences =
+          scene.fantasyNarration.match(/[^.!?]+[.!?]?/g) ??
+          [scene.fantasyNarration];
+
+        for (const ownerId of new Set(
+          activeWounds
+            .map((wound) => wound.pieceId)
+            .filter((pieceId) => pieceId !== targetId),
+        )) {
+          const owner = pieces.get(ownerId);
+          if (!owner) continue;
+          const ownerWoundText = activeWounds
+            .filter((wound) => wound.pieceId === ownerId)
+            .flatMap((wound) => [wound.injury, ...wound.lastingEffects])
+            .join(' ');
+          const excerpt = sentences
+            .map((sentence) => sentence.trim())
+            .find((sentence) => {
+              if (!mentionsCharacter(sentence, targetAliases)) return false;
+              if (!highConfidenceWoundSignature(sentence, ownerWoundText)) {
+                return false;
+              }
+              const signatureTerms = [
+                ...matchingFamilies(
+                  ownerWoundText,
+                  ANATOMY_FAMILIES,
+                ).flat(),
+                ...matchingFamilies(
+                  ownerWoundText,
+                  INJURY_FAMILIES,
+                ).flat(),
+              ];
+              if (
+                !namedCharacterPrecedesWound(
+                  sentence,
+                  targetAliases,
+                  signatureTerms,
+                )
+              ) {
+                return false;
+              }
+              if (
+                targetWoundTexts.some((woundText) =>
+                  highConfidenceWoundSignature(sentence, woundText),
+                )
+              ) {
+                return false;
+              }
+              return woundMentionFollowsTargetMoreClosely(
+                sentence,
+                targetAliases,
+                otherAliases,
+                signatureTerms,
+              );
+            });
+          if (!excerpt) continue;
+          findings.push({
+            type: 'invented-wound',
+            severity: 'warning',
+            message: `${target.permanentName} appears to inherit distinctive wound details belonging to ${owner.permanentName} at ply ${scene.ply}`,
+            ply: scene.ply,
+            pieceId: targetId,
+            excerpt,
+          });
+          break;
+        }
+      }
+    }
+
+    return findings;
+  }
 }
 
 const ANATOMY_FAMILIES = [
@@ -430,7 +535,66 @@ const INJURY_FAMILIES = [
   ['numb', 'numbness', 'paralyzed', 'paralysis'],
   ['limp', 'limping', 'stagger', 'staggered'],
   ['concussion', 'concussed'],
+  ['ruined', 'mangled'],
 ] as const;
+
+function highConfidenceWoundSignature(
+  narration: string,
+  woundDescription: string,
+): boolean {
+  const anatomyMatches = matchingFamilies(
+    woundDescription,
+    ANATOMY_FAMILIES,
+  ).filter((family) => hasAny(narration, family));
+  const specificInjuryMatches = matchingFamilies(
+    woundDescription,
+    INJURY_FAMILIES.slice(1),
+  ).filter((family) => hasAny(narration, family));
+  const hasGenericInjury = hasAny(narration, INJURY_FAMILIES[0]);
+  return (
+    (anatomyMatches.length >= 2 &&
+      (hasGenericInjury || specificInjuryMatches.length > 0)) ||
+    (anatomyMatches.length >= 1 && specificInjuryMatches.length >= 1)
+  );
+}
+
+function namedCharacterPrecedesWound(
+  sentence: string,
+  aliases: string[],
+  woundTerms: readonly string[],
+): boolean {
+  const woundPositions = matchPositions(sentence, woundTerms);
+  if (woundPositions.length === 0) return false;
+  const firstWoundPosition = Math.min(...woundPositions);
+  const precedingAliases = matchPositions(sentence, aliases).filter(
+    (position) => position <= firstWoundPosition,
+  );
+  if (precedingAliases.length === 0) return false;
+  return firstWoundPosition - Math.max(...precedingAliases) <= 160;
+}
+
+function woundMentionFollowsTargetMoreClosely(
+  sentence: string,
+  targetAliases: string[],
+  otherAliases: string[],
+  woundTerms: readonly string[],
+): boolean {
+  const woundPositions = matchPositions(sentence, woundTerms);
+  if (woundPositions.length === 0) return false;
+  const firstWoundPosition = Math.min(...woundPositions);
+  const precedingDistance = (aliases: string[]) => {
+    const positions = matchPositions(sentence, aliases).filter(
+      (position) => position <= firstWoundPosition,
+    );
+    return positions.length
+      ? firstWoundPosition - Math.max(...positions)
+      : Number.POSITIVE_INFINITY;
+  };
+  return (
+    precedingDistance(targetAliases) < precedingDistance(otherAliases) &&
+    precedingDistance(targetAliases) <= 160
+  );
+}
 
 function mentionsCharacter(narration: string, aliases: string[]): boolean {
   return aliases.some((alias) =>

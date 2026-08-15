@@ -1051,6 +1051,113 @@ describe('DeterministicStoryValidator', () => {
     ]);
   });
 
+  it('warns when a named character inherits another character’s distinctive wounds', () => {
+    const injuryLedger = {
+      pieces: [
+        {
+          id: 'b-b-c8',
+          permanentName: 'Archwizard Mara',
+          characterName: 'Mara',
+          fantasyType: 'archwizard',
+        },
+        {
+          id: 'b-b-f8',
+          permanentName: 'Archwizard Sabine',
+          characterName: 'Sabine',
+          fantasyType: 'archwizard',
+        },
+        {
+          id: 'b-q-d8',
+          permanentName: 'Queen Kerra',
+          characterName: 'Kerra',
+          fantasyType: 'queen',
+        },
+      ],
+      events: [{ ply: 40, isCapture: false }],
+    } as GameLedger;
+    const wounds = [
+      {
+        pieceId: 'b-b-f8',
+        inflictedAtPly: 12,
+        injury: 'deep magical laceration across the casting forearm',
+        lastingEffects: ['persistent spell tremor'],
+        recoveryPly: null,
+      },
+      {
+        pieceId: 'b-b-f8',
+        inflictedAtPly: 28,
+        injury: 'crushed ankle and heat-burned lower leg',
+        lastingEffects: ['impaired walking'],
+        recoveryPly: null,
+      },
+    ];
+
+    expect(
+      validator.validateWoundOwnershipTransfers(
+        [
+          {
+            ply: 40,
+            characters: ['b-b-c8', 'b-q-d8'],
+            fantasyNarration:
+              "Archwizard Mara walked unevenly through the smoke, her injured forearm shaking and her ruined leg dragging over broken paving, Kerra's insignia in her other hand.",
+          },
+        ],
+        wounds,
+        injuryLedger,
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        type: 'invented-wound',
+        severity: 'warning',
+        pieceId: 'b-b-c8',
+      }),
+    ]);
+  });
+
+  it('does not guess wound ownership when another wounded character owns the prose', () => {
+    const injuryLedger = {
+      pieces: [
+        {
+          id: 'b-b-c8',
+          permanentName: 'Archwizard Mara',
+          characterName: 'Mara',
+          fantasyType: 'archwizard',
+        },
+        {
+          id: 'b-b-f8',
+          permanentName: 'Archwizard Sabine',
+          characterName: 'Sabine',
+          fantasyType: 'archwizard',
+        },
+      ],
+      events: [{ ply: 40, isCapture: false }],
+    } as GameLedger;
+    const wounds = [
+      {
+        pieceId: 'b-b-f8',
+        inflictedAtPly: 12,
+        injury: 'deep laceration across the forearm and shoulder',
+        lastingEffects: ['persistent pain'],
+        recoveryPly: null,
+      },
+    ];
+
+    expect(
+      validator.validateWoundOwnershipTransfers(
+        [
+          {
+            ply: 40,
+            characters: ['b-b-c8', 'b-b-f8'],
+            fantasyNarration:
+              'Mara reached Sabine, whose lacerated forearm and injured shoulder shook with pain.',
+          },
+        ],
+        wounds,
+        injuryLedger,
+      ),
+    ).toEqual([]);
+  });
+
   it('allows active planned wounds, fatal capture wounds, and royal check strain', () => {
     const injuryLedger = {
       pieces: [

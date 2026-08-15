@@ -7,6 +7,7 @@ import {
   normalizeStoryOutlineCharacters,
   normalizeStoryOutlineEndingSequence,
   normalizeStoryOutlineNumbering,
+  normalizeStoryOutlineRevengePayoffs,
   normalizeStoryOutlineRelationshipScenes,
   normalizeStoryOutlineRequiredEvents,
   normalizeStoryOutlineSetupPayoffs,
@@ -159,6 +160,85 @@ describe('StoryOutlineValidator', () => {
     expect(() =>
       new StoryOutlineValidator().validate(selected, revengeLedger, analysis),
     ).not.toThrow();
+  });
+
+  it('discards unauthorized revenge selections and preserves valid ones', () => {
+    const revengeLedger = structuredClone(ledger);
+    revengeLedger.events[1] = {
+      ...revengeLedger.events[1],
+      pieceId: 'b-k-e8',
+      capturedPieceId: 'w-q-d1',
+      interactionContext: {
+        adjacentAllyPieceIds: [],
+        avengesDeaths: [{ victimPieceId: 'b-q-d8', deathPly: 1 }],
+      },
+    };
+    revengeLedger.pieces.push(
+      {
+        id: 'b-k-e8',
+        fantasyType: 'king',
+      } as GameLedger['pieces'][number],
+      {
+        id: 'b-q-d8',
+        fantasyType: 'queen',
+      } as GameLedger['pieces'][number],
+    );
+    const selected = structuredClone(outline);
+    selected.selectedRevengePayoffs = [
+      { deathPly: 99, payoffPly: 100 },
+      { deathPly: 1, payoffPly: 2 },
+    ];
+
+    expect(
+      normalizeStoryOutlineRevengePayoffs(
+        selected,
+        revengeLedger,
+        analysis,
+      ).selectedRevengePayoffs,
+    ).toEqual([{ deathPly: 1, payoffPly: 2 }]);
+  });
+
+  it('selects the strongest ledger-authorized revenge when no valid selection remains', () => {
+    const revengeLedger = structuredClone(ledger);
+    revengeLedger.events[1] = {
+      ...revengeLedger.events[1],
+      pieceId: 'b-k-e8',
+      capturedPieceId: 'w-q-d1',
+      interactionContext: {
+        adjacentAllyPieceIds: [],
+        avengesDeaths: [{ victimPieceId: 'b-q-d8', deathPly: 1 }],
+      },
+    };
+    revengeLedger.pieces.push(
+      {
+        id: 'b-k-e8',
+        fantasyType: 'king',
+      } as GameLedger['pieces'][number],
+      {
+        id: 'b-q-d8',
+        fantasyType: 'queen',
+      } as GameLedger['pieces'][number],
+    );
+    const selected = structuredClone(outline);
+    selected.selectedRevengePayoffs = [{ deathPly: 99, payoffPly: 100 }];
+
+    expect(
+      normalizeStoryOutlineRevengePayoffs(
+        selected,
+        revengeLedger,
+        analysis,
+      ).selectedRevengePayoffs,
+    ).toEqual([{ deathPly: 1, payoffPly: 2 }]);
+  });
+
+  it('allows no revenge payoff when the ledger has no valid opportunity', () => {
+    const selected = structuredClone(outline);
+    selected.selectedRevengePayoffs = [{ deathPly: 99, payoffPly: 100 }];
+
+    expect(
+      normalizeStoryOutlineRevengePayoffs(selected, ledger, analysis)
+        .selectedRevengePayoffs,
+    ).toEqual([]);
   });
 
   it('preserves a planned nonfatal wound in the outline', () => {

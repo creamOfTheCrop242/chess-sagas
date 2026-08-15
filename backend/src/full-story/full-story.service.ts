@@ -345,38 +345,36 @@ export class FullStoryService {
             .join('; ')}`,
         );
       }
-      const findTimedWounds = (candidateScenes: typeof scenes) =>
-        [
-          ...this.deterministic.validateTimedWounds(
-            candidateScenes.map((scene, index) => ({
-              ply: scene.startPly,
-              fantasyNarration: scene.fantasyNarration,
-              characters: scene.characters,
-              woundsInflicted:
-                storyPackage.scenes[index]?.woundsInflicted ?? [],
-            })),
-            storyPackage.wounds,
-            ledger,
-          ),
-          ...this.deterministic.validateUnplannedInjuries(
-            candidateScenes.map((scene) => ({
-              ply: scene.startPly,
-              fantasyNarration: scene.fantasyNarration,
-              characters: scene.characters,
-            })),
-            storyPackage.wounds,
-            ledger,
-          ),
-          ...this.deterministic.validateWoundOwnershipTransfers(
-            candidateScenes.map((scene) => ({
-              ply: scene.startPly,
-              fantasyNarration: scene.fantasyNarration,
-              characters: scene.characters,
-            })),
-            storyPackage.wounds,
-            ledger,
-          ),
-        ];
+      const findTimedWounds = (candidateScenes: typeof scenes) => [
+        ...this.deterministic.validateTimedWounds(
+          candidateScenes.map((scene, index) => ({
+            ply: scene.startPly,
+            fantasyNarration: scene.fantasyNarration,
+            characters: scene.characters,
+            woundsInflicted: storyPackage.scenes[index]?.woundsInflicted ?? [],
+          })),
+          storyPackage.wounds,
+          ledger,
+        ),
+        ...this.deterministic.validateUnplannedInjuries(
+          candidateScenes.map((scene) => ({
+            ply: scene.startPly,
+            fantasyNarration: scene.fantasyNarration,
+            characters: scene.characters,
+          })),
+          storyPackage.wounds,
+          ledger,
+        ),
+        ...this.deterministic.validateWoundOwnershipTransfers(
+          candidateScenes.map((scene) => ({
+            ply: scene.startPly,
+            fantasyNarration: scene.fantasyNarration,
+            characters: scene.characters,
+          })),
+          storyPackage.wounds,
+          ledger,
+        ),
+      ];
       let timedWoundFindings = findTimedWounds(scenes);
       const initialWoundErrors = timedWoundFindings.filter(
         (finding) => finding.severity === 'error',
@@ -698,6 +696,7 @@ export class FullStoryService {
 export function isCorrectableStoryPackageError(message: string): boolean {
   return [
     'Generated story package contains capture attribution errors:',
+    'Generated story package omits verified revenge payoffs:',
     'Generated story package contains premature character deaths:',
     'Generated story package contains wound timeline errors:',
     'Generated story package contains deterministic errors:',
@@ -752,6 +751,7 @@ export function buildStoryCorrectionFeedback(message: string): string {
     message,
     'This is the single targeted correction attempt.',
     'For every cited capture, use the exact actor and victim stated in the error: the actor kills the victim, never the reverse.',
+    'For every cited revenge payoff, explicitly name the fallen ally identified in the error and make the avenger connect the current capture to that specific witnessed death. Preserve the actual current capture actor and victim; the fallen ally is the emotional reason for the capture, not its victim.',
     'Re-audit the captureManifest entry for every capture scene. Each requiredOutcome is authoritative even when nearby dialogue or resistance makes the victim prominent.',
     'For wounds, obey woundTimeline as an exact temporal permission table. Before prohibitedBeforePly ends, remove the cited injury, its anatomical damage, pain, impairment, and lasting effects from that character. General danger may remain, but it must not state or imply that the future wound already exists.',
     'For the aftermath, copy endingWorldState exactly. Never apply a destroyed Seal or entombment outcome to a Fortress marked retains-seal-power.',

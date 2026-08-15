@@ -183,6 +183,19 @@ The Southern King poured his strength into the Royal Seal, but every remaining r
     expect(buildStoryCorrectionFeedback(error)).toContain(error);
   });
 
+  it('retries a story that omits a selected verified revenge payoff', () => {
+    const error =
+      "Generated story package omits verified revenge payoffs: King Roderic's capture at ply 8 avenges Queen Isolde's witnessed death at ply 7, but the prose does not connect the payoff to that victim.";
+
+    expect(isCorrectableStoryPackageError(error)).toBe(true);
+    expect(buildStoryCorrectionFeedback(error)).toContain(
+      'explicitly name the fallen ally',
+    );
+    expect(buildStoryCorrectionFeedback(error)).toContain(
+      'the emotional reason for the capture, not its victim',
+    );
+  });
+
   it('builds an explicit capture manifest from ledger identities', () => {
     const captureLedger = {
       pieces: [

@@ -37,6 +37,10 @@ export interface OpenAiTelemetryRecorder {
   record(entry: OpenAiCallRecord): void;
 }
 
+export interface ModelPayloadOptions {
+  deduplicateBoardSnapshots?: boolean;
+}
+
 export function createOpenAiGenerationClient(
   apiKey: string,
   config: ConfigService,
@@ -74,12 +78,12 @@ export function serializeRequestWithCharacterRegistry<
     characterRegistry: unknown[];
     telemetry?: GenerationTelemetryContext;
   },
->(request: T): string {
+>(request: T, options: ModelPayloadOptions = {}): string {
   const { telemetry, ledger, ...modelRequest } = request;
   void telemetry;
   return JSON.stringify({
     ...modelRequest,
-    ledger: compactGameLedgerForModel(ledger, false),
+    ledger: safelyCompactGameLedgerForModel(ledger, false, options),
   });
 }
 
@@ -88,18 +92,19 @@ export function serializeRequestWithoutTelemetry<
     ledger: GameLedger;
     telemetry?: GenerationTelemetryContext;
   },
->(request: T): string {
+>(request: T, options: ModelPayloadOptions = {}): string {
   const { telemetry, ledger, ...modelRequest } = request;
   void telemetry;
   return JSON.stringify({
     ...modelRequest,
-    ledger: compactGameLedgerForModel(ledger, true),
+    ledger: safelyCompactGameLedgerForModel(ledger, true, options),
   });
 }
 
 export function compactGameLedgerForModel(
   ledger: GameLedger,
   includePieces = true,
+  options: ModelPayloadOptions = {},
 ) {
   const { pieces, events, ...ledgerWithoutEventsAndPieces } = ledger;
   return {
@@ -107,7 +112,7 @@ export function compactGameLedgerForModel(
     ...(includePieces ? { pieces } : {}),
     events: events.map((event, index) => {
       const { boardFenAfterMove, ...eventWithoutBoard } = event;
-      return shouldRetainBoardSnapshot(event, index, events.length)
+      return shouldRetainBoardSnapshot(event, index, events.length, options)
         ? { ...eventWithoutBoard, boardFenAfterMove }
         : eventWithoutBoard;
     }),
@@ -118,7 +123,16 @@ function shouldRetainBoardSnapshot(
   event: GameLedger['events'][number],
   index: number,
   eventCount: number,
+  options: ModelPayloadOptions,
 ): boolean {
+  if (options.deduplicateBoardSnapshots) {
+    return (
+      index === eventCount - 1 ||
+      event.isCheckmate ||
+      event.isCastle ||
+      event.isPromotion
+    );
+  }
   return (
     index === eventCount - 1 ||
     event.isCapture ||
@@ -127,6 +141,61 @@ function shouldRetainBoardSnapshot(
     event.isCastle ||
     event.isPromotion
   );
+}
+
+export function losslessPayloadCompactionEnabled(config: ConfigService) {
+  return config.get<string>('OPENAI_LOSSLESS_PAYLOAD_COMPACTION') === 'true';
+}
+
+export function safelyCompactGameLedgerForModel(
+  ledger: GameLedger,
+  includePieces: boolean,
+  options: ModelPayloadOptions,
+) {
+  if (!options.deduplicateBoardSnapshots) {
+    return compactGameLedgerForModel(ledger, includePieces);
+  }
+
+  try {
+    const compact = compactGameLedgerForModel(ledger, includePieces, options);
+    assertLosslessEventFacts(ledger, compact.events);
+    return compact;
+  } catch {
+    return compactGameLedgerForModel(ledger, includePieces);
+  }
+}
+
+function assertLosslessEventFacts(
+  ledger: GameLedger,
+  compactEvents: Array<
+    Omit<GameLedger['events'][number], 'boardFenAfterMove'> & {
+      boardFenAfterMove?: string;
+    }
+  >,
+): void {
+  if (compactEvents.length !== ledger.events.length) {
+    throw new Error('Ledger compaction changed the event count');
+  }
+
+  ledger.events.forEach((event, index) => {
+    const { boardFenAfterMove, ...expectedFacts } = event;
+    const compactEvent = compactEvents[index];
+    if (!compactEvent) throw new Error('Ledger compaction removed an event');
+    const { boardFenAfterMove: compactBoard, ...actualFacts } = compactEvent;
+    if (JSON.stringify(actualFacts) !== JSON.stringify(expectedFacts)) {
+      throw new Error(`Ledger compaction changed facts at ply ${event.ply}`);
+    }
+    if (
+      shouldRetainBoardSnapshot(event, index, ledger.events.length, {
+        deduplicateBoardSnapshots: true,
+      }) &&
+      compactBoard !== boardFenAfterMove
+    ) {
+      throw new Error(
+        `Ledger compaction changed board state at ply ${event.ply}`,
+      );
+    }
+  });
 }
 
 export function logOpenAiGeneration(

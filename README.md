@@ -284,6 +284,14 @@ Repeated board-position snapshots are omitted from quiet moves and retained
 for captures, checks, checkmates, castling, promotions, and the final position.
 Use the report's payload-size columns to compare this reduction across stages.
 
+An optional guarded trial can remove the remaining intermediate capture and
+check snapshots because their exact mover, squares, capture attribution,
+tactical context, and check facts are already present in the same ledger
+events. Checkmate geometry plus final, castling, and promotion positions remain
+intact. Enable it with `OPENAI_LOSSLESS_PAYLOAD_COMPACTION=true`. The serializer
+verifies that every non-snapshot event fact remains byte-equivalent and falls
+back to the existing payload automatically if that invariant fails.
+
 During an active backend session, deterministic game preparation is also
 reused across pipeline stages and retries. The normalized ledger, wound-event
 selection, battlefield environment, and surrender classification are held in

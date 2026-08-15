@@ -11,6 +11,8 @@ import {
   createOpenAiGenerationClient,
   logOpenAiGeneration,
   logOpenAiGenerationFailure,
+  losslessPayloadCompactionEnabled,
+  type ModelPayloadOptions,
   promptCacheOptions,
   serializeRequestWithoutTelemetry,
 } from '../openai/openai-generation';
@@ -27,6 +29,7 @@ export class OpenAiSceneBreakdownProvider implements SceneBreakdownProvider {
   readonly model: string;
   private readonly logger = new Logger(OpenAiSceneBreakdownProvider.name);
   private readonly client: OpenAI | null;
+  private readonly payloadOptions: ModelPayloadOptions;
   constructor(
     config: ConfigService,
     private readonly telemetryRecorder: OpenAiTelemetryService,
@@ -34,6 +37,9 @@ export class OpenAiSceneBreakdownProvider implements SceneBreakdownProvider {
     const key = config.get<string>('OPENAI_API_KEY');
     this.model = config.get<string>('SCENE_BREAKDOWN_MODEL') || 'gpt-5.6-sol';
     this.client = key ? createOpenAiGenerationClient(key, config) : null;
+    this.payloadOptions = {
+      deduplicateBoardSnapshots: losslessPayloadCompactionEnabled(config),
+    };
   }
   async generate(
     input: Parameters<SceneBreakdownProvider['generate']>[0],
@@ -41,7 +47,10 @@ export class OpenAiSceneBreakdownProvider implements SceneBreakdownProvider {
     if (!this.client)
       throw new ServiceUnavailableException('OPENAI_API_KEY is not configured');
     const startedAt = Date.now();
-    const serializedInput = serializeRequestWithoutTelemetry(input);
+    const serializedInput = serializeRequestWithoutTelemetry(
+      input,
+      this.payloadOptions,
+    );
     const callTelemetry = {
       ...input.telemetry,
       payloadBytes: Buffer.byteLength(serializedInput, 'utf8'),

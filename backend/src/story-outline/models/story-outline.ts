@@ -54,6 +54,13 @@ const woundBeatSchema = z.object({
   sourcePieceId: z.string().min(1).nullable(),
 });
 
+const selectedRevengePayoffSchema = z.object({
+  avengerPieceId: z.string().min(1),
+  victimPieceId: z.string().min(1),
+  deathPly: z.number().int().positive(),
+  payoffPly: z.number().int().positive(),
+});
+
 export const storyOutlineSchema = z.object({
   battlefieldEnvironment: battlefieldEnvironmentSchema,
   selectedTitle: z.string().min(1),
@@ -61,6 +68,10 @@ export const storyOutlineSchema = z.object({
   acts: z.array(outlineActSchema).min(1),
   setupPayoffs: z.array(setupPayoffSchema),
   relationshipBeats: z.array(relationshipBeatSchema).min(2).max(4),
+  selectedRevengePayoffs: z
+    .array(selectedRevengePayoffSchema)
+    .max(3)
+    .default([]),
   woundBeats: z.array(woundBeatSchema).default([]),
   endingSequence: z.array(endingBeatSchema).min(1),
   proseConstraints: z.array(z.string().min(1)).min(1),

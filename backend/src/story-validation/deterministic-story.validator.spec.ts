@@ -952,6 +952,14 @@ describe('DeterministicStoryValidator', () => {
           },
         ],
         revengeLedger,
+        [
+          {
+            avengerPieceId: 'w-n-b1',
+            victimPieceId: 'w-q-d1',
+            deathPly: 1,
+            payoffPly: 2,
+          },
+        ],
       ),
     ).toEqual([
       expect.objectContaining({
@@ -971,6 +979,44 @@ describe('DeterministicStoryValidator', () => {
           },
         ],
         revengeLedger,
+        [
+          {
+            avengerPieceId: 'w-n-b1',
+            victimPieceId: 'w-q-d1',
+            deathPly: 1,
+            payoffPly: 2,
+          },
+        ],
+      ),
+    ).toEqual([]);
+  });
+
+  it('does not require an unselected eligible revenge opportunity', () => {
+    const revengeLedger = {
+      pieces: [
+        { id: 'w-n-b1', permanentName: 'Bram' },
+        { id: 'b-q-d8', permanentName: 'Sera' },
+        { id: 'w-q-d1', permanentName: 'Jessamine' },
+      ],
+      events: [
+        { ply: 1 },
+        {
+          ply: 2,
+          pieceId: 'w-n-b1',
+          capturedPieceId: 'b-q-d8',
+          interactionContext: {
+            adjacentAllyPieceIds: [],
+            avengesDeaths: [{ victimPieceId: 'w-q-d1', deathPly: 1 }],
+          },
+        },
+      ],
+    } as GameLedger;
+
+    expect(
+      validator.validateRevengePayoffs(
+        [{ ply: 2, fantasyNarration: 'Bram defeated Sera.' }],
+        revengeLedger,
+        [],
       ),
     ).toEqual([]);
   });

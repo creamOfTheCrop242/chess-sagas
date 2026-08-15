@@ -102,6 +102,11 @@ export class StoryOutlineService {
           ledger,
           narrativeAnalysis,
         );
+        candidate = normalizeStoryOutlineRevengePayoffs(
+          candidate,
+          ledger,
+          narrativeAnalysis,
+        );
         try {
           this.validator.validate(candidate, ledger, narrativeAnalysis);
           outline = candidate;
@@ -351,6 +356,85 @@ export function normalizeStoryOutlineWounds(
         sourcePieceId: wound.sourcePieceId,
       };
     }),
+  };
+}
+
+export function normalizeStoryOutlineRevengePayoffs(
+  outline: StoryOutline,
+  ledger: GameLedger,
+  analysis: NarrativeAnalysis,
+): StoryOutline {
+  const authorized = new Map<
+    string,
+    { deathPly: number; payoffPly: number; score: number }
+  >();
+  const piecesById = new Map(ledger.pieces.map((piece) => [piece.id, piece]));
+  const relationshipPlans = analysis.relationshipPlans ?? [];
+  const hierarchyScore: Record<
+    GameLedger['pieces'][number]['fantasyType'],
+    number
+  > = {
+    king: 6,
+    queen: 5,
+    'moving-fortress': 4,
+    'knight-commander': 4,
+    archwizard: 3,
+    grunt: 1,
+  };
+
+  for (const event of ledger.events) {
+    for (const debt of event.interactionContext?.avengesDeaths ?? []) {
+      const key = `${debt.deathPly}:${event.ply}`;
+      const relationshipStrength = relationshipPlans.some(
+        (relationship) =>
+          relationship.characterIds.includes(event.pieceId) &&
+          relationship.characterIds.includes(debt.victimPieceId),
+      )
+        ? 100
+        : 0;
+      const victim = piecesById.get(debt.victimPieceId);
+      const avenger = piecesById.get(event.pieceId);
+      authorized.set(key, {
+        deathPly: debt.deathPly,
+        payoffPly: event.ply,
+        score:
+          relationshipStrength +
+          (victim ? hierarchyScore[victim.fantasyType] * 10 : 0) +
+          (avenger ? hierarchyScore[avenger.fantasyType] : 0) -
+          Math.min(event.ply - debt.deathPly, 20) / 100,
+      });
+    }
+  }
+
+  const validSelections: Array<{
+    deathPly: number;
+    payoffPly: number;
+    score: number;
+  }> = [];
+  const seenSelections = new Set<string>();
+  for (const payoff of outline.selectedRevengePayoffs ?? []) {
+    const key = `${payoff.deathPly}:${payoff.payoffPly}`;
+    const candidate = authorized.get(key);
+    if (!candidate || seenSelections.has(key)) continue;
+    validSelections.push(candidate);
+    seenSelections.add(key);
+  }
+
+  const selected = validSelections.length
+    ? validSelections.slice(0, 3)
+    : [...authorized.values()]
+        .sort(
+          (left, right) =>
+            right.score - left.score || left.payoffPly - right.payoffPly,
+        )
+        .slice(0, 1);
+
+  return {
+    ...outline,
+    selectedRevengePayoffs: selected.map(({ deathPly, payoffPly }) => ({
+      deathPly,
+      payoffPly,
+    })),
   };
 }
 

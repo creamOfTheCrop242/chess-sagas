@@ -55,7 +55,7 @@ describe('GamesService', () => {
       capturedArgs = args;
       return Promise.resolve({
         id: 'existing-game',
-        ledger: { schemaVersion: 6 },
+        ledger: { schemaVersion: 7 },
       });
     });
 
@@ -77,7 +77,7 @@ describe('GamesService', () => {
       ledger: { schemaVersion: 3 },
     });
     gameLedgerUpdate.mockResolvedValue({
-      schemaVersion: 6,
+      schemaVersion: 7,
       data: {},
     });
 
@@ -89,7 +89,7 @@ describe('GamesService', () => {
       expect.objectContaining({
         where: { gameId: 'existing-game' },
         data: expect.objectContaining({
-          schemaVersion: 6,
+          schemaVersion: 7,
           data: expect.objectContaining({
             pieces: expect.arrayContaining([
               expect.objectContaining({
@@ -138,7 +138,7 @@ describe('GamesService', () => {
       blackPlayer: 'Turing',
       result: '1-0',
     });
-    expect(createArgs.data.ledger.create.schemaVersion).toBe(6);
+    expect(createArgs.data.ledger.create.schemaVersion).toBe(7);
     expect(createArgs.data.ledger.create.data.events).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ san: 'Qxf7#', isCheckmate: true }),

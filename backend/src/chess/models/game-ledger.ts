@@ -88,6 +88,7 @@ export interface ChessEvent {
   quietBeatContext?: QuietBeatContext;
   boardFenAfterMove: string;
   tacticalContext?: TacticalContext;
+  interactionContext?: InteractionContext;
   checkmateExplanation?: CheckmateExplanation;
 }
 
@@ -101,6 +102,19 @@ export interface TacticalContext {
   attackedByPieceIds: string[];
   forkedPieceIds: string[];
   checkResponse?: 'blocks-check' | 'captures-checker' | 'king-escape';
+}
+
+export interface InteractionContext {
+  adjacentAllyPieceIds: string[];
+  witnessedCapture?: {
+    victimPieceId: string;
+    killerPieceId: string;
+    witnessPieceIds: string[];
+  };
+  avengesDeaths: Array<{
+    victimPieceId: string;
+    deathPly: number;
+  }>;
 }
 
 export interface CheckmateExplanation {

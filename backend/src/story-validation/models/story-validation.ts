@@ -6,6 +6,7 @@ export const validationFindingTypeSchema = z.enum([
   'survivor-killed',
   'captured-piece-survives',
   'wrong-captor',
+  'missing-revenge-payoff',
   'missing-check',
   'missing-checkmate',
   'wrong-winner',

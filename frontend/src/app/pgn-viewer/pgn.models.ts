@@ -262,6 +262,8 @@ export type PipelineStatus = Record<SagaStage, boolean>;
 
 export interface SagaGenerationStatus {
   state: 'idle' | 'queued' | 'running' | 'completed' | 'failed';
+  startedAt: string | null;
+  completedAt: string | null;
   currentStage: SagaStage;
   error: string | null;
   stages: PipelineStatus;

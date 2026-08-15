@@ -740,6 +740,45 @@ describe('PgnViewerComponent character inspection', () => {
         expect(billing.refresh).toHaveBeenCalledTimes(1);
     });
 
+    it('uses backend timestamps for the completed generation duration', () => {
+        const viewer = new PgnViewerComponent({} as PgnApiService);
+        const syncTimer = (viewer as unknown as {
+            syncGenerationTimer: (status: {
+                startedAt: string;
+                completedAt: string;
+            }) => void;
+        }).syncGenerationTimer.bind(viewer);
+
+        syncTimer({
+            startedAt: '2026-08-15T15:08:44.000Z',
+            completedAt: '2026-08-15T15:12:31.000Z',
+        });
+
+        expect(viewer.generationElapsedSeconds).toBe(227);
+        expect(viewer.formattedGenerationTime).toBe('03:47');
+    });
+
+    it('restores elapsed generation time from the original backend start', () => {
+        const viewer = new PgnViewerComponent({} as PgnApiService);
+        const now = vi
+            .spyOn(Date, 'now')
+            .mockReturnValue(Date.parse('2026-08-15T15:11:44.000Z'));
+        const syncTimer = (viewer as unknown as {
+            syncGenerationTimer: (status: {
+                startedAt: string;
+                completedAt: null;
+            }) => void;
+        }).syncGenerationTimer.bind(viewer);
+
+        syncTimer({
+            startedAt: '2026-08-15T15:08:44.000Z',
+            completedAt: null,
+        });
+
+        expect(viewer.generationElapsedSeconds).toBe(180);
+        now.mockRestore();
+    });
+
     it('checks the account for an active generation when local recovery is empty', () => {
         const api = {
             recentGenerationGameId: vi.fn().mockReturnValue(null),

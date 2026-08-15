@@ -298,6 +298,7 @@ export class FullStoryService {
           fantasyNarration: scene.fantasyNarration,
         })),
         ledger,
+        outline.selectedRevengePayoffs,
       );
       const prematureAscensionFindings =
         this.deterministic.validatePrematureAscensionReveals(
@@ -458,6 +459,7 @@ export class FullStoryService {
                 fantasyNarration: scene.fantasyNarration,
               })),
               ledger,
+              outline.selectedRevengePayoffs,
             );
           const repairedFateErrors =
             this.deterministic.validateTimedCharacterFates(

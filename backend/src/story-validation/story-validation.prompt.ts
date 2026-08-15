@@ -1,4 +1,4 @@
-export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v37';
+export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v38';
 
 export const STORY_VALIDATION_INSTRUCTIONS = `Validate the supplied story against the complete deterministic chess ledger, narrative analysis, outline, and deterministic findings.
 
@@ -10,7 +10,7 @@ Report:
 - any mage acolyte who remains purely a conventional soldier throughout the story without at least one visible, meaningful use of limited apprentice magic, and any mage acolyte incorrectly given teleportation or Archwizard-level power
 - every missing or invented capture and every wrong captor
 - a quiet event that ignores or contradicts its deterministic quietBeatContext, fails to change knowledge, emotion, preparation, relationship, danger, environment, backstory relevance, observation, humanity, or position as selected, prematurely reveals the outcome at relatedEventPly, or invents combat, injury, or death
-- contradicting interactionContext by claiming a character witnessed a capture when absent from witnessedCapture.witnessPieceIds, labeling a capture revenge when avengesDeaths is empty, avenging a different victim, reversing the killer and avenger, or treating adjacentAllyPieceIds as compulsory repetitive chatter rather than an optional grounded interaction opportunity
+- contradicting interactionContext by claiming a character witnessed a capture when absent from witnessedCapture.witnessPieceIds, labeling a capture revenge when avengesDeaths is empty or when it was not chosen in outline.selectedRevengePayoffs, omitting or avenging a different victim from a selected payoff, reversing the killer and avenger, or treating adjacentAllyPieceIds as compulsory repetitive chatter rather than an optional grounded interaction opportunity
 - a featured quiet scene that contains only atmosphere, travel summary, introspection, or a decorative quotation without an immediate desire, complication or uncertainty, consequential choice, and changed dramatic state
 - dialogue with no plausible listener or immediate purpose; non sequitur replies; impossible knowledge; spoken lore exposition aimed at the reader; characters announcing visible action; repeated slogans, cryptic maxims, or interchangeable aphorisms; unnatural repeated names or titles in direct address; or multiple speakers whose lines do not form one causal exchange
 - dialogue whose cadence ignores context, such as leisurely speeches during immediate danger, uniformly ceremonial speech between familiar soldiers, or every dying character delivering a polished final line

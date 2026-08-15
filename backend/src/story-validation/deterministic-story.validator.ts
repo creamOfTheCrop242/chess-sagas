@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { GameLedger } from '../chess/models/game-ledger';
 import type { GeneratedStoryPackage } from '../full-story/models/generated-story';
+import type { StoryOutline } from '../story-outline/models/story-outline';
 import type { ValidationFinding } from './models/story-validation';
 
 @Injectable()
@@ -187,14 +188,24 @@ export class DeterministicStoryValidator {
   validateRevengePayoffs(
     scenes: Array<{ ply: number; fantasyNarration: string }>,
     ledger: GameLedger,
+    selectedPayoffs: StoryOutline['selectedRevengePayoffs'] = [],
   ): ValidationFinding[] {
     const pieces = new Map(ledger.pieces.map((piece) => [piece.id, piece]));
     const sceneByPly = new Map(scenes.map((scene) => [scene.ply, scene]));
     const findings: ValidationFinding[] = [];
 
-    for (const event of ledger.events) {
-      const debts = event.interactionContext?.avengesDeaths ?? [];
-      if (debts.length === 0) continue;
+    for (const selected of selectedPayoffs) {
+      const event = ledger.events.find(
+        (candidate) => candidate.ply === selected.payoffPly,
+      );
+      if (!event) continue;
+      const debts = (event.interactionContext?.avengesDeaths ?? []).filter(
+        (debt) =>
+          debt.victimPieceId === selected.victimPieceId &&
+          debt.deathPly === selected.deathPly,
+      );
+      if (debts.length === 0 || event.pieceId !== selected.avengerPieceId)
+        continue;
       const scene = sceneByPly.get(event.ply);
       const avenger = pieces.get(event.pieceId);
       if (!scene || !avenger) continue;

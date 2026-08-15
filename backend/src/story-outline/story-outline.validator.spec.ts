@@ -112,6 +112,7 @@ describe('StoryOutlineValidator', () => {
         payoff: 'The Queen acknowledges the soldier’s courage.',
       },
     ],
+    selectedRevengePayoffs: [],
     woundBeats: [],
     endingSequence: [{ ply: 2, beat: 'The seal fails.' }],
     proseConstraints: ['Do not mention coordinates.'],
@@ -121,6 +122,22 @@ describe('StoryOutlineValidator', () => {
     expect(() =>
       new StoryOutlineValidator().validate(outline, ledger, analysis),
     ).not.toThrow();
+  });
+
+  it('rejects a revenge payoff that the ledger does not authorize', () => {
+    const invalid = structuredClone(outline);
+    invalid.selectedRevengePayoffs = [
+      {
+        avengerPieceId: 'w-q-d1',
+        victimPieceId: 'w-q-d1',
+        deathPly: 1,
+        payoffPly: 2,
+      },
+    ];
+
+    expect(() =>
+      new StoryOutlineValidator().validate(invalid, ledger, analysis),
+    ).toThrow('is not authorized by the ledger');
   });
 
   it('preserves a planned nonfatal wound in the outline', () => {

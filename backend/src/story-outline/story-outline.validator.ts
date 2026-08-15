@@ -148,6 +148,29 @@ export class StoryOutlineValidator {
         errors.push(`Relationship plan ${relationshipId} is missing`);
       }
     }
+    const selectedRevengeKeys = new Set<string>();
+    for (const payoff of outline.selectedRevengePayoffs ?? []) {
+      const event = ledger.events.find(
+        (candidate) => candidate.ply === payoff.payoffPly,
+      );
+      const authorized =
+        event?.pieceId === payoff.avengerPieceId &&
+        (event.interactionContext?.avengesDeaths ?? []).some(
+          (debt) =>
+            debt.victimPieceId === payoff.victimPieceId &&
+            debt.deathPly === payoff.deathPly,
+        );
+      const key = `${payoff.avengerPieceId}:${payoff.victimPieceId}:${payoff.deathPly}:${payoff.payoffPly}`;
+      if (!authorized) {
+        errors.push(
+          `Selected revenge payoff ${key} is not authorized by the ledger`,
+        );
+      }
+      if (selectedRevengeKeys.has(key)) {
+        errors.push(`Selected revenge payoff ${key} is duplicated`);
+      }
+      selectedRevengeKeys.add(key);
+    }
     const plannedWounds = new Map(
       (analysis.woundPlans ?? []).map((wound) => [
         `${wound.pieceId}:${wound.inflictedAtPly}`,

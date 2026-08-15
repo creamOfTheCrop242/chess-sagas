@@ -43,7 +43,13 @@ export class PgnApiService {
   >();
   private readonly generationListeners = new Map<
     string,
-    Set<(stage: SagaStage, state: SagaStageState) => void>
+    Set<
+      (
+        stage: SagaStage,
+        state: SagaStageState,
+        status?: SagaGenerationStatus,
+      ) => void
+    >
   >();
   private readonly generationState = new Map<
     string,
@@ -100,14 +106,22 @@ export class PgnApiService {
 
   generateSaga(
     gameId: string,
-    onProgress: (stage: SagaStage, state: SagaStageState) => void,
+    onProgress: (
+      stage: SagaStage,
+      state: SagaStageState,
+      status?: SagaGenerationStatus,
+    ) => void,
   ): Observable<SceneBreakdownResponse> {
     return this.observeSaga(gameId, onProgress, true);
   }
 
   resumeSaga(
     gameId: string,
-    onProgress: (stage: SagaStage, state: SagaStageState) => void,
+    onProgress: (
+      stage: SagaStage,
+      state: SagaStageState,
+      status?: SagaGenerationStatus,
+    ) => void,
   ): Observable<SceneBreakdownResponse> {
     return this.observeSaga(gameId, onProgress, false);
   }
@@ -123,7 +137,11 @@ export class PgnApiService {
 
   private observeSaga(
     gameId: string,
-    onProgress: (stage: SagaStage, state: SagaStageState) => void,
+    onProgress: (
+      stage: SagaStage,
+      state: SagaStageState,
+      status?: SagaGenerationStatus,
+    ) => void,
     start: boolean,
   ): Observable<SceneBreakdownResponse> {
     this.rememberGeneration(gameId);
@@ -245,20 +263,25 @@ export class PgnApiService {
           previous[stage] === 'generating' || completedDuringThisRequest
             ? 'completed'
             : 'reused',
+          status,
         );
       } else if (status.state === 'failed' && stage === status.currentStage) {
-        this.notify(gameId, stage, 'failed');
+        this.notify(gameId, stage, 'failed', status);
       } else if (status.state === 'running' && index === currentIndex) {
-        this.notify(gameId, stage, 'generating');
+        this.notify(gameId, stage, 'generating', status);
       } else {
-        this.notify(gameId, stage, 'pending');
+        this.notify(gameId, stage, 'pending', status);
       }
     });
   }
 
   private addGenerationListener(
     gameId: string,
-    listener: (stage: SagaStage, state: SagaStageState) => void,
+    listener: (
+      stage: SagaStage,
+      state: SagaStageState,
+      status?: SagaGenerationStatus,
+    ) => void,
   ): void {
     const listeners = this.generationListeners.get(gameId) ?? new Set();
     listeners.add(listener);
@@ -274,13 +297,14 @@ export class PgnApiService {
     gameId: string,
     stage: SagaStage,
     state: SagaStageState,
+    status?: SagaGenerationStatus,
   ): void {
     const snapshot = this.generationState.get(gameId) ?? {};
     snapshot[stage] = state;
     this.generationState.set(gameId, snapshot);
     this.generationListeners
       .get(gameId)
-      ?.forEach((listener) => listener(stage, state));
+      ?.forEach((listener) => listener(stage, state, status));
   }
 
   private notifyAllStages(gameId: string, state: SagaStageState): void {

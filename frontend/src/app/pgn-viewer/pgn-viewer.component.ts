@@ -20,6 +20,7 @@ import {
   PieceIdentity,
   PlaybackScene,
   ChessEvent,
+  SagaGenerationStatus,
   SagaStage,
   SagaStageState,
   StoryWound,
@@ -637,8 +638,9 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
     const generation = resume
       ? this.pgnApi.resumeSaga.bind(this.pgnApi)
       : this.pgnApi.generateSaga.bind(this.pgnApi);
-    generation(this.gameId, (stage, state) => {
+    generation(this.gameId, (stage, state, status) => {
         this.pipelineState = { ...this.pipelineState, [stage]: state };
+        if (status) this.syncGenerationTimer(status);
       })
       .subscribe({
         next: (response) => {
@@ -1254,6 +1256,29 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
         (Date.now() - this.generationStartedAt) / 1000,
       );
     }, 1000);
+  }
+
+  private syncGenerationTimer(status: SagaGenerationStatus): void {
+    if (!status.startedAt) return;
+    const startedAt = Date.parse(status.startedAt);
+    if (!Number.isFinite(startedAt)) return;
+    const completedAt = status.completedAt
+      ? Date.parse(status.completedAt)
+      : Number.NaN;
+    if (Number.isFinite(completedAt)) {
+      this.generationElapsedSeconds = Math.max(
+        0,
+        Math.floor((completedAt - startedAt) / 1000),
+      );
+      this.generationStartedAt = null;
+      this.clearGenerationInterval();
+      return;
+    }
+    this.generationStartedAt = startedAt;
+    this.generationElapsedSeconds = Math.max(
+      0,
+      Math.floor((Date.now() - startedAt) / 1000),
+    );
   }
 
   private stopGenerationTimer(): void {

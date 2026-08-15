@@ -123,6 +123,8 @@ describe('SagaGenerationService', () => {
 
     await expect(service.status('game-1')).resolves.toEqual({
       state: 'completed',
+      startedAt: null,
+      completedAt: null,
       currentStage: 'scenes',
       error: null,
       stages: {

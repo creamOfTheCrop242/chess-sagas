@@ -35,6 +35,8 @@ export type SagaJobState =
 
 export interface SagaGenerationStatus {
   state: SagaJobState;
+  startedAt: string | null;
+  completedAt: string | null;
   currentStage: 'analysis' | 'outline' | 'story' | 'validation' | 'scenes';
   error: string | null;
   stages: {
@@ -120,6 +122,7 @@ export class SagaGenerationService
         where: { gameId },
         create: {
           gameId,
+          createdAt: new Date(),
           status: 'COMPLETED',
           currentStage: 'SCENE_BREAKDOWN',
           completedAt: new Date(),
@@ -127,6 +130,7 @@ export class SagaGenerationService
           billingState: GenerationBillingState.REUSED,
         },
         update: {
+          createdAt: new Date(),
           status: 'COMPLETED',
           currentStage: 'SCENE_BREAKDOWN',
           completedAt: new Date(),
@@ -180,6 +184,7 @@ export class SagaGenerationService
         ? GenerationBillingState.AUTHORIZING
         : shadowState;
       const claimData = {
+        createdAt: new Date(),
         status: pendingAuthorization
           ? ('FAILED' as const)
           : ('QUEUED' as const),
@@ -379,6 +384,8 @@ export class SagaGenerationService
         : job
           ? (job.status.toLowerCase() as SagaJobState)
           : 'idle',
+      startedAt: job?.createdAt?.toISOString() ?? null,
+      completedAt: job?.completedAt?.toISOString() ?? null,
       currentStage: this.clientStage(
         job?.currentStage ?? this.nextStage(stages),
       ),

@@ -30,6 +30,10 @@ export class GameLedgerService {
     const byId = new Map(pieces.map((piece) => [piece.id, piece]));
     const events: GameLedger['events'] = [];
     const promotedPieces: string[] = [];
+    const revengeDebts = new Map<
+      string,
+      Array<{ victimPieceId: string; killerPieceId: string; deathPly: number }>
+    >();
 
     for (const historicalMove of history) {
       const ply = events.length + 1;
@@ -108,6 +112,37 @@ export class GameLedgerService {
         wasInCheck,
         checkingPieceIds,
       );
+      const adjacentAllyPieceIds = adjacentSquares(result.to)
+        .map((square) => squareToId.get(square))
+        .filter((pieceId): pieceId is string => {
+          const piece = pieceId ? byId.get(pieceId) : undefined;
+          return Boolean(piece?.alive && piece.chessColor === mover.chessColor);
+        });
+      const avengesDeaths = capturedId
+        ? (revengeDebts.get(moverId) ?? [])
+            .filter((debt) => debt.killerPieceId === capturedId)
+            .map(({ victimPieceId, deathPly }) => ({ victimPieceId, deathPly }))
+        : [];
+      const witnessPieceIds = captured
+        ? this.captureWitnesses(
+            replay,
+            squareToId,
+            byId,
+            result.to,
+            captured.chessColor,
+          )
+        : [];
+      if (captured) {
+        for (const witnessPieceId of witnessPieceIds) {
+          const debts = revengeDebts.get(witnessPieceId) ?? [];
+          debts.push({
+            victimPieceId: captured.id,
+            killerPieceId: mover.id,
+            deathPly: ply,
+          });
+          revengeDebts.set(witnessPieceId, debts);
+        }
+      }
       events.push({
         ply,
         moveNumber: Math.ceil(ply / 2),
@@ -145,6 +180,17 @@ export class GameLedgerService {
         isQuietMove: !result.captured && !isCheck && !isCastle && !isPromotion,
         boardFenAfterMove: replay.fen(),
         tacticalContext,
+        interactionContext: {
+          adjacentAllyPieceIds,
+          witnessedCapture: captured
+            ? {
+                victimPieceId: captured.id,
+                killerPieceId: mover.id,
+                witnessPieceIds,
+              }
+            : undefined,
+          avengesDeaths,
+        },
         checkmateExplanation,
       });
     }
@@ -163,6 +209,26 @@ export class GameLedgerService {
         .map((piece) => piece.id),
       promotedPieces,
     };
+  }
+
+  private captureWitnesses(
+    chess: Chess,
+    squareToId: Map<string, string>,
+    byId: Map<string, GameLedger['pieces'][number]>,
+    captureSquare: Square,
+    victimColor: Color,
+  ): string[] {
+    const visibleSquares = new Set<Square>([
+      ...adjacentSquares(captureSquare),
+      ...chess.attackers(captureSquare, victimColor),
+    ]);
+    return [...visibleSquares]
+      .map((square) => squareToId.get(square))
+      .filter((pieceId): pieceId is string => {
+        const piece = pieceId ? byId.get(pieceId) : undefined;
+        return Boolean(piece?.alive && piece.chessColor === victimColor);
+      })
+      .sort();
   }
 
   private assignQuietBeatContexts(

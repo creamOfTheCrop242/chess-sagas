@@ -166,6 +166,35 @@ describe('PgnService deterministic ledger', () => {
     expect(tactics?.attackedByPieceIds).toContain('b-b-h5');
   });
 
+  it('records adjacent allies as grounded interaction opportunities', () => {
+    const game = service.parse(
+      '[SetUp "1"]\n[FEN "k7/8/8/8/3PR3/8/8/7K w - - 0 1"]\n[Result "*"]\n\n1. Re5 *',
+    );
+
+    expect(game.ledger.events[0].interactionContext).toMatchObject({
+      adjacentAllyPieceIds: ['w-p-d4'],
+      avengesDeaths: [],
+    });
+  });
+
+  it('records witnesses and only marks a later capture as verified revenge', () => {
+    const game = service.parse(
+      '[SetUp "1"]\n[FEN "k3r3/8/8/4p3/4R3/8/8/7K w - - 0 1"]\n[Result "*"]\n\n1. Rxe5 Rxe5 *',
+    );
+    const death = game.ledger.events[0];
+    const revenge = game.ledger.events[1];
+
+    expect(death.interactionContext?.witnessedCapture).toEqual({
+      victimPieceId: 'b-p-e5',
+      killerPieceId: 'w-r-e4',
+      witnessPieceIds: ['b-r-e8'],
+    });
+    expect(death.interactionContext?.avengesDeaths).toEqual([]);
+    expect(revenge.interactionContext?.avengesDeaths).toEqual([
+      { victimPieceId: 'b-p-e5', deathPly: 1 },
+    ]);
+  });
+
   it('assigns stable story purposes to quiet beats', () => {
     const pgn =
       '[White "Ada"]\n[Black "Turing"]\n[Result "*"]\n\n1. e4 d5 2. exd5 Qxd5 3. Nf3 *';

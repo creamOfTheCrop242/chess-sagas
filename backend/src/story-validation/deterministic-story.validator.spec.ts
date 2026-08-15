@@ -921,4 +921,153 @@ describe('DeterministicStoryValidator', () => {
       ),
     ).toEqual([]);
   });
+
+  it('requires a verified revenge capture to name the witnessed victim', () => {
+    const revengeLedger = {
+      pieces: [
+        { id: 'w-n-b1', permanentName: 'Bram' },
+        { id: 'b-q-d8', permanentName: 'Sera' },
+        { id: 'w-q-d1', permanentName: 'Jessamine' },
+      ],
+      events: [
+        { ply: 1 },
+        {
+          ply: 2,
+          pieceId: 'w-n-b1',
+          capturedPieceId: 'b-q-d8',
+          interactionContext: {
+            adjacentAllyPieceIds: [],
+            avengesDeaths: [{ victimPieceId: 'w-q-d1', deathPly: 1 }],
+          },
+        },
+      ],
+    } as GameLedger;
+
+    expect(
+      validator.validateRevengePayoffs(
+        [
+          {
+            ply: 2,
+            fantasyNarration: 'Bram drove his poleaxe through Sera’s chest.',
+          },
+        ],
+        revengeLedger,
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        type: 'missing-revenge-payoff',
+        ply: 2,
+        pieceId: 'w-n-b1',
+        message: expect.stringContaining('Jessamine'),
+      }),
+    ]);
+    expect(
+      validator.validateRevengePayoffs(
+        [
+          {
+            ply: 2,
+            fantasyNarration:
+              'Bram remembered Jessamine falling and drove his poleaxe through Sera’s chest.',
+          },
+        ],
+        revengeLedger,
+      ),
+    ).toEqual([]);
+  });
+
+  it('detects bodily injury assigned to a character without an active wound', () => {
+    const injuryLedger = {
+      pieces: [
+        {
+          id: 'w-b-f1',
+          permanentName: 'Ansel',
+          fantasyType: 'archwizard',
+        },
+      ],
+      events: [{ ply: 1, isCapture: false }],
+    } as GameLedger;
+
+    expect(
+      validator.validateUnplannedInjuries(
+        [
+          {
+            ply: 1,
+            characters: ['w-b-f1'],
+            fantasyNarration:
+              'Ansel walked with breath short from the damage beneath his ribs.',
+          },
+        ],
+        [],
+        injuryLedger,
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        type: 'invented-wound',
+        severity: 'warning',
+        pieceId: 'w-b-f1',
+      }),
+    ]);
+  });
+
+  it('allows active planned wounds, fatal capture wounds, and royal check strain', () => {
+    const injuryLedger = {
+      pieces: [
+        {
+          id: 'w-b-f1',
+          permanentName: 'Ansel',
+          fantasyType: 'archwizard',
+        },
+        {
+          id: 'w-k-e1',
+          permanentName: 'King Garrick',
+          fantasyType: 'king',
+        },
+        {
+          id: 'b-p-a7',
+          permanentName: 'Mirelle',
+          fantasyType: 'grunt',
+        },
+      ],
+      events: [
+        { ply: 1, isCapture: false },
+        { ply: 2, isCapture: false },
+        { ply: 3, isCapture: true, capturedPieceId: 'b-p-a7' },
+      ],
+    } as GameLedger;
+    const wounds = [
+      {
+        pieceId: 'w-b-f1',
+        inflictedAtPly: 1,
+        injury: 'fractured ribs',
+        lastingEffects: ['shortened breath'],
+        recoveryPly: null,
+      },
+    ];
+
+    expect(
+      validator.validateUnplannedInjuries(
+        [
+          {
+            ply: 1,
+            characters: ['w-b-f1'],
+            fantasyNarration: 'Ansel clutched his fractured ribs.',
+          },
+          {
+            ply: 2,
+            characters: ['w-k-e1'],
+            fantasyNarration:
+              'King Garrick staggered as pain burned through his chest.',
+          },
+          {
+            ply: 3,
+            characters: ['b-p-a7'],
+            fantasyNarration:
+              'Mirelle died when the blade pierced her wounded chest.',
+          },
+        ],
+        wounds,
+        injuryLedger,
+      ),
+    ).toEqual([]);
+  });
 });

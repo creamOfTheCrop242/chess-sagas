@@ -292,6 +292,13 @@ export class FullStoryService {
           })),
           ledger,
         );
+      const revengePayoffFindings = this.deterministic.validateRevengePayoffs(
+        scenes.map((scene) => ({
+          ply: scene.startPly,
+          fantasyNarration: scene.fantasyNarration,
+        })),
+        ledger,
+      );
       const prematureAscensionFindings =
         this.deterministic.validatePrematureAscensionReveals(
           scenes.map((scene) => ({
@@ -320,6 +327,16 @@ export class FullStoryService {
             .join('; ')}`,
         );
       }
+      if (revengePayoffFindings.length > 0) {
+        throw new Error(
+          `Generated story package omits verified revenge payoffs: ${revengePayoffFindings
+            .map(
+              (finding) =>
+                `${finding.message}. Rejected prose: ${JSON.stringify(finding.excerpt)}`,
+            )
+            .join('; ')}`,
+        );
+      }
       if (timedFateFindings.length > 0) {
         throw new Error(
           `Generated story package contains premature character deaths: ${timedFateFindings
@@ -328,16 +345,28 @@ export class FullStoryService {
         );
       }
       const findTimedWounds = (candidateScenes: typeof scenes) =>
-        this.deterministic.validateTimedWounds(
-          candidateScenes.map((scene, index) => ({
-            ply: scene.startPly,
-            fantasyNarration: scene.fantasyNarration,
-            characters: scene.characters,
-            woundsInflicted: storyPackage.scenes[index]?.woundsInflicted ?? [],
-          })),
-          storyPackage.wounds,
-          ledger,
-        );
+        [
+          ...this.deterministic.validateTimedWounds(
+            candidateScenes.map((scene, index) => ({
+              ply: scene.startPly,
+              fantasyNarration: scene.fantasyNarration,
+              characters: scene.characters,
+              woundsInflicted:
+                storyPackage.scenes[index]?.woundsInflicted ?? [],
+            })),
+            storyPackage.wounds,
+            ledger,
+          ),
+          ...this.deterministic.validateUnplannedInjuries(
+            candidateScenes.map((scene) => ({
+              ply: scene.startPly,
+              fantasyNarration: scene.fantasyNarration,
+              characters: scene.characters,
+            })),
+            storyPackage.wounds,
+            ledger,
+          ),
+        ];
       let timedWoundFindings = findTimedWounds(scenes);
       const initialWoundErrors = timedWoundFindings.filter(
         (finding) => finding.severity === 'error',
@@ -422,6 +451,14 @@ export class FullStoryService {
               })),
               ledger,
             );
+          const repairedRevengeErrors =
+            this.deterministic.validateRevengePayoffs(
+              candidateScenes.map((scene) => ({
+                ply: scene.startPly,
+                fantasyNarration: scene.fantasyNarration,
+              })),
+              ledger,
+            );
           const repairedFateErrors =
             this.deterministic.validateTimedCharacterFates(
               candidateScenes.map((scene) => ({
@@ -441,6 +478,7 @@ export class FullStoryService {
           const repairedWoundFindings = findTimedWounds(candidateScenes);
           if (
             repairedCaptureErrors.length > 0 ||
+            repairedRevengeErrors.length > 0 ||
             repairedFateErrors.length > 0 ||
             repairedAscensionErrors.length > 0 ||
             repairedWoundFindings.some(

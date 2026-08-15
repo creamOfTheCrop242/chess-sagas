@@ -184,6 +184,38 @@ export class DeterministicStoryValidator {
     return findings;
   }
 
+  validateRevengePayoffs(
+    scenes: Array<{ ply: number; fantasyNarration: string }>,
+    ledger: GameLedger,
+  ): ValidationFinding[] {
+    const pieces = new Map(ledger.pieces.map((piece) => [piece.id, piece]));
+    const sceneByPly = new Map(scenes.map((scene) => [scene.ply, scene]));
+    const findings: ValidationFinding[] = [];
+
+    for (const event of ledger.events) {
+      const debts = event.interactionContext?.avengesDeaths ?? [];
+      if (debts.length === 0) continue;
+      const scene = sceneByPly.get(event.ply);
+      const avenger = pieces.get(event.pieceId);
+      if (!scene || !avenger) continue;
+      for (const debt of debts) {
+        const victim = pieces.get(debt.victimPieceId);
+        if (!victim) continue;
+        const victimAliases = characterAliases(victim);
+        if (mentionsCharacter(scene.fantasyNarration, victimAliases)) continue;
+        findings.push({
+          type: 'missing-revenge-payoff',
+          severity: 'error',
+          message: `${avenger.permanentName}'s capture at ply ${event.ply} avenges ${victim.permanentName}'s witnessed death at ply ${debt.deathPly}, but the prose does not connect the payoff to that victim`,
+          ply: event.ply,
+          pieceId: event.pieceId,
+          excerpt: scene.fantasyNarration.slice(0, 300),
+        });
+      }
+    }
+    return findings;
+  }
+
   validateTimedWounds(
     scenes: Array<{
       ply: number;
@@ -284,6 +316,60 @@ export class DeterministicStoryValidator {
     }
     return findings;
   }
+
+  validateUnplannedInjuries(
+    scenes: Array<{
+      ply: number;
+      fantasyNarration: string;
+      characters: string[];
+    }>,
+    wounds: GeneratedStoryPackage['wounds'],
+    ledger: GameLedger,
+  ): ValidationFinding[] {
+    const pieces = new Map(ledger.pieces.map((piece) => [piece.id, piece]));
+    const woundsByPiece = new Map<string, GeneratedStoryPackage['wounds']>();
+    for (const wound of wounds) {
+      const entries = woundsByPiece.get(wound.pieceId) ?? [];
+      entries.push(wound);
+      woundsByPiece.set(wound.pieceId, entries);
+    }
+    const findings: ValidationFinding[] = [];
+
+    for (const scene of scenes) {
+      const event = ledger.events[scene.ply - 1];
+      for (const pieceId of scene.characters) {
+        const piece = pieces.get(pieceId);
+        if (!piece || piece.fantasyType === 'king') continue;
+        if (event?.isCapture && event.capturedPieceId === pieceId) continue;
+        const activeWound = (woundsByPiece.get(pieceId) ?? []).some(
+          (wound) =>
+            wound.inflictedAtPly <= scene.ply &&
+            (wound.recoveryPly === null || wound.recoveryPly >= scene.ply),
+        );
+        if (activeWound) continue;
+        const aliases = characterAliases(piece);
+        if (!mentionsCharacter(scene.fantasyNarration, aliases)) continue;
+        const otherAliases = ledger.pieces
+          .filter((candidate) => candidate.id !== pieceId)
+          .flatMap((candidate) => characterAliases(candidate));
+        const excerpt = unplannedInjuryExcerpt(
+          scene.fantasyNarration,
+          aliases,
+          otherAliases,
+        );
+        if (!excerpt) continue;
+        findings.push({
+          type: 'invented-wound',
+          severity: 'warning',
+          message: `${piece.permanentName} has no active planned wound at ply ${scene.ply} but is described with a bodily injury`,
+          ply: scene.ply,
+          pieceId,
+          excerpt,
+        });
+      }
+    }
+    return findings;
+  }
 }
 
 const ANATOMY_FAMILIES = [
@@ -294,7 +380,7 @@ const ANATOMY_FAMILIES = [
   ['foot', 'ankle', 'toe'],
   ['eye', 'sight', 'vision'],
   ['head', 'skull', 'temple', 'brow'],
-  ['chest', 'rib', 'lung', 'heart'],
+  ['chest', 'rib', 'ribs', 'lung', 'lungs', 'heart'],
   ['shoulder', 'collarbone'],
   ['back', 'spine', 'spinal'],
   ['face', 'jaw', 'cheek'],
@@ -317,6 +403,7 @@ const INJURY_FAMILIES = [
     'ache',
     'aching',
     'damaged',
+    'damage',
     'trauma',
     'traumatized',
     'sore',
@@ -380,6 +467,43 @@ function matchingCharacterWoundExcerpt(
       !mentionsCharacter(sentence, otherCharacterAliases) &&
       /\b(?:he|she|his|her|they|their)\b/i.test(sentence)
     );
+  });
+}
+
+function unplannedInjuryExcerpt(
+  narration: string,
+  aliases: string[],
+  otherCharacterAliases: string[],
+): string | undefined {
+  const bodilyAnatomy = ANATOMY_FAMILIES.slice(0, 11).flat();
+  const injuryTerms = INJURY_FAMILIES.flat();
+  const sentences = narration.match(/[^.!?]+[.!?]?/g) ?? [narration];
+  return sentences.map((sentence) => sentence.trim()).find((sentence) => {
+    if (!hasAny(sentence, bodilyAnatomy) || !hasAny(sentence, injuryTerms)) {
+      return false;
+    }
+    const targetPositions = matchPositions(sentence, aliases);
+    const anatomyPositions = matchPositions(sentence, bodilyAnatomy);
+    const injuryPositions = matchPositions(sentence, injuryTerms);
+    if (
+      targetPositions.length === 0 ||
+      anatomyPositions.length === 0 ||
+      injuryPositions.length === 0
+    ) {
+      return false;
+    }
+    const firstWoundPosition = Math.min(...anatomyPositions, ...injuryPositions);
+    const targetPosition = Math.max(
+      ...targetPositions.filter((position) => position <= firstWoundPosition),
+    );
+    if (!Number.isFinite(targetPosition)) return false;
+    const lastWoundPosition = Math.max(...anatomyPositions, ...injuryPositions);
+    if (lastWoundPosition - targetPosition > 160) return false;
+    // Stay conservative in multi-character sentences. Pronouns and possessives
+    // make deterministic ownership ambiguous (for example, "Rowan walked
+    // toward Tarin ... while his palm..."). Those scenes are handled by the
+    // planned-wound validator instead of guessing that Tarin owns the injury.
+    return matchPositions(sentence, otherCharacterAliases).length === 0;
   });
 }
 

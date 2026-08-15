@@ -12,6 +12,7 @@ import { NarrativeAnalysisValidator } from './narrative-analysis.validator';
 import { buildEndingContract } from './ending-contract';
 import type { NarrativeAnalysis } from './models/narrative-analysis';
 import { sealFateForKingFate } from '../chess/models/story-ending';
+import type { GameLedger } from '../chess/models/game-ledger';
 
 @Injectable()
 export class NarrativeAnalysisService {
@@ -66,11 +67,14 @@ export class NarrativeAnalysisService {
         }),
       );
       const analysis = normalizeRelationshipChronology(
-        normalizeDeterministicAnalysisFacts(
-          generatedAnalysis,
-          battlefieldEnvironment,
-          surrenderContext,
-          endingContract,
+        normalizeSharedAscensionSites(
+          normalizeDeterministicAnalysisFacts(
+            generatedAnalysis,
+            battlefieldEnvironment,
+            surrenderContext,
+            endingContract,
+          ),
+          ledger,
         ),
       );
       this.validator.validate(analysis, ledger);
@@ -161,6 +165,42 @@ export function normalizeRelationshipChronology(
         ...relationship,
         developmentPlies: [relationship.payoffPly],
         payoffPly: null,
+      };
+    }),
+  };
+}
+
+export function normalizeSharedAscensionSites(
+  analysis: NarrativeAnalysis,
+  ledger: GameLedger,
+): NarrativeAnalysis {
+  const pieceSides = new Map(
+    ledger.pieces.map((piece) => [piece.id, piece.side] as const),
+  );
+  const siteByInvadedKingdom = new Map<'north' | 'south', string>();
+  const orderedPlans = [...analysis.promotingPawnPlans].sort(
+    (left, right) => left.promotionPly - right.promotionPly,
+  );
+
+  for (const plan of orderedPlans) {
+    const promotingSide = pieceSides.get(plan.pieceId);
+    if (!promotingSide) continue;
+    const invadedKingdom = promotingSide === 'north' ? 'south' : 'north';
+    if (!siteByInvadedKingdom.has(invadedKingdom)) {
+      siteByInvadedKingdom.set(invadedKingdom, plan.ascensionSite);
+    }
+  }
+
+  return {
+    ...analysis,
+    promotingPawnPlans: analysis.promotingPawnPlans.map((plan) => {
+      const promotingSide = pieceSides.get(plan.pieceId);
+      if (!promotingSide) return plan;
+      const invadedKingdom = promotingSide === 'north' ? 'south' : 'north';
+      return {
+        ...plan,
+        ascensionSite:
+          siteByInvadedKingdom.get(invadedKingdom) ?? plan.ascensionSite,
       };
     }),
   };

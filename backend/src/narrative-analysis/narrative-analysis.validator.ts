@@ -215,6 +215,23 @@ export class NarrativeAnalysisValidator {
         errors.push(`Invented promotion plan for ${pieceId}`);
       }
     }
+    const pieceSides = new Map(
+      ledger.pieces.map((piece) => [piece.id, piece.side] as const),
+    );
+    const ascensionSiteByInvadedKingdom = new Map<'north' | 'south', string>();
+    for (const plan of analysis.promotingPawnPlans) {
+      const promotingSide = pieceSides.get(plan.pieceId);
+      if (!promotingSide) continue;
+      const invadedKingdom = promotingSide === 'north' ? 'south' : 'north';
+      const canonicalSite = ascensionSiteByInvadedKingdom.get(invadedKingdom);
+      if (canonicalSite === undefined) {
+        ascensionSiteByInvadedKingdom.set(invadedKingdom, plan.ascensionSite);
+      } else if (plan.ascensionSite !== canonicalSite) {
+        errors.push(
+          `Promotions invading the ${invadedKingdom} kingdom must share one Ascension Seal site`,
+        );
+      }
+    }
 
     const expectedWinner =
       ledger.metadata.result === '1-0'

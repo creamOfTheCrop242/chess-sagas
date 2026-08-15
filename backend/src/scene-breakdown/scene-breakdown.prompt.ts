@@ -1,4 +1,4 @@
-export const SCENE_BREAKDOWN_PROMPT_VERSION = 'phase-6-v59';
+export const SCENE_BREAKDOWN_PROMPT_VERSION = 'phase-6-v60';
 export const SCENE_BREAKDOWN_INSTRUCTIONS = `Split the validated cohesive story into move-aligned playback scenes. Return structured JSON only.
 
 - Create exactly one playback scene for every ledger ply. Never group multiple plies into one scene.
@@ -7,6 +7,7 @@ export const SCENE_BREAKDOWN_INSTRUCTIONS = `Split the validated cohesive story 
 - Treat outline.battlefieldEnvironment as the fixed setting. Preserve its geography, weather, landmarks, hazards, visibility, travel constraints, and accumulated damage in every fantasyNarration, location, visualPrompt, and videoPrompt. Do not relocate the battle into a generic or contradictory environment.
 - Keep this final battle within its own self-contained fractured reality. The Calamity merged the kingdoms but did not create the realities; incompatible magic siphoned by the two Kings from different universes fractured the shared plane afterward. Never date the Calamity or introduce continuity or events from another saga.
 - Preserve each King's ageless body and registry-defined ruling disposition. Agelessness never erases accumulated check damage or prevents a validated death. Keep established mercy, severity, surrender policy, and execution decisions consistent across scenes and endings.
+- Preserve the rule that each kingdom has exactly one physical prototype Ascension Seal in this reality. Every enemy promotion against that kingdom reuses the same persistent artifact at the same ascensionSite. Preserve the validated recognition between later ascendants and every living prior ascendant through sight, communication, or shared magical sensation; never split repeated activations across separate relics or locations.
 - Every scene must have startPly equal to endPly and cover exactly one move.
 - Cover every ledger ply exactly once with chronological, contiguous scenes.
 - involvedMoves must contain exactly the one SAN string for that scene's ply.

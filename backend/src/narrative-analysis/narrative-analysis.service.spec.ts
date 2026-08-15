@@ -10,6 +10,7 @@ import type { NarrativeAnalysis } from './models/narrative-analysis';
 import {
   NarrativeAnalysisService,
   normalizeRelationshipChronology,
+  normalizeSharedAscensionSites,
 } from './narrative-analysis.service';
 import { NarrativeAnalysisValidator } from './narrative-analysis.validator';
 import { selectRequiredWoundEvents } from './wound-planning';
@@ -214,6 +215,52 @@ describe('NarrativeAnalysisService', () => {
       developmentPlies: [3, 5, 7],
       payoffPly: null,
     });
+  });
+
+  it('reuses one persistent Ascension Seal site for every invasion of a kingdom', () => {
+    const analysis = makeAnalysis(ledger);
+    const northPieces = ledger.pieces.filter((piece) => piece.side === 'north');
+    const southPiece = ledger.pieces.find((piece) => piece.side === 'south')!;
+    analysis.promotingPawnPlans = [
+      {
+        pieceId: northPieces[1].id,
+        promotionPly: 6,
+        setupPlies: [4],
+        ascensionSite: 'a second southern cave',
+        ascensionMeaning: 'the later transformation',
+      },
+      {
+        pieceId: northPieces[0].id,
+        promotionPly: 3,
+        setupPlies: [2],
+        ascensionSite: 'the buried southern altar',
+        ascensionMeaning: 'the first transformation',
+      },
+      {
+        pieceId: southPiece.id,
+        promotionPly: 7,
+        setupPlies: [5],
+        ascensionSite: 'the northern observatory',
+        ascensionMeaning: 'the opposing transformation',
+      },
+    ];
+
+    const normalized = normalizeSharedAscensionSites(analysis, ledger);
+
+    expect(normalized.promotingPawnPlans).toEqual([
+      expect.objectContaining({
+        pieceId: northPieces[1].id,
+        ascensionSite: 'the buried southern altar',
+      }),
+      expect.objectContaining({
+        pieceId: northPieces[0].id,
+        ascensionSite: 'the buried southern altar',
+      }),
+      expect.objectContaining({
+        pieceId: southPiece.id,
+        ascensionSite: 'the northern observatory',
+      }),
+    ]);
   });
 
   it('rejects a lasting wound that is not anchored to the character’s capture', () => {

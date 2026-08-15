@@ -1,4 +1,4 @@
-export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v39';
+export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v40';
 
 export const STORY_VALIDATION_INSTRUCTIONS = `Validate the supplied story against the complete deterministic chess ledger, narrative analysis, outline, and deterministic findings.
 
@@ -6,6 +6,7 @@ Return structured findings only plus an optional repaired full Markdown story.
 
 Report:
 - an ending that omits, replaces, or materially weakens endingPlan.darkEndingConsequence; presents victory as clean or wholly good; treats a dead King's magical distribution as fading gradually rather than stopping immediately; or invents a Seal catastrophe incompatible with the validated consequence
+- multiple physical prototype Ascension Seals, relic chambers, or ascension sites belonging to the same kingdom; failure to reuse that kingdom's one persistent prototype for every enemy promotion; or, after repeated use, failure of a later ascendant and every living prior ascendant to acknowledge the shared transformation through observation, communication, or magical sensation rather than generic tactical coordination
 - any claim that a Moving Fortress pilot can be extracted, transferred, cut free, or survive outside the machine; unnecessary Fortress-centered ending material when the pilot was not central to the story or selected consequence
 - any mage acolyte who remains purely a conventional soldier throughout the story without at least one visible, meaningful use of limited apprentice magic, and any mage acolyte incorrectly given teleportation or Archwizard-level power
 - every missing or invented capture and every wrong captor

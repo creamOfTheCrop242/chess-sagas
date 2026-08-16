@@ -619,10 +619,16 @@ export class FullStoryService {
           storyValidation: {
             create: {
               sourceStoryId: completedRun.generatedStory.id,
-              schemaVersion: 2,
+              schemaVersion: 3,
               valid: true,
               findings: [],
               repairedStoryMarkdown: null,
+            },
+          },
+          sceneBreakdown: {
+            create: {
+              schemaVersion: 3,
+              data: breakdownData,
             },
           },
         },

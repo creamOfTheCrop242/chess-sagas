@@ -16,6 +16,12 @@ import {
   type StoryValidationProvider,
 } from './story-validation.provider';
 import { STORY_VALIDATION_PROMPT_VERSION } from './story-validation.prompt';
+import {
+  sceneBreakdownSchema,
+  type SceneBreakdown,
+} from '../scene-breakdown/models/scene-breakdown';
+import { SceneBreakdownValidator } from '../scene-breakdown/scene-breakdown.validator';
+import type { StoryValidationResult } from './models/story-validation';
 
 @Injectable()
 export class StoryValidationService {
@@ -25,6 +31,7 @@ export class StoryValidationService {
     @Inject(STORY_VALIDATION_PROVIDER)
     private readonly provider: StoryValidationProvider,
     private readonly deterministic: DeterministicStoryValidator,
+    private readonly sceneValidator: SceneBreakdownValidator,
   ) {}
 
   async validate(gameId: string) {
@@ -53,7 +60,7 @@ export class StoryValidationService {
       this.prisma.generationRun.findFirst({
         where: { gameId, currentStage: 'STORY', status: 'COMPLETED' },
         orderBy: { createdAt: 'desc' },
-        include: { generatedStory: true },
+        include: { generatedStory: true, sceneBreakdown: true },
       }),
     ]);
     if (!analysisRun?.narrativeAnalysis)
@@ -62,6 +69,8 @@ export class StoryValidationService {
       throw new NotFoundException('A completed story outline is required');
     if (!storyRun?.generatedStory)
       throw new NotFoundException('A completed full story is required');
+    if (!storyRun.sceneBreakdown)
+      throw new NotFoundException('A structured full story is required');
 
     const run = await this.prisma.generationRun.create({
       data: {
@@ -74,6 +83,10 @@ export class StoryValidationService {
     });
     try {
       const { ledger } = prepared;
+      const outline = storyOutlineSchema.parse(outlineRun.storyOutline.data);
+      const sourceBreakdown = sceneBreakdownSchema.parse(
+        storyRun.sceneBreakdown.data,
+      );
       const deterministicFindings = this.deterministic.validate(
         storyRun.generatedStory.storyMarkdown,
         ledger,
@@ -84,9 +97,9 @@ export class StoryValidationService {
           narrativeAnalysis: narrativeAnalysisSchema.parse(
             analysisRun.narrativeAnalysis.data,
           ),
-          outline: storyOutlineSchema.parse(outlineRun.storyOutline.data),
+          outline,
           title: storyRun.generatedStory.title,
-          storyMarkdown: storyRun.generatedStory.storyMarkdown,
+          structuredStory: sourceBreakdown,
           deterministicFindings,
           telemetry: {
             gameId,
@@ -110,18 +123,23 @@ export class StoryValidationService {
       const hasErrors = findings.some(
         (finding) => finding.severity === 'error',
       );
-      const repairApplied = Boolean(result.repairedStoryMarkdown);
-      if (hasErrors && !result.repairedStoryMarkdown) {
+      const repairApplied = hasStoryValidationPatches(result);
+      if (hasErrors && !repairApplied) {
         throw new BadGatewayException(
-          'Validation found errors but OpenAI returned no repaired story',
+          'Validation found errors but OpenAI returned no structured patches',
         );
       }
-      const repairedStoryMarkdown = result.repairedStoryMarkdown
-        ? this.deterministic.repairProhibitedTerminology(
-            result.repairedStoryMarkdown,
-          )
-        : null;
-      if (repairedStoryMarkdown) {
+      const repairedBreakdown = applyStoryValidationPatches(
+        sourceBreakdown,
+        result,
+        (prose) => this.deterministic.repairProhibitedTerminology(prose),
+      );
+      this.sceneValidator.validate(repairedBreakdown, ledger);
+      const repairedStoryMarkdown = assembleValidatedStoryMarkdown(
+        repairedBreakdown,
+        outline.acts.map((act) => act.title),
+      );
+      if (repairApplied) {
         const remainingFindings = this.deterministic.validate(
           repairedStoryMarkdown,
           ledger,
@@ -138,6 +156,9 @@ export class StoryValidationService {
       const findingsJson = JSON.parse(
         JSON.stringify(findings),
       ) as Prisma.InputJsonValue;
+      const breakdownJson = JSON.parse(
+        JSON.stringify(repairedBreakdown),
+      ) as Prisma.InputJsonValue;
 
       await this.prisma.generationRun.update({
         where: { id: run.id },
@@ -148,17 +169,22 @@ export class StoryValidationService {
           storyValidation: {
             create: {
               sourceStoryId: storyRun.generatedStory.id,
-              schemaVersion: 1,
+              schemaVersion: 2,
               valid,
               findings: findingsJson,
-              repairedStoryMarkdown,
+              repairedStoryMarkdown: repairApplied
+                ? repairedStoryMarkdown
+                : null,
             },
+          },
+          sceneBreakdown: {
+            create: { schemaVersion: 3, data: breakdownJson },
           },
         },
       });
       return this.prisma.generationRun.findUnique({
         where: { id: run.id },
-        include: { storyValidation: true },
+        include: { storyValidation: true, sceneBreakdown: true },
       });
     } catch (error) {
       await this.prisma.generationRun.update({
@@ -191,4 +217,90 @@ export class StoryValidationService {
     }
     return run;
   }
+}
+
+export function hasStoryValidationPatches(
+  result: StoryValidationResult,
+): boolean {
+  return (
+    result.scenePatches.length > 0 ||
+    result.epiloguePatch !== null ||
+    result.laterEpilogueHeadingPatch !== null ||
+    result.laterEpiloguePatch !== null
+  );
+}
+
+export function applyStoryValidationPatches(
+  source: SceneBreakdown,
+  result: StoryValidationResult,
+  cleanProse: (prose: string) => string = (prose) => prose,
+): SceneBreakdown {
+  const knownPlies = new Set(source.scenes.map((scene) => scene.startPly));
+  const patches = new Map<number, string>();
+  for (const patch of result.scenePatches) {
+    if (!knownPlies.has(patch.ply)) {
+      throw new BadGatewayException(
+        `Validation returned a patch for unknown ply ${patch.ply}`,
+      );
+    }
+    if (patches.has(patch.ply)) {
+      throw new BadGatewayException(
+        `Validation returned duplicate patches for ply ${patch.ply}`,
+      );
+    }
+    patches.set(patch.ply, cleanProse(patch.fantasyNarration));
+  }
+
+  return sceneBreakdownSchema.parse({
+    ...source,
+    scenes: source.scenes.map((scene) => ({
+      ...scene,
+      fantasyNarration: patches.get(scene.startPly) ?? scene.fantasyNarration,
+    })),
+    epilogue:
+      result.epiloguePatch === null
+        ? source.epilogue
+        : cleanProse(result.epiloguePatch),
+    laterEpilogueHeading:
+      result.laterEpilogueHeadingPatch === null
+        ? source.laterEpilogueHeading
+        : cleanHeading(result.laterEpilogueHeadingPatch),
+    laterEpilogue:
+      result.laterEpiloguePatch === null
+        ? source.laterEpilogue
+        : cleanProse(result.laterEpiloguePatch),
+  });
+}
+
+export function assembleValidatedStoryMarkdown(
+  breakdown: SceneBreakdown,
+  actTitles: string[],
+): string {
+  const sections: string[] = [];
+  let currentAct = 0;
+  for (const scene of breakdown.scenes) {
+    if (scene.actNumber !== currentAct) {
+      currentAct = scene.actNumber;
+      const title = (actTitles[currentAct - 1] || `Act ${currentAct}`).replace(
+        /\b[a-h][1-8]\b/gi,
+        'battlefield',
+      );
+      sections.push(`## Act ${currentAct}: ${title}`);
+    }
+    sections.push(scene.fantasyNarration);
+  }
+  if (breakdown.epilogue) {
+    sections.push('## Immediate Aftermath', breakdown.epilogue);
+  }
+  if (breakdown.laterEpilogue) {
+    sections.push(
+      `## ${breakdown.laterEpilogueHeading || 'The Later Chronicle'}`,
+      breakdown.laterEpilogue,
+    );
+  }
+  return sections.join('\n\n');
+}
+
+function cleanHeading(heading: string): string {
+  return heading.replace(/^#{1,6}\s*/, '').trim();
 }

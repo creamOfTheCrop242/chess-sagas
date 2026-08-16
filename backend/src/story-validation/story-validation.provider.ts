@@ -6,6 +6,7 @@ import type {
   ValidationFinding,
 } from './models/story-validation';
 import type { GenerationTelemetryContext } from '../openai/openai-generation';
+import type { SceneBreakdown } from '../scene-breakdown/models/scene-breakdown';
 
 export const STORY_VALIDATION_PROVIDER = Symbol('STORY_VALIDATION_PROVIDER');
 
@@ -14,7 +15,18 @@ export interface StoryValidationRequest {
   narrativeAnalysis: NarrativeAnalysis;
   outline: StoryOutline;
   title: string;
-  storyMarkdown: string;
+  structuredStory: Pick<
+    SceneBreakdown,
+    | 'scenes'
+    | 'wounds'
+    | 'epilogue'
+    | 'laterEpilogueHeading'
+    | 'laterEpilogue'
+    | 'defeatedKingDeathDescription'
+    | 'defeatedKingFate'
+    | 'defeatedSealFate'
+    | 'survivingFortressOutcomes'
+  >;
   deterministicFindings: ValidationFinding[];
   telemetry: GenerationTelemetryContext;
 }

@@ -1,24 +1,21 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
+import type { GameLedger } from '../chess/models/game-ledger';
 import { PrismaService } from '../database/prisma.service';
+import { FULL_STORY_PROMPT_VERSION } from '../full-story/full-story.prompt';
 import { GenerationPreparationService } from '../generation/generation-preparation.service';
-import { storyOutlineSchema } from '../story-outline/models/story-outline';
-import { sceneBreakdownSchema } from './models/scene-breakdown';
 import {
-  SCENE_BREAKDOWN_PROVIDER,
-  type SceneBreakdownProvider,
-} from './scene-breakdown.provider';
+  sceneBreakdownSchema,
+  type SceneBreakdown,
+} from './models/scene-breakdown';
 import { SCENE_BREAKDOWN_PROMPT_VERSION } from './scene-breakdown.prompt';
 import { SceneBreakdownValidator } from './scene-breakdown.validator';
-import { FULL_STORY_PROMPT_VERSION } from '../full-story/full-story.prompt';
 
 @Injectable()
 export class SceneBreakdownService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly preparation: GenerationPreparationService,
-    @Inject(SCENE_BREAKDOWN_PROVIDER)
-    private readonly provider: SceneBreakdownProvider,
     private readonly validator: SceneBreakdownValidator,
   ) {}
 
@@ -29,17 +26,12 @@ export class SceneBreakdownService {
   }
 
   private async generateOnce(gameId: string) {
-    const [prepared, outlineRun, validationRun, storyRun] = await Promise.all([
+    const [prepared, validationRun, storyRun] = await Promise.all([
       this.preparation.prepare(gameId),
-      this.prisma.generationRun.findFirst({
-        where: { gameId, currentStage: 'OUTLINE', status: 'COMPLETED' },
-        orderBy: { createdAt: 'desc' },
-        include: { storyOutline: true },
-      }),
       this.prisma.generationRun.findFirst({
         where: { gameId, currentStage: 'VALIDATION', status: 'COMPLETED' },
         orderBy: { createdAt: 'desc' },
-        include: { storyValidation: true },
+        include: { storyValidation: true, sceneBreakdown: true },
       }),
       this.prisma.generationRun.findFirst({
         where: { gameId, currentStage: 'STORY', status: 'COMPLETED' },
@@ -47,63 +39,34 @@ export class SceneBreakdownService {
         include: { generatedStory: true, sceneBreakdown: true },
       }),
     ]);
-    if (!outlineRun?.storyOutline)
-      throw new NotFoundException('Validated outline required');
     if (!validationRun?.storyValidation?.valid)
       throw new NotFoundException('Valid Phase 5 story required');
-    if (!storyRun?.generatedStory)
-      throw new NotFoundException('Generated story required');
+    const validatedBreakdown = validationRun.sceneBreakdown
+      ? sceneBreakdownSchema.parse(validationRun.sceneBreakdown.data)
+      : validationRun.storyValidation.repairedStoryMarkdown === null &&
+          storyRun?.sceneBreakdown
+        ? sceneBreakdownSchema.parse(storyRun.sceneBreakdown.data)
+        : null;
+    if (!validatedBreakdown) {
+      throw new NotFoundException(
+        'A validated structured story is required; regenerate validation with the current version',
+      );
+    }
     const run = await this.prisma.generationRun.create({
       data: {
         gameId,
         status: 'RUNNING',
         currentStage: 'SCENE_BREAKDOWN',
-        model: this.provider.model,
+        model: 'deterministic',
         promptVersion: SCENE_BREAKDOWN_PROMPT_VERSION,
       },
     });
     try {
       const { ledger } = prepared;
-      if (!storyRun.sceneBreakdown) {
-        throw new NotFoundException('Structured story ending state required');
-      }
-      const storyBreakdown = sceneBreakdownSchema.parse(
-        storyRun.sceneBreakdown.data,
-      );
-      const generatedBreakdown = await this.provider.generate({
+      const breakdown = normalizeLedgerOwnedSceneFacts(
+        validatedBreakdown,
         ledger,
-        outline: storyOutlineSchema.parse(outlineRun.storyOutline.data),
-        validatedStoryMarkdown:
-          validationRun.storyValidation.repairedStoryMarkdown ||
-          storyRun.generatedStory.storyMarkdown,
-        endingState: {
-          defeatedKingFate: storyBreakdown.defeatedKingFate,
-          defeatedSealFate: storyBreakdown.defeatedSealFate,
-          defeatedKingDeathDescription:
-            storyBreakdown.defeatedKingDeathDescription,
-        },
-        telemetry: {
-          gameId,
-          generationRunId: run.id,
-          attempt: 1,
-          repairMode: 'none',
-        },
-      });
-      const breakdown = sceneBreakdownSchema.parse({
-        ...generatedBreakdown,
-        scenes: generatedBreakdown.scenes.map((scene) => {
-          const event = ledger.events[scene.startPly - 1];
-          return {
-            ...scene,
-            captureActorId: event?.isCapture ? event.pieceId : null,
-            captureVictimId: event?.capturedPieceId ?? null,
-          };
-        }),
-        defeatedKingFate: storyBreakdown.defeatedKingFate,
-        defeatedSealFate: storyBreakdown.defeatedSealFate,
-        defeatedKingDeathDescription:
-          storyBreakdown.defeatedKingDeathDescription,
-      });
+      );
       this.validator.validate(breakdown, ledger);
       const data = JSON.parse(
         JSON.stringify(breakdown),
@@ -114,7 +77,7 @@ export class SceneBreakdownService {
           status: 'COMPLETED',
           completedAt: new Date(),
           error: null,
-          sceneBreakdown: { create: { schemaVersion: 1, data } },
+          sceneBreakdown: { create: { schemaVersion: 3, data } },
         },
       });
       return this.prisma.generationRun.findUnique({
@@ -178,4 +141,65 @@ export class SceneBreakdownService {
           : null,
     };
   }
+}
+
+export function normalizeLedgerOwnedSceneFacts(
+  source: SceneBreakdown,
+  ledger: GameLedger,
+): SceneBreakdown {
+  const sceneByPly = new Map(
+    source.scenes.map((scene) => [scene.startPly, scene]),
+  );
+  let currentAct = 0;
+  let sceneNumber = 0;
+  const scenes = ledger.events.map((event) => {
+    const scene = sceneByPly.get(event.ply);
+    if (!scene) throw new Error(`Validated story omitted ply ${event.ply}`);
+    if (scene.actNumber !== currentAct) {
+      currentAct = scene.actNumber;
+      sceneNumber = 1;
+    } else {
+      sceneNumber += 1;
+    }
+    return {
+      ...scene,
+      id: `ply-${event.ply}`,
+      sceneNumber,
+      startPly: event.ply,
+      endPly: event.ply,
+      involvedMoves: [event.san],
+      deaths:
+        event.isCapture && event.capturedPieceId ? [event.capturedPieceId] : [],
+      captureActorId: event.isCapture ? event.pieceId : null,
+      captureVictimId: event.capturedPieceId ?? null,
+      promotions: event.isPromotion ? [event.pieceId] : [],
+    };
+  });
+
+  const result = ledger.metadata?.result;
+  const defeatedSide =
+    result === '1-0' ? 'south' : result === '0-1' ? 'north' : null;
+  const survivingFortressOutcomes = ledger.pieces
+    .filter(
+      (piece) =>
+        piece.alive &&
+        (piece.fantasyType === 'moving-fortress' ||
+          piece.currentChessType === 'r'),
+    )
+    .map((piece) => ({
+      pieceId: piece.id,
+      operatorName:
+        piece.operatorName ?? piece.viewpointName ?? piece.permanentName,
+      side: piece.side,
+      powerOutcome:
+        defeatedSide === piece.side && source.defeatedSealFate === 'destroyed'
+          ? ('loses-seal-power' as const)
+          : ('retains-seal-power' as const),
+    }));
+
+  return sceneBreakdownSchema.parse({
+    ...source,
+    scenes,
+    survivingFortressOutcomes,
+  });
 }

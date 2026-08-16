@@ -41,7 +41,15 @@ export const validationFindingSchema = z.object({
 
 export const storyValidationResultSchema = z.object({
   findings: z.array(validationFindingSchema),
-  repairedStoryMarkdown: z.string().min(500).nullable(),
+  scenePatches: z.array(
+    z.object({
+      ply: z.number().int().positive(),
+      fantasyNarration: z.string().min(1),
+    }),
+  ),
+  epiloguePatch: z.string().min(1).nullable(),
+  laterEpilogueHeadingPatch: z.string().min(1).max(80).nullable(),
+  laterEpiloguePatch: z.string().min(1).nullable(),
 });
 
 export type ValidationFinding = z.infer<typeof validationFindingSchema>;

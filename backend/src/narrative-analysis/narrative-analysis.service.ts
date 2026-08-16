@@ -187,7 +187,10 @@ export function normalizeSharedAscensionSites(
     if (!promotingSide) continue;
     const invadedKingdom = promotingSide === 'north' ? 'south' : 'north';
     if (!siteByInvadedKingdom.has(invadedKingdom)) {
-      siteByInvadedKingdom.set(invadedKingdom, plan.ascensionSite);
+      siteByInvadedKingdom.set(
+        invadedKingdom,
+        normalizeAscensionSiteTerritory(plan.ascensionSite, invadedKingdom),
+      );
     }
   }
 
@@ -204,6 +207,51 @@ export function normalizeSharedAscensionSites(
       };
     }),
   };
+}
+
+export function normalizeAscensionSiteTerritory(
+  ascensionSite: string,
+  invadedKingdom: 'north' | 'south',
+): string {
+  const territory =
+    invadedKingdom === 'south'
+      ? {
+          kingdom: 'Dark Kingdom',
+          direction: 'southern',
+          wrongKingdom: /\b(?:Light|North(?:ern)?) Kingdom\b/gi,
+          wrongExtreme: /\bnorthernmost\b/gi,
+          wrongDirection:
+            /\b(?:far\s+)?north(?:ern)?\s+(edge|border|frontier|reaches)\b/gi,
+          correctTerritory:
+            /\b(?:Dark|South(?:ern)?) Kingdom\b|\b(?:far\s+)?south(?:ern)?\s+(?:edge|border|frontier|reaches)\b/i,
+        }
+      : {
+          kingdom: 'Light Kingdom',
+          direction: 'northern',
+          wrongKingdom: /\b(?:Dark|South(?:ern)?) Kingdom\b/gi,
+          wrongExtreme: /\bsouthernmost\b/gi,
+          wrongDirection:
+            /\b(?:far\s+)?south(?:ern)?\s+(edge|border|frontier|reaches)\b/gi,
+          correctTerritory:
+            /\b(?:Light|North(?:ern)?) Kingdom\b|\b(?:far\s+)?north(?:ern)?\s+(?:edge|border|frontier|reaches)\b/i,
+        };
+
+  const corrected = ascensionSite
+    .trim()
+    .replace(territory.wrongKingdom, territory.kingdom)
+    .replace(
+      territory.wrongExtreme,
+      territory.direction === 'southern' ? 'southernmost' : 'northernmost',
+    )
+    .replace(
+      territory.wrongDirection,
+      (_match, boundary: string) => `far ${territory.direction} ${boundary}`,
+    );
+
+  if (territory.correctTerritory.test(corrected)) return corrected;
+
+  const site = corrected.replace(/[.,;:\s]+$/u, '');
+  return `${site}, at the ${territory.kingdom}'s far ${territory.direction} edge`;
 }
 
 function normalizeDeterministicAnalysisFacts(

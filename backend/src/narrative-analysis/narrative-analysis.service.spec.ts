@@ -9,6 +9,7 @@ import type { NarrativeAnalysisProvider } from './llm-provider';
 import type { NarrativeAnalysis } from './models/narrative-analysis';
 import {
   NarrativeAnalysisService,
+  normalizeAscensionSiteTerritory,
   normalizeRelationshipChronology,
   normalizeSharedAscensionSites,
 } from './narrative-analysis.service';
@@ -250,17 +251,54 @@ describe('NarrativeAnalysisService', () => {
     expect(normalized.promotingPawnPlans).toEqual([
       expect.objectContaining({
         pieceId: northPieces[1].id,
-        ascensionSite: 'the buried southern altar',
+        ascensionSite:
+          "the buried southern altar, at the Dark Kingdom's far southern edge",
       }),
       expect.objectContaining({
         pieceId: northPieces[0].id,
-        ascensionSite: 'the buried southern altar',
+        ascensionSite:
+          "the buried southern altar, at the Dark Kingdom's far southern edge",
       }),
       expect.objectContaining({
         pieceId: southPiece.id,
-        ascensionSite: 'the northern observatory',
+        ascensionSite:
+          "the northern observatory, at the Light Kingdom's far northern edge",
       }),
     ]);
+  });
+
+  it('corrects an Ascension site placed on the wrong edge of the invaded kingdom', () => {
+    expect(
+      normalizeAscensionSiteTerritory(
+        "the buried shrine beneath the oldest ward-stone at the Mire's far northern edge",
+        'south',
+      ),
+    ).toBe(
+      "the buried shrine beneath the oldest ward-stone at the Mire's far southern edge",
+    );
+    expect(
+      normalizeAscensionSiteTerritory(
+        'an altar below the Dark Kingdom border',
+        'north',
+      ),
+    ).toBe('an altar below the Light Kingdom border');
+    expect(
+      normalizeAscensionSiteTerritory(
+        'the drowned observatory beyond the northernmost ward-stone line',
+        'south',
+      ),
+    ).toBe(
+      "the drowned observatory beyond the southernmost ward-stone line, at the Dark Kingdom's far southern edge",
+    );
+  });
+
+  it('adds deterministic territory when the generated Ascension site omits it', () => {
+    expect(normalizeAscensionSiteTerritory('the flooded star crypt', 'south')).toBe(
+      "the flooded star crypt, at the Dark Kingdom's far southern edge",
+    );
+    expect(normalizeAscensionSiteTerritory('the glass observatory', 'north')).toBe(
+      "the glass observatory, at the Light Kingdom's far northern edge",
+    );
   });
 
   it('rejects a lasting wound that is not anchored to the character’s capture', () => {

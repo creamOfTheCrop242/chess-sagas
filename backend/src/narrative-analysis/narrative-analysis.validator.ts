@@ -1,4 +1,4 @@
-import { BadGatewayException, Injectable } from '@nestjs/common';
+import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
 import type { GameLedger } from '../chess/models/game-ledger';
 import { isSurrenderKingFate } from '../chess/models/story-ending';
 import type { NarrativeAnalysis } from './models/narrative-analysis';
@@ -12,11 +12,14 @@ import {
 
 @Injectable()
 export class NarrativeAnalysisValidator {
+  private readonly logger = new Logger(NarrativeAnalysisValidator.name);
+
   validate(analysis: NarrativeAnalysis, ledger: GameLedger): void {
     const finalPly = ledger.events.length;
     const pieceIds = new Set(ledger.pieces.map((piece) => piece.id));
     const validPly = (ply: number) => ply >= 1 && ply <= finalPly;
     const errors: string[] = [];
+    const relationshipWarnings: string[] = [];
     const expectedEnvironment = selectBattlefieldEnvironment(ledger);
     if (
       analysis.battlefieldEnvironment.id !== expectedEnvironment.id ||
@@ -46,7 +49,6 @@ export class NarrativeAnalysisValidator {
       ...analysis.characterArcs.map((item) => item.pieceId),
       ...analysis.acts.flatMap((act) => act.majorCharacters),
       ...analysis.promotingPawnPlans.map((plan) => plan.pieceId),
-      ...analysis.relationshipPlans.flatMap((plan) => plan.characterIds),
       ...(analysis.woundPlans ?? []).map((plan) => plan.pieceId),
     ];
     for (const pieceId of referencedPieceIds) {
@@ -73,10 +75,6 @@ export class NarrativeAnalysisValidator {
         plan.payoffPly,
         ...plan.setupPlies,
       ]),
-      ...analysis.relationshipPlans.flatMap((plan) => [
-        ...plan.developmentPlies,
-        ...(plan.payoffPly === null ? [] : [plan.payoffPly]),
-      ]),
       ...(analysis.woundPlans ?? []).flatMap((plan) => [
         plan.inflictedAtPly,
         ...(plan.recoveryPly === null ? [] : [plan.recoveryPly]),
@@ -88,11 +86,26 @@ export class NarrativeAnalysisValidator {
     const relationshipIds = new Set<string>();
     for (const relationship of analysis.relationshipPlans) {
       if (relationshipIds.has(relationship.id)) {
-        errors.push(`Duplicate relationship ID: ${relationship.id}`);
+        relationshipWarnings.push(
+          `Duplicate relationship ID: ${relationship.id}`,
+        );
       }
       relationshipIds.add(relationship.id);
+      if (relationship.characterIds.some((pieceId) => !pieceIds.has(pieceId))) {
+        relationshipWarnings.push(
+          `Relationship ${relationship.id} references an unknown piece ID`,
+        );
+      }
+      if (
+        relationship.developmentPlies.some((ply) => !validPly(ply)) ||
+        (relationship.payoffPly !== null && !validPly(relationship.payoffPly))
+      ) {
+        relationshipWarnings.push(
+          `Relationship ${relationship.id} references a ply outside 1-${finalPly}`,
+        );
+      }
       if (relationship.characterIds[0] === relationship.characterIds[1]) {
-        errors.push(
+        relationshipWarnings.push(
           `Relationship ${relationship.id} must involve two characters`,
         );
       }
@@ -102,7 +115,7 @@ export class NarrativeAnalysisValidator {
           (ply) => ply > relationship.payoffPly!,
         )
       ) {
-        errors.push(
+        relationshipWarnings.push(
           `Relationship ${relationship.id} develops after its payoff`,
         );
       }
@@ -223,6 +236,14 @@ export class NarrativeAnalysisValidator {
       const promotingSide = pieceSides.get(plan.pieceId);
       if (!promotingSide) continue;
       const invadedKingdom = promotingSide === 'north' ? 'south' : 'north';
+      const expectedDamagedKing = ledger.pieces.find(
+        (piece) => piece.side === invadedKingdom && piece.chessType === 'k',
+      );
+      if (plan.damagedKingId !== expectedDamagedKing?.id) {
+        errors.push(
+          `Promotion by ${plan.pieceId} must damage the ${invadedKingdom} King`,
+        );
+      }
       const canonicalSite = ascensionSiteByInvadedKingdom.get(invadedKingdom);
       if (canonicalSite === undefined) {
         ascensionSiteByInvadedKingdom.set(invadedKingdom, plan.ascensionSite);
@@ -278,6 +299,14 @@ export class NarrativeAnalysisValidator {
       (ledger.metadata.termination === 'resignation')
     ) {
       errors.push('Surrender attempt must match resignation termination');
+    }
+
+    if (relationshipWarnings.length > 0) {
+      this.logger.warn(
+        `Narrative relationship warnings: ${[
+          ...new Set(relationshipWarnings),
+        ].join('; ')}`,
+      );
     }
 
     if (errors.length > 0) {

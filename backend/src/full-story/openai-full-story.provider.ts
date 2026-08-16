@@ -160,7 +160,7 @@ ${EPILOGUE_INSTRUCTIONS}`,
         reasoning: { effort: 'low' },
         instructions: `Repair only the supplied wound-warning scenes. Return exactly one replacement for every supplied scene and preserve each ply.
 
-The structured wounds, woundTimeline, captureManifest, character registry, deaths, captors, victims, names, dialogue continuity, setting, and scene outcome are authoritative. Do not alter a capture, death, promotion, allegiance, or character identity.
+The structured wounds, woundTimeline, woundReferences, captureManifest, character registry, deaths, captors, victims, names, dialogue continuity, setting, and scene outcome are authoritative. Do not alter a wound reference, capture, death, promotion, allegiance, or character identity.
 
 For a wound inflicted in the scene, order the prose as: character acts without that new wound; concrete cause occurs; wound happens for the first time; consequences follow. Never call the character, body part, armor, machine, or movement damaged, wounded, broken, impaired, painful, unstable, or limited before the cause occurs.
 
@@ -206,6 +206,7 @@ Return publishable replacement narration only. Do not explain the edit.`,
       throw error;
     }
   }
+
 }
 
 const woundSceneRepairResultSchema = z.object({

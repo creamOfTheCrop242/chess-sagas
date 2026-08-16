@@ -325,6 +325,75 @@ export class DeterministicStoryValidator {
     return findings;
   }
 
+  validateStructuredWoundReferences(
+    scenes: Array<{
+      ply: number;
+      characters: string[];
+      woundReferences?: Array<{ woundId: string; ownerPieceId: string }>;
+    }>,
+    wounds: GeneratedStoryPackage['wounds'],
+  ): ValidationFinding[] {
+    const findings: ValidationFinding[] = [];
+    const woundById = new Map(
+      wounds.map((wound) => [woundIdFor(wound), wound]),
+    );
+
+    for (const scene of scenes) {
+      const seen = new Set<string>();
+      for (const reference of scene.woundReferences ?? []) {
+        const wound = woundById.get(reference.woundId);
+        if (!wound) {
+          findings.push({
+            type: 'invented-wound',
+            severity: 'error',
+            message: `Scene at ply ${scene.ply} references unknown wound ${reference.woundId}`,
+            ply: scene.ply,
+            pieceId: reference.ownerPieceId,
+            excerpt: null,
+          });
+          continue;
+        }
+        const activeThrough = wound.recoveryPly
+          ? wound.recoveryPly - 1
+          : Number.POSITIVE_INFINITY;
+        if (
+          seen.has(reference.woundId) ||
+          reference.ownerPieceId !== wound.pieceId ||
+          scene.ply < wound.inflictedAtPly ||
+          scene.ply > activeThrough ||
+          !scene.characters.includes(wound.pieceId)
+        ) {
+          findings.push({
+            type: 'wound-continuity',
+            severity: 'error',
+            message: `Scene at ply ${scene.ply} has invalid ownership or timing for wound ${reference.woundId}`,
+            ply: scene.ply,
+            pieceId: reference.ownerPieceId,
+            excerpt: null,
+          });
+        }
+        seen.add(reference.woundId);
+      }
+
+      for (const wound of wounds.filter(
+        (candidate) => candidate.inflictedAtPly === scene.ply,
+      )) {
+        const woundId = woundIdFor(wound);
+        if (!seen.has(woundId)) {
+          findings.push({
+            type: 'missing-wound',
+            severity: 'error',
+            message: `Scene at ply ${scene.ply} is missing structured reference ${woundId}`,
+            ply: scene.ply,
+            pieceId: wound.pieceId,
+            excerpt: null,
+          });
+        }
+      }
+    }
+    return findings;
+  }
+
   validateUnplannedInjuries(
     scenes: Array<{
       ply: number;
@@ -412,9 +481,9 @@ export class DeterministicStoryValidator {
         const otherAliases = ledger.pieces
           .filter((piece) => piece.id !== targetId)
           .flatMap((piece) => characterAliases(piece));
-        const sentences =
-          scene.fantasyNarration.match(/[^.!?]+[.!?]?/g) ??
-          [scene.fantasyNarration];
+        const sentences = scene.fantasyNarration.match(/[^.!?]+[.!?]?/g) ?? [
+          scene.fantasyNarration,
+        ];
 
         for (const ownerId of new Set(
           activeWounds
@@ -435,14 +504,8 @@ export class DeterministicStoryValidator {
                 return false;
               }
               const signatureTerms = [
-                ...matchingFamilies(
-                  ownerWoundText,
-                  ANATOMY_FAMILIES,
-                ).flat(),
-                ...matchingFamilies(
-                  ownerWoundText,
-                  INJURY_FAMILIES,
-                ).flat(),
+                ...matchingFamilies(ownerWoundText, ANATOMY_FAMILIES).flat(),
+                ...matchingFamilies(ownerWoundText, INJURY_FAMILIES).flat(),
               ];
               if (
                 !namedCharacterPrecedesWound(
@@ -558,6 +621,13 @@ function highConfidenceWoundSignature(
   );
 }
 
+function woundIdFor(wound: {
+  pieceId: string;
+  inflictedAtPly: number;
+}): string {
+  return `wound:${wound.pieceId}:${wound.inflictedAtPly}`;
+}
+
 function namedCharacterPrecedesWound(
   sentence: string,
   aliases: string[],
@@ -650,33 +720,41 @@ function unplannedInjuryExcerpt(
   const bodilyAnatomy = ANATOMY_FAMILIES.slice(0, 11).flat();
   const injuryTerms = INJURY_FAMILIES.flat();
   const sentences = narration.match(/[^.!?]+[.!?]?/g) ?? [narration];
-  return sentences.map((sentence) => sentence.trim()).find((sentence) => {
-    if (!hasAny(sentence, bodilyAnatomy) || !hasAny(sentence, injuryTerms)) {
-      return false;
-    }
-    const targetPositions = matchPositions(sentence, aliases);
-    const anatomyPositions = matchPositions(sentence, bodilyAnatomy);
-    const injuryPositions = matchPositions(sentence, injuryTerms);
-    if (
-      targetPositions.length === 0 ||
-      anatomyPositions.length === 0 ||
-      injuryPositions.length === 0
-    ) {
-      return false;
-    }
-    const firstWoundPosition = Math.min(...anatomyPositions, ...injuryPositions);
-    const targetPosition = Math.max(
-      ...targetPositions.filter((position) => position <= firstWoundPosition),
-    );
-    if (!Number.isFinite(targetPosition)) return false;
-    const lastWoundPosition = Math.max(...anatomyPositions, ...injuryPositions);
-    if (lastWoundPosition - targetPosition > 160) return false;
-    // Stay conservative in multi-character sentences. Pronouns and possessives
-    // make deterministic ownership ambiguous (for example, "Rowan walked
-    // toward Tarin ... while his palm..."). Those scenes are handled by the
-    // planned-wound validator instead of guessing that Tarin owns the injury.
-    return matchPositions(sentence, otherCharacterAliases).length === 0;
-  });
+  return sentences
+    .map((sentence) => sentence.trim())
+    .find((sentence) => {
+      if (!hasAny(sentence, bodilyAnatomy) || !hasAny(sentence, injuryTerms)) {
+        return false;
+      }
+      const targetPositions = matchPositions(sentence, aliases);
+      const anatomyPositions = matchPositions(sentence, bodilyAnatomy);
+      const injuryPositions = matchPositions(sentence, injuryTerms);
+      if (
+        targetPositions.length === 0 ||
+        anatomyPositions.length === 0 ||
+        injuryPositions.length === 0
+      ) {
+        return false;
+      }
+      const firstWoundPosition = Math.min(
+        ...anatomyPositions,
+        ...injuryPositions,
+      );
+      const targetPosition = Math.max(
+        ...targetPositions.filter((position) => position <= firstWoundPosition),
+      );
+      if (!Number.isFinite(targetPosition)) return false;
+      const lastWoundPosition = Math.max(
+        ...anatomyPositions,
+        ...injuryPositions,
+      );
+      if (lastWoundPosition - targetPosition > 160) return false;
+      // Stay conservative in multi-character sentences. Pronouns and possessives
+      // make deterministic ownership ambiguous (for example, "Rowan walked
+      // toward Tarin ... while his palm..."). Those scenes are handled by the
+      // planned-wound validator instead of guessing that Tarin owns the injury.
+      return matchPositions(sentence, otherCharacterAliases).length === 0;
+    });
 }
 
 function nearestWoundMentionBelongsTo(

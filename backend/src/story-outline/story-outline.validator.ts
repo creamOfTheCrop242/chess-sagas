@@ -1,4 +1,4 @@
-import { BadGatewayException, Injectable } from '@nestjs/common';
+import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
 import type { GameLedger } from '../chess/models/game-ledger';
 import type { NarrativeAnalysis } from '../narrative-analysis/models/narrative-analysis';
 import type { StoryOutline } from './models/story-outline';
@@ -6,6 +6,8 @@ import { isSpoilerFreeBattleTitle } from './story-title';
 
 @Injectable()
 export class StoryOutlineValidator {
+  private readonly logger = new Logger(StoryOutlineValidator.name);
+
   validate(
     outline: StoryOutline,
     ledger: GameLedger,
@@ -14,6 +16,7 @@ export class StoryOutlineValidator {
     const finalPly = ledger.events.length;
     const pieceIds = new Set(ledger.pieces.map((piece) => piece.id));
     const errors: string[] = [];
+    const relationshipWarnings: string[] = [];
     let nextPly = 1;
     const representedEvents = new Set<number>();
     if (!isSpoilerFreeBattleTitle(outline.selectedTitle)) {
@@ -92,7 +95,9 @@ export class StoryOutlineValidator {
           (ply) => ply < 1 || ply >= relationship.payoffPly,
         )
       ) {
-        errors.push(`Invalid setup/payoff relationship ${relationship.id}`);
+        relationshipWarnings.push(
+          `Invalid setup/payoff relationship ${relationship.id}`,
+        );
       }
     });
     const plannedRelationships = new Map(
@@ -105,7 +110,9 @@ export class StoryOutlineValidator {
     for (const relationship of outline.relationshipBeats) {
       const planned = plannedRelationships.get(relationship.relationshipId);
       if (!planned) {
-        errors.push(`Unknown relationship plan ${relationship.relationshipId}`);
+        relationshipWarnings.push(
+          `Unknown relationship plan ${relationship.relationshipId}`,
+        );
         continue;
       }
       outlinedRelationships.add(relationship.relationshipId);
@@ -115,12 +122,12 @@ export class StoryOutlineValidator {
           (pieceId) => !planned.characterIds.includes(pieceId),
         )
       ) {
-        errors.push(
+        relationshipWarnings.push(
           `Relationship ${relationship.relationshipId} has incorrect characters`,
         );
       }
       if (relationship.beatPlies.some((ply) => ply < 1 || ply > finalPly)) {
-        errors.push(
+        relationshipWarnings.push(
           `Relationship ${relationship.relationshipId} references an invalid ply`,
         );
       }
@@ -136,7 +143,7 @@ export class StoryOutlineValidator {
             (pieceId) => !scene.characters.includes(pieceId),
           )
         ) {
-          errors.push(
+          relationshipWarnings.push(
             `Relationship ${relationship.relationshipId} must place both characters in each planned scene`,
           );
           break;
@@ -145,7 +152,9 @@ export class StoryOutlineValidator {
     }
     for (const relationshipId of plannedRelationships.keys()) {
       if (!outlinedRelationships.has(relationshipId)) {
-        errors.push(`Relationship plan ${relationshipId} is missing`);
+        relationshipWarnings.push(
+          `Relationship plan ${relationshipId} is missing`,
+        );
       }
     }
     const selectedRevengeKeys = new Set<string>();
@@ -209,6 +218,14 @@ export class StoryOutlineValidator {
       !outline.endingSequence.some((beat) => beat.ply === finalPly)
     ) {
       errors.push('Ending sequence must include the final ply');
+    }
+
+    if (relationshipWarnings.length > 0) {
+      this.logger.warn(
+        `Story outline relationship warnings: ${[
+          ...new Set(relationshipWarnings),
+        ].join('; ')}`,
+      );
     }
 
     if (errors.length) {

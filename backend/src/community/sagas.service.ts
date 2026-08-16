@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { GameLedger } from '../chess/models/game-ledger';
 import { PrismaService } from '../database/prisma.service';
@@ -78,6 +82,45 @@ export class SagasService {
         bookmarks: { some: { userId } },
       } satisfies Prisma.SagaWhereInput,
     });
+  }
+
+  async deleteArtifacts(sagaId: string) {
+    const saga = await this.prisma.saga.findUnique({
+      where: { id: sagaId },
+      select: {
+        gameId: true,
+        game: {
+          select: {
+            sagaJob: { select: { status: true } },
+          },
+        },
+      },
+    });
+    if (!saga) throw new NotFoundException(`Saga ${sagaId} was not found`);
+    if (
+      saga.game.sagaJob?.status === 'QUEUED' ||
+      saga.game.sagaJob?.status === 'RUNNING'
+    ) {
+      throw new ConflictException(
+        'Wait for the active saga generation to finish before deleting it',
+      );
+    }
+
+    const [jobs, runs] = await this.prisma.$transaction([
+      this.prisma.sagaGenerationJob.deleteMany({
+        where: { gameId: saga.gameId },
+      }),
+      this.prisma.generationRun.deleteMany({
+        where: { gameId: saga.gameId },
+      }),
+    ]);
+    return {
+      deleted: true as const,
+      gameId: saga.gameId,
+      deletedJobs: jobs.count,
+      deletedRuns: runs.count,
+      preservedGame: true as const,
+    };
   }
 
   async champions(query: { side?: string; type?: string; limit?: string }) {

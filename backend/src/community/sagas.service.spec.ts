@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { SagasService } from './sagas.service';
 
 function sagaRow(showCreatorCredit = true) {
@@ -37,8 +37,16 @@ function sagaRow(showCreatorCredit = true) {
 
 describe('SagasService', () => {
   const prisma = {
-    saga: { findMany: jest.fn(), findFirst: jest.fn(), count: jest.fn() },
+    saga: {
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      findUnique: jest.fn(),
+      count: jest.fn(),
+    },
     sagaBookmark: { upsert: jest.fn(), deleteMany: jest.fn() },
+    sagaGenerationJob: { deleteMany: jest.fn() },
+    generationRun: { deleteMany: jest.fn() },
+    $transaction: jest.fn(),
   };
 
   beforeEach(() => {
@@ -261,5 +269,44 @@ describe('SagasService', () => {
       lightMostLethalType: { fantasyType: 'queen', captures: 2 },
       darkMostLethalType: { fantasyType: 'moving-fortress', captures: 2 },
     });
+  });
+
+  it('deletes every generated artifact while preserving the base game', async () => {
+    prisma.saga.findUnique.mockResolvedValue({
+      gameId: 'game-1',
+      game: { sagaJob: { status: 'COMPLETED' } },
+    });
+    prisma.sagaGenerationJob.deleteMany.mockReturnValue('delete-jobs');
+    prisma.generationRun.deleteMany.mockReturnValue('delete-runs');
+    prisma.$transaction.mockResolvedValue([{ count: 1 }, { count: 3 }]);
+    const service = new SagasService(prisma as never);
+
+    await expect(service.deleteArtifacts('saga-1')).resolves.toEqual({
+      deleted: true,
+      gameId: 'game-1',
+      deletedJobs: 1,
+      deletedRuns: 3,
+      preservedGame: true,
+    });
+    expect(prisma.$transaction).toHaveBeenCalledWith([
+      'delete-jobs',
+      'delete-runs',
+    ]);
+    expect(prisma.generationRun.deleteMany).toHaveBeenCalledWith({
+      where: { gameId: 'game-1' },
+    });
+  });
+
+  it('does not delete artifacts while generation is active', async () => {
+    prisma.saga.findUnique.mockResolvedValue({
+      gameId: 'game-1',
+      game: { sagaJob: { status: 'RUNNING' } },
+    });
+    const service = new SagasService(prisma as never);
+
+    await expect(service.deleteArtifacts('saga-1')).rejects.toThrow(
+      ConflictException,
+    );
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 });

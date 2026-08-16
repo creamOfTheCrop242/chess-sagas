@@ -202,6 +202,16 @@ h1 {
   font-size: 0.72rem;
 }
 
+.record-actions .delete-artifacts {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 55%, transparent);
+}
+
+.record-actions .delete-artifacts:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
 .load-more {
   display: block;
   margin: 1.25rem auto 0;

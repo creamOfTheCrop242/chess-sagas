@@ -73,6 +73,22 @@ export class CommunityService {
     });
   }
 
+  deleteArtifacts(sagaId: string): Observable<{
+    deleted: true;
+    gameId: string;
+    deletedJobs: number;
+    deletedRuns: number;
+    preservedGame: true;
+  }> {
+    return this.http.delete<{
+      deleted: true;
+      gameId: string;
+      deletedJobs: number;
+      deletedRuns: number;
+      preservedGame: true;
+    }>(`/api/sagas/${sagaId}/artifacts`, { withCredentials: true });
+  }
+
   profile(handle: string): Observable<PublicProfile> {
     return this.http.get<PublicProfile>(`/api/profiles/${handle}`);
   }

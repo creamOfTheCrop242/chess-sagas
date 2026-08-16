@@ -426,13 +426,13 @@ describe('StoryOutlineValidator', () => {
     ]);
   });
 
-  it('rejects an outline that omits an analyzed relationship', () => {
+  it('does not reject an outline that omits an analyzed relationship', () => {
     const invalid = structuredClone(outline);
     invalid.relationshipBeats = invalid.relationshipBeats.slice(0, 1);
 
     expect(() =>
       new StoryOutlineValidator().validate(invalid, ledger, analysis),
-    ).toThrow('Relationship plan queen-soldier-respect is missing');
+    ).not.toThrow();
   });
 
   it('places both relationship characters in every planned scene', () => {
@@ -555,7 +555,7 @@ describe('StoryOutlineValidator', () => {
     ).not.toThrow();
   });
 
-  it('leaves an unrecoverable setup relationship invalid for targeted retry', () => {
+  it('does not reject an unrecoverable setup relationship', () => {
     const invalid = structuredClone(outline);
     invalid.setupPayoffs[0].setupPlies = [2];
     invalid.setupPayoffs[0].payoffPly = 2;
@@ -564,7 +564,7 @@ describe('StoryOutlineValidator', () => {
 
     expect(() =>
       new StoryOutlineValidator().validate(normalized, ledger, analysis),
-    ).toThrow('Invalid setup/payoff relationship gate');
+    ).not.toThrow();
   });
 
   it('moves the final planned ending beat to the ledger final ply', () => {

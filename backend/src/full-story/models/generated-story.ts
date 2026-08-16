@@ -53,6 +53,14 @@ export const generatedStoryPackageSchema = z.object({
             }),
           )
           .default([]),
+        woundReferences: z
+          .array(
+            z.object({
+              woundId: z.string().min(1),
+              ownerPieceId: z.string().min(1),
+            }),
+          )
+          .default([]),
       }),
     )
     .min(1),

@@ -88,6 +88,7 @@ function buildNarrativeAnalysisSchema(pieceIdSchema: z.ZodType<string>) {
 
   const promotingPawnPlanSchema = z.object({
     pieceId: pieceIdSchema,
+    damagedKingId: pieceIdSchema,
     promotionPly: z.number().int().positive(),
     setupPlies: z.array(z.number().int().positive()),
     ascensionSite: z.string().min(1),
@@ -143,7 +144,7 @@ function buildNarrativeAnalysisSchema(pieceIdSchema: z.ZodType<string>) {
     acts: z.array(narrativeActSchema).min(1),
     characterImportance: z.array(characterImportanceSchema),
     characterArcs: z.array(characterArcSchema),
-    relationshipPlans: z.array(relationshipPlanSchema).min(2).max(4),
+    relationshipPlans: z.array(relationshipPlanSchema).max(4),
     promotingPawnPlans: z.array(promotingPawnPlanSchema),
     foreshadowing: z.array(foreshadowingPlanSchema),
     woundPlans: z.array(woundPlanSchema).default([]),

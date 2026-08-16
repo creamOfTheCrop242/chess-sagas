@@ -4,6 +4,7 @@ import type { StoryOutline } from '../story-outline/models/story-outline';
 import {
   buildEndingWorldState,
   buildStoryCorrectionFeedback,
+  buildWoundStateByPly,
   buildWoundTimeline,
 } from './full-story.service';
 
@@ -99,6 +100,7 @@ describe('full-story wound timing preparation', () => {
 
     expect(buildWoundTimeline(ledger, analysis, outline)).toEqual([
       {
+        woundId: 'wound:w-r-a1:55',
         pieceId: 'w-r-a1',
         characterNames: ['Theron', 'Northeast Fortress'],
         injury: 'cracked ward plates',
@@ -110,6 +112,38 @@ describe('full-story wound timing preparation', () => {
         causeType: undefined,
         sourcePieceId: undefined,
         sourceNames: [],
+      },
+    ]);
+  });
+
+  it('builds scene-specific wound permission snapshots', () => {
+    expect(
+      buildWoundStateByPly(5, [
+        {
+          woundId: 'wound:w-q-d1:2',
+          pieceId: 'w-q-d1',
+          characterNames: ['Queen Lyra'],
+          injury: 'cut shoulder',
+          lastingEffects: ['pain'],
+          prohibitedBeforePly: 1,
+          inflictedAtPly: 2,
+          activeThroughPly: 3,
+          recoveryPly: 4,
+          causeType: 'victim-retaliation',
+          sourcePieceId: 'b-p-a7',
+          sourceNames: ['Tarin'],
+        },
+      ]),
+    ).toEqual([
+      {
+        ply: 2,
+        newlyInflictedWoundIds: ['wound:w-q-d1:2'],
+        activeWoundIds: ['wound:w-q-d1:2'],
+      },
+      {
+        ply: 3,
+        newlyInflictedWoundIds: [],
+        activeWoundIds: ['wound:w-q-d1:2'],
       },
     ]);
   });

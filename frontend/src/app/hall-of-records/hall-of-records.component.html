@@ -65,6 +65,14 @@
               @if (auth.user()) {
                 <button type="button" (click)="toggleSaved(record)">{{ isSaved(record) ? 'Remove saved mark' : 'Save saga' }}</button>
               }
+              @if (billing.status()?.unlimited) {
+                <button
+                  class="delete-artifacts"
+                  type="button"
+                  [disabled]="deletingSagaId !== null"
+                  (click)="deleteArtifacts(record)"
+                >{{ deletingSagaId === record.id ? 'Deleting…' : 'Delete story + artifacts' }}</button>
+              }
             </div>
           </article>
         </li>

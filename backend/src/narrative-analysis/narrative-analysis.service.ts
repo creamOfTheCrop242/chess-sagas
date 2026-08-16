@@ -13,6 +13,7 @@ import { buildEndingContract } from './ending-contract';
 import type { NarrativeAnalysis } from './models/narrative-analysis';
 import { sealFateForKingFate } from '../chess/models/story-ending';
 import type { GameLedger } from '../chess/models/game-ledger';
+import { sanitizeWoundStatusText } from './wound-status-sanitizer';
 
 @Injectable()
 export class NarrativeAnalysisService {
@@ -66,16 +67,22 @@ export class NarrativeAnalysisService {
           },
         }),
       );
-      const analysis = normalizeRelationshipChronology(
-        normalizeSharedAscensionSites(
-          normalizeDeterministicAnalysisFacts(
-            generatedAnalysis,
-            battlefieldEnvironment,
-            surrenderContext,
-            endingContract,
+      const analysis = sanitizeWoundStatusText(
+        normalizeRelationshipChronology(
+          normalizeSharedAscensionSites(
+            normalizePromotionDamageOwnership(
+              normalizeDeterministicAnalysisFacts(
+                generatedAnalysis,
+                battlefieldEnvironment,
+                surrenderContext,
+                endingContract,
+              ),
+              ledger,
+            ),
+            ledger,
           ),
-          ledger,
         ),
+        ledger,
       );
       this.validator.validate(analysis, ledger);
       const data = JSON.parse(
@@ -166,6 +173,31 @@ export function normalizeRelationshipChronology(
         developmentPlies: [relationship.payoffPly],
         payoffPly: null,
       };
+    }),
+  };
+}
+
+export function normalizePromotionDamageOwnership(
+  analysis: NarrativeAnalysis,
+  ledger: GameLedger,
+): NarrativeAnalysis {
+  const pieceSides = new Map(
+    ledger.pieces.map((piece) => [piece.id, piece.side] as const),
+  );
+  const kingBySide = new Map(
+    ledger.pieces
+      .filter((piece) => piece.chessType === 'k')
+      .map((piece) => [piece.side, piece.id] as const),
+  );
+
+  return {
+    ...analysis,
+    promotingPawnPlans: analysis.promotingPawnPlans.map((plan) => {
+      const promotingSide = pieceSides.get(plan.pieceId);
+      if (!promotingSide) return plan;
+      const opposingSide = promotingSide === 'north' ? 'south' : 'north';
+      const damagedKingId = kingBySide.get(opposingSide);
+      return damagedKingId ? { ...plan, damagedKingId } : plan;
     }),
   };
 }

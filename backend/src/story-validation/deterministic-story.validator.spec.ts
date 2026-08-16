@@ -241,6 +241,78 @@ describe('DeterministicStoryValidator', () => {
     ]);
   });
 
+  it('rejects structured wound references with the wrong owner or timing', () => {
+    const wounds = [
+      {
+        pieceId: 'b-n-b8',
+        inflictedAtPly: 20,
+        injury: 'fractured forearm',
+        lastingEffects: ['weak grip'],
+        recoveryPly: null,
+      },
+    ];
+
+    const findings = validator.validateStructuredWoundReferences(
+      [
+        {
+          ply: 19,
+          characters: ['b-n-g8'],
+          woundReferences: [
+            {
+              woundId: 'wound:b-n-b8:20',
+              ownerPieceId: 'b-n-g8',
+            },
+          ],
+        },
+        {
+          ply: 20,
+          characters: ['b-n-b8'],
+          woundReferences: [],
+        },
+      ],
+      wounds,
+    );
+
+    expect(findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ severity: 'error', ply: 19 }),
+        expect.objectContaining({
+          severity: 'error',
+          ply: 20,
+          type: 'missing-wound',
+        }),
+      ]),
+    );
+  });
+
+  it('accepts a wound reference owned by the active character', () => {
+    expect(
+      validator.validateStructuredWoundReferences(
+        [
+          {
+            ply: 20,
+            characters: ['b-n-b8'],
+            woundReferences: [
+              {
+                woundId: 'wound:b-n-b8:20',
+                ownerPieceId: 'b-n-b8',
+              },
+            ],
+          },
+        ],
+        [
+          {
+            pieceId: 'b-n-b8',
+            inflictedAtPly: 20,
+            injury: 'fractured forearm',
+            lastingEffects: ['weak grip'],
+            recoveryPly: null,
+          },
+        ],
+      ),
+    ).toEqual([]);
+  });
+
   it('rejects generic damage and pain language before the planned wound', () => {
     const woundLedger = {
       pieces: [

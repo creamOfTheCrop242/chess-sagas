@@ -27,6 +27,7 @@ import {
   FULL_STORY_PROVIDER,
   type CaptureDirective,
   type EndingWorldState,
+  type FullStoryRequest,
   type FullStoryProvider,
   type WoundTimelineDirective,
 } from './full-story.provider';
@@ -126,6 +127,10 @@ export class FullStoryService {
         narrativeAnalysis,
         outline,
       );
+      const woundStateByPly = buildWoundStateByPly(
+        ledger.events.length,
+        woundTimeline,
+      );
       const storyPackage = generatedStoryPackageSchema.parse(
         await this.provider.generate({
           ledger,
@@ -134,6 +139,7 @@ export class FullStoryService {
           characterRegistry: ledger.pieces,
           captureManifest,
           woundTimeline,
+          woundStateByPly,
           endingWorldState,
           validationFeedback: validationFeedback?.trim().slice(0, 4_000),
           telemetry: {
@@ -346,12 +352,21 @@ export class FullStoryService {
         );
       }
       const findTimedWounds = (candidateScenes: typeof scenes) => [
+        ...this.deterministic.validateStructuredWoundReferences(
+          storyPackage.scenes.map((scene) => ({
+            ply: scene.ply,
+            characters: scene.characters,
+            woundReferences: scene.woundReferences,
+          })),
+          storyPackage.wounds,
+        ),
         ...this.deterministic.validateTimedWounds(
           candidateScenes.map((scene, index) => ({
             ply: scene.startPly,
             fantasyNarration: scene.fantasyNarration,
             characters: scene.characters,
             woundsInflicted: storyPackage.scenes[index]?.woundsInflicted ?? [],
+            woundReferences: storyPackage.scenes[index]?.woundReferences ?? [],
           })),
           storyPackage.wounds,
           ledger,
@@ -404,6 +419,7 @@ export class FullStoryService {
                 fantasyNarration: scene.fantasyNarration,
                 characters: scene.characters,
                 woundsInflicted: scene.woundsInflicted,
+                woundReferences: scene.woundReferences,
               })),
             warnings: initialWoundWarnings.map((finding) => ({
               ply: finding.ply ?? 0,
@@ -788,6 +804,7 @@ export function buildWoundTimeline(
       `${wound.pieceId}:${wound.inflictedAtPly}`,
     );
     return {
+      woundId: woundIdFor(wound.pieceId, wound.inflictedAtPly),
       pieceId: wound.pieceId,
       characterNames: piece ? narrativeAliases(piece) : [],
       injury: wound.injury,
@@ -807,6 +824,34 @@ export function buildWoundTimeline(
           : [],
     };
   });
+}
+
+export function buildWoundStateByPly(
+  finalPly: number,
+  woundTimeline: WoundTimelineDirective[],
+): FullStoryRequest['woundStateByPly'] {
+  return Array.from({ length: finalPly }, (_, index) => index + 1)
+    .map((ply) => ({
+      ply,
+      newlyInflictedWoundIds: woundTimeline
+        .filter((wound) => wound.inflictedAtPly === ply)
+        .map((wound) => wound.woundId),
+      activeWoundIds: woundTimeline
+        .filter(
+          (wound) =>
+            wound.inflictedAtPly <= ply && wound.activeThroughPly >= ply,
+        )
+        .map((wound) => wound.woundId),
+    }))
+    .filter(
+      (state) =>
+        state.newlyInflictedWoundIds.length > 0 ||
+        state.activeWoundIds.length > 0,
+    );
+}
+
+function woundIdFor(pieceId: string, inflictedAtPly: number): string {
+  return `wound:${pieceId}:${inflictedAtPly}`;
 }
 
 export function buildCaptureManifest(ledger: GameLedger): CaptureDirective[] {

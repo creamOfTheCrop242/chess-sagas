@@ -65,7 +65,7 @@ export const storyOutlineSchema = z.object({
   theme: z.string().min(1),
   acts: z.array(outlineActSchema).min(1),
   setupPayoffs: z.array(setupPayoffSchema),
-  relationshipBeats: z.array(relationshipBeatSchema).min(2).max(4),
+  relationshipBeats: z.array(relationshipBeatSchema).max(4),
   selectedRevengePayoffs: z
     .array(selectedRevengePayoffSchema)
     .max(3)

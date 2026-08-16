@@ -36,6 +36,10 @@ describe('createLedgerConstrainedNarrativeAnalysisSchema', () => {
     ).not.toThrow();
   });
 
+  it('allows generation to continue without relationship plans', () => {
+    expect(schema.shape.relationshipPlans.parse([])).toEqual([]);
+  });
+
   it('rejects invented piece IDs before ledger validation', () => {
     expect(() =>
       schema.shape.characterImportance.parse([

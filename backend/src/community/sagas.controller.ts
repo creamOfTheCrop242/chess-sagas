@@ -1,6 +1,7 @@
 import {
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   Post,
@@ -11,6 +12,7 @@ import {
 import type { Request } from 'express';
 import { AuthService } from '../auth/auth.service';
 import { readCookie, SESSION_COOKIE } from '../auth/session-cookie';
+import { CreditService } from '../billing/credit.service';
 import { parseSagaListQuery } from './community-query';
 import type { SagaListQuery } from './community-query';
 import { SagasService } from './sagas.service';
@@ -20,6 +22,7 @@ export class SagasController {
   constructor(
     private readonly sagas: SagasService,
     private readonly auth: AuthService,
+    private readonly credits: CreditService,
   ) {}
 
   @Get()
@@ -69,6 +72,21 @@ export class SagasController {
       'Sign in to manage saved sagas',
     );
     return this.sagas.removeBookmark(user.id, id);
+  }
+
+  @Delete(':id/artifacts')
+  async deleteArtifacts(@Param('id') id: string, @Req() request: Request) {
+    const user = await this.requireUser(
+      request,
+      'Sign in to manage saga artifacts',
+    );
+    const creditState = await this.credits.state(user.id);
+    if (!creditState.unlimited) {
+      throw new ForbiddenException(
+        'Only the unlimited account can delete saga artifacts',
+      );
+    }
+    return this.sagas.deleteArtifacts(id);
   }
 
   @Get(':id')

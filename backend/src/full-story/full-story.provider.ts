@@ -17,6 +17,7 @@ export interface CaptureDirective {
 }
 
 export interface WoundTimelineDirective {
+  woundId: string;
   pieceId: string;
   characterNames: string[];
   injury: string;
@@ -54,6 +55,11 @@ export interface FullStoryRequest {
   characterRegistry: PieceIdentity[];
   captureManifest: CaptureDirective[];
   woundTimeline: WoundTimelineDirective[];
+  woundStateByPly: Array<{
+    ply: number;
+    newlyInflictedWoundIds: string[];
+    activeWoundIds: string[];
+  }>;
   endingWorldState: EndingWorldState;
   validationFeedback?: string;
   telemetry: GenerationTelemetryContext;
@@ -65,6 +71,7 @@ export interface WoundSceneRepairRequest {
     fantasyNarration: string;
     characters: string[];
     woundsInflicted: Array<{ pieceId: string; inflictedAtPly: number }>;
+    woundReferences: Array<{ woundId: string; ownerPieceId: string }>;
   }>;
   warnings: Array<{
     ply: number;

@@ -10,6 +10,7 @@ import type { NarrativeAnalysis } from './models/narrative-analysis';
 import {
   NarrativeAnalysisService,
   normalizeAscensionSiteTerritory,
+  normalizePromotionDamageOwnership,
   normalizeRelationshipChronology,
   normalizeSharedAscensionSites,
 } from './narrative-analysis.service';
@@ -225,6 +226,7 @@ describe('NarrativeAnalysisService', () => {
     analysis.promotingPawnPlans = [
       {
         pieceId: northPieces[1].id,
+        damagedKingId: northPieces[0].id,
         promotionPly: 6,
         setupPlies: [4],
         ascensionSite: 'a second southern cave',
@@ -232,6 +234,7 @@ describe('NarrativeAnalysisService', () => {
       },
       {
         pieceId: northPieces[0].id,
+        damagedKingId: northPieces[0].id,
         promotionPly: 3,
         setupPlies: [2],
         ascensionSite: 'the buried southern altar',
@@ -239,6 +242,7 @@ describe('NarrativeAnalysisService', () => {
       },
       {
         pieceId: southPiece.id,
+        damagedKingId: southPiece.id,
         promotionPly: 7,
         setupPlies: [5],
         ascensionSite: 'the northern observatory',
@@ -265,6 +269,45 @@ describe('NarrativeAnalysisService', () => {
           "the northern observatory, at the Light Kingdom's far northern edge",
       }),
     ]);
+  });
+
+  it('forces every promotion to damage the opposing King', () => {
+    const analysis = makeAnalysis(ledger);
+    const northPawn = ledger.pieces.find(
+      (piece) => piece.side === 'north' && piece.chessType === 'p',
+    )!;
+    const southPawn = ledger.pieces.find(
+      (piece) => piece.side === 'south' && piece.chessType === 'p',
+    )!;
+    const northKing = ledger.pieces.find(
+      (piece) => piece.side === 'north' && piece.chessType === 'k',
+    )!;
+    const southKing = ledger.pieces.find(
+      (piece) => piece.side === 'south' && piece.chessType === 'k',
+    )!;
+    analysis.promotingPawnPlans = [
+      {
+        pieceId: northPawn.id,
+        damagedKingId: northKing.id,
+        promotionPly: 3,
+        setupPlies: [2],
+        ascensionSite: 'the southern altar',
+        ascensionMeaning: 'north ascends',
+      },
+      {
+        pieceId: southPawn.id,
+        damagedKingId: southKing.id,
+        promotionPly: 4,
+        setupPlies: [2],
+        ascensionSite: 'the northern altar',
+        ascensionMeaning: 'south ascends',
+      },
+    ];
+
+    const normalized = normalizePromotionDamageOwnership(analysis, ledger);
+
+    expect(normalized.promotingPawnPlans[0].damagedKingId).toBe(southKing.id);
+    expect(normalized.promotingPawnPlans[1].damagedKingId).toBe(northKing.id);
   });
 
   it('corrects an Ascension site placed on the wrong edge of the invaded kingdom', () => {

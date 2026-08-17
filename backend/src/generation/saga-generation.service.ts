@@ -677,6 +677,7 @@ export class SagaGenerationService
       where: {
         gameId,
         status: 'COMPLETED',
+        generatedStory: { isNot: null },
         sceneBreakdown: { isNot: null },
       },
       orderBy: { completedAt: 'desc' },

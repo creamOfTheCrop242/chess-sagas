@@ -225,6 +225,16 @@ describe('SagaGenerationService', () => {
     expect(analysis.generate).toHaveBeenCalledWith('game-1');
     expect(outline.generate).toHaveBeenCalledWith('game-1');
     expect(story.generate).toHaveBeenCalledWith('game-1');
+    expect(prisma.generationRun.findFirst).toHaveBeenCalledWith({
+      where: {
+        gameId: 'game-1',
+        status: 'COMPLETED',
+        generatedStory: { isNot: null },
+        sceneBreakdown: { isNot: null },
+      },
+      orderBy: { completedAt: 'desc' },
+      select: { id: true },
+    });
     expect(pushNotifications.sendSagaStage).toHaveBeenNthCalledWith(
       1,
       undefined,

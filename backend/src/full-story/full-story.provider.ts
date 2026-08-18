@@ -90,10 +90,44 @@ export interface WoundSceneRepairResult {
   scenes: Array<{ ply: number; fantasyNarration: string }>;
 }
 
+export interface StorySceneRepairRequest {
+  scenes: Array<{
+    ply: number;
+    fantasyNarration: string;
+    characters: string[];
+    locations: string[];
+    captureActorId: string | null;
+    captureVictimId: string | null;
+    victimDies: boolean;
+    woundsInflicted: Array<{ pieceId: string; inflictedAtPly: number }>;
+    woundReferences: Array<{ woundId: string; ownerPieceId: string }>;
+  }>;
+  contextScenes: Array<{ ply: number; fantasyNarration: string }>;
+  findings: Array<{
+    ply: number;
+    pieceId: string | null;
+    type: string;
+    message: string;
+    excerpt: string | null;
+  }>;
+  captureManifest: CaptureDirective[];
+  woundTimeline: WoundTimelineDirective[];
+  characterRegistry: PieceIdentity[];
+  selectedRevengePayoffs: StoryOutline['selectedRevengePayoffs'];
+  telemetry: GenerationTelemetryContext;
+}
+
+export interface StorySceneRepairResult {
+  scenes: Array<{ ply: number; fantasyNarration: string }>;
+}
+
 export interface FullStoryProvider {
   readonly model: string;
   generate(request: FullStoryRequest): Promise<GeneratedStoryPackage>;
   repairWoundScenes(
     request: WoundSceneRepairRequest,
   ): Promise<WoundSceneRepairResult>;
+  repairStoryScenes(
+    request: StorySceneRepairRequest,
+  ): Promise<StorySceneRepairResult>;
 }

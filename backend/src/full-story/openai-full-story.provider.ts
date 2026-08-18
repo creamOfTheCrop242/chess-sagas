@@ -21,6 +21,8 @@ import { OpenAiTelemetryService } from '../openai/openai-telemetry.service';
 import type {
   FullStoryProvider,
   FullStoryRequest,
+  StorySceneRepairRequest,
+  StorySceneRepairResult,
   WoundSceneRepairRequest,
   WoundSceneRepairResult,
 } from './full-story.provider';
@@ -207,6 +209,74 @@ Return publishable replacement narration only. Do not explain the edit.`,
     }
   }
 
+  async repairStoryScenes(
+    request: StorySceneRepairRequest,
+  ): Promise<StorySceneRepairResult> {
+    if (!this.client) {
+      throw new ServiceUnavailableException('OPENAI_API_KEY is not configured');
+    }
+    const startedAt = Date.now();
+    const { telemetry, ...modelRequest } = request;
+    const input = JSON.stringify(modelRequest);
+    const callTelemetry = {
+      ...telemetry,
+      repairMode: 'partial' as const,
+      payloadBytes: Buffer.byteLength(input, 'utf8'),
+    };
+    try {
+      const response = await this.client.responses.parse({
+        model: this.woundRepairModel,
+        ...promptCacheOptions(
+          this.woundRepairModel,
+          'chess-sagas:story-scene-repair',
+        ),
+        reasoning: { effort: 'low' },
+        instructions: `Repair only the supplied broken story scenes. Return exactly one replacement for every scene in scenes and preserve each ply. contextScenes are read-only continuity context and must not be returned or rewritten.
+
+Every finding is authoritative. Correct it without changing any other event. The character registry, captureManifest, woundTimeline, selectedRevengePayoffs, structured scene fields, deaths, captors, victims, promotions, allegiances, and names are binding.
+
+For captures, the manifest actor kills its victim; resistance by the victim must never reverse that outcome. For a selected revenge payoff, explicitly connect the capture to the named witnessed fallen ally while preserving the actual capture victim. Never kill a survivor or describe a future death early. Never reveal the Ascension Seal or its purpose before activation. Preserve all valid active wounds and do not introduce an unplanned or premature wound.
+
+Keep the original scene's voice, setting, useful dialogue, relationships, length, and narrative purpose wherever they do not conflict with a finding. Return publishable replacement narration only and do not explain the edit.`,
+        input,
+        max_output_tokens: 12_000,
+        text: {
+          verbosity: 'high',
+          format: zodTextFormat(
+            storySceneRepairResultSchema,
+            'story_scene_repairs',
+          ),
+        },
+      });
+      if (!response.output_parsed) {
+        throw new BadGatewayException(
+          response.error?.message || 'OpenAI returned no story scene repairs',
+        );
+      }
+      const result = storySceneRepairResultSchema.parse(response.output_parsed);
+      logOpenAiGeneration(
+        this.logger,
+        'story-scene-repair',
+        this.woundRepairModel,
+        startedAt,
+        response,
+        callTelemetry,
+        this.telemetryRecorder,
+      );
+      return result;
+    } catch (error) {
+      logOpenAiGenerationFailure(
+        this.logger,
+        'story-scene-repair',
+        this.woundRepairModel,
+        startedAt,
+        error,
+        callTelemetry,
+        this.telemetryRecorder,
+      );
+      throw error;
+    }
+  }
 }
 
 const woundSceneRepairResultSchema = z.object({
@@ -217,3 +287,5 @@ const woundSceneRepairResultSchema = z.object({
     }),
   ),
 });
+
+const storySceneRepairResultSchema = woundSceneRepairResultSchema;

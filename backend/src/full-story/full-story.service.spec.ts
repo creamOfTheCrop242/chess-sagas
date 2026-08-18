@@ -6,6 +6,7 @@ import {
   buildStoryCorrectionFeedback,
   buildWoundStateByPly,
   buildWoundTimeline,
+  deriveSceneWoundReferences,
 } from './full-story.service';
 
 describe('full-story wound timing preparation', () => {
@@ -144,6 +145,65 @@ describe('full-story wound timing preparation', () => {
         ply: 3,
         newlyInflictedWoundIds: [],
         activeWoundIds: ['wound:w-q-d1:2'],
+      },
+    ]);
+  });
+
+  it('derives wound references from scene characters and active timing', () => {
+    const wounds = [
+      {
+        pieceId: 'w-p-d2',
+        inflictedAtPly: 3,
+        injury: 'burned hand',
+        lastingEffects: ['weak grip'],
+        recoveryPly: 6,
+      },
+      {
+        pieceId: 'b-p-e7',
+        inflictedAtPly: 4,
+        injury: 'cut shoulder',
+        lastingEffects: ['limited reach'],
+        recoveryPly: null,
+      },
+    ];
+
+    expect(
+      deriveSceneWoundReferences(
+        [
+          { startPly: 3, characters: ['w-p-d2'] },
+          { startPly: 4, characters: ['b-p-e7'] },
+          { startPly: 5, characters: ['w-p-d2', 'b-p-e7'] },
+          { startPly: 6, characters: ['w-p-d2'] },
+          { startPly: 7, characters: ['b-p-e7'] },
+        ],
+        wounds,
+      ),
+    ).toEqual([
+      {
+        ply: 3,
+        woundReferences: [
+          { woundId: 'wound:w-p-d2:3', ownerPieceId: 'w-p-d2' },
+        ],
+      },
+      {
+        ply: 4,
+        woundReferences: [
+          { woundId: 'wound:b-p-e7:4', ownerPieceId: 'b-p-e7' },
+        ],
+      },
+      {
+        ply: 5,
+        woundReferences: [
+          { woundId: 'wound:w-p-d2:3', ownerPieceId: 'w-p-d2' },
+          { woundId: 'wound:b-p-e7:4', ownerPieceId: 'b-p-e7' },
+        ],
+      },
+      { ply: 6, woundReferences: [] },
+      {
+        ply: 7,
+        woundReferences: [
+          { woundId: 'wound:b-p-e7:4', ownerPieceId: 'b-p-e7' },
+        ],
       },
     ]);
   });

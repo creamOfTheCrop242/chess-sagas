@@ -255,6 +255,9 @@ export class FullStoryService {
         const characters = [
           event.pieceId,
           ...(event.capturedPieceId ? [event.capturedPieceId] : []),
+          ...woundTimeline
+            .filter((wound) => wound.inflictedAtPly === event.ply)
+            .map((wound) => wound.pieceId),
           ...creativeScene.characters.filter((id) => pieceIds.has(id)),
         ].filter((id, index, all) => all.indexOf(id) === index);
         const fantasyNarration = this.cleanReaderFacingProse(
@@ -283,14 +286,22 @@ export class FullStoryService {
           continuityNotes: [],
         };
       });
-      const timedFateFindings = this.deterministic.validateTimedCharacterFates(
+      const woundReferencesByPly = new Map(
+        deriveSceneWoundReferences(scenes, storyPackage.wounds).map(
+          (metadata) => [metadata.ply, metadata.woundReferences],
+        ),
+      );
+      const generatedSceneByPly = new Map(
+        storyPackage.scenes.map((scene) => [scene.ply, scene]),
+      );
+      let timedFateFindings = this.deterministic.validateTimedCharacterFates(
         scenes.map((scene) => ({
           ply: scene.startPly,
           fantasyNarration: scene.fantasyNarration,
         })),
         ledger,
       );
-      const captureAttributionFindings =
+      let captureAttributionFindings =
         this.deterministic.validateCaptureAttribution(
           scenes.map((scene) => ({
             ply: scene.startPly,
@@ -298,7 +309,7 @@ export class FullStoryService {
           })),
           ledger,
         );
-      const revengePayoffFindings = this.deterministic.validateRevengePayoffs(
+      let revengePayoffFindings = this.deterministic.validateRevengePayoffs(
         scenes.map((scene) => ({
           ply: scene.startPly,
           fantasyNarration: scene.fantasyNarration,
@@ -306,7 +317,7 @@ export class FullStoryService {
         ledger,
         outline.selectedRevengePayoffs,
       );
-      const prematureAscensionFindings =
+      let prematureAscensionFindings =
         this.deterministic.validatePrematureAscensionReveals(
           scenes.map((scene) => ({
             ply: scene.startPly,
@@ -314,6 +325,121 @@ export class FullStoryService {
           })),
           ledger,
         );
+      const initialSceneFindings = [
+        ...prematureAscensionFindings,
+        ...captureAttributionFindings,
+        ...revengePayoffFindings,
+        ...timedFateFindings,
+      ].filter((finding) => finding.ply !== null);
+      if (initialSceneFindings.length > 0) {
+        try {
+          const targetPlies = [
+            ...new Set(
+              initialSceneFindings.map((finding) => finding.ply as number),
+            ),
+          ];
+          const contextPlies = new Set<number>();
+          for (const ply of targetPlies) {
+            if (ply > 1) contextPlies.add(ply - 1);
+            if (ply < ledger.events.length) contextPlies.add(ply + 1);
+          }
+          targetPlies.forEach((ply) => contextPlies.delete(ply));
+          const repairResult = await this.provider.repairStoryScenes({
+            scenes: storyPackage.scenes
+              .filter((scene) => targetPlies.includes(scene.ply))
+              .map((scene) => {
+                return {
+                  ...scene,
+                  woundReferences: woundReferencesByPly.get(scene.ply) ?? [],
+                };
+              }),
+            contextScenes: scenes
+              .filter((scene) => contextPlies.has(scene.startPly))
+              .map((scene) => ({
+                ply: scene.startPly,
+                fantasyNarration: scene.fantasyNarration,
+              })),
+            findings: initialSceneFindings.map((finding) => ({
+              ply: finding.ply as number,
+              pieceId: finding.pieceId,
+              type: finding.type,
+              message: finding.message,
+              excerpt: finding.excerpt,
+            })),
+            captureManifest: captureManifest.filter((entry) =>
+              targetPlies.includes(entry.ply),
+            ),
+            woundTimeline,
+            characterRegistry: ledger.pieces,
+            selectedRevengePayoffs: outline.selectedRevengePayoffs.filter(
+              (payoff) => targetPlies.includes(payoff.payoffPly),
+            ),
+            telemetry: {
+              gameId,
+              generationRunId: run.id,
+              attempt: correctionAttempt + 1,
+              repairMode: 'partial',
+            },
+          });
+          const repairedByPly = new Map(
+            repairResult.scenes.map((scene) => [scene.ply, scene]),
+          );
+          if (
+            repairedByPly.size !== targetPlies.length ||
+            targetPlies.some((ply) => !repairedByPly.has(ply))
+          ) {
+            throw new Error(
+              'Story scene repair returned incomplete ply coverage',
+            );
+          }
+          scenes = scenes.map((scene) => {
+            const repair = repairedByPly.get(scene.startPly);
+            if (!repair) return scene;
+            const fantasyNarration = this.cleanReaderFacingProse(
+              repair.fantasyNarration,
+              [...pieceIds],
+            );
+            const wordCount = fantasyNarration.trim().split(/\s+/).length;
+            return {
+              ...scene,
+              fantasyNarration,
+              visualPrompt: fantasyNarration,
+              videoPrompt: fantasyNarration,
+              estimatedDurationSeconds: Math.max(8, Math.ceil(wordCount / 2.5)),
+            };
+          });
+          const repairedSceneInput = scenes.map((scene) => ({
+            ply: scene.startPly,
+            fantasyNarration: scene.fantasyNarration,
+          }));
+          timedFateFindings = this.deterministic.validateTimedCharacterFates(
+            repairedSceneInput,
+            ledger,
+          );
+          captureAttributionFindings =
+            this.deterministic.validateCaptureAttribution(
+              repairedSceneInput,
+              ledger,
+            );
+          revengePayoffFindings = this.deterministic.validateRevengePayoffs(
+            repairedSceneInput,
+            ledger,
+            outline.selectedRevengePayoffs,
+          );
+          prematureAscensionFindings =
+            this.deterministic.validatePrematureAscensionReveals(
+              repairedSceneInput,
+              ledger,
+            );
+          this.logger.log(
+            `Applied targeted story scene repair gameId=${gameId} runId=${run.id} plies=${targetPlies.join(',')}`,
+          );
+        } catch (error) {
+          this.logger.warn(
+            `Story scene repair failed gameId=${gameId} runId=${run.id}: ${error instanceof Error ? error.message : 'unknown repair error'}`,
+          );
+        }
+      }
       if (prematureAscensionFindings.length > 0) {
         throw new Error(
           `Generated story package reveals the promotion artifact prematurely: ${prematureAscensionFindings
@@ -353,20 +479,21 @@ export class FullStoryService {
       }
       const findTimedWounds = (candidateScenes: typeof scenes) => [
         ...this.deterministic.validateStructuredWoundReferences(
-          storyPackage.scenes.map((scene) => ({
-            ply: scene.ply,
+          candidateScenes.map((scene) => ({
+            ply: scene.startPly,
             characters: scene.characters,
-            woundReferences: scene.woundReferences,
+            woundReferences: woundReferencesByPly.get(scene.startPly) ?? [],
           })),
           storyPackage.wounds,
         ),
         ...this.deterministic.validateTimedWounds(
-          candidateScenes.map((scene, index) => ({
+          candidateScenes.map((scene) => ({
             ply: scene.startPly,
             fantasyNarration: scene.fantasyNarration,
             characters: scene.characters,
-            woundsInflicted: storyPackage.scenes[index]?.woundsInflicted ?? [],
-            woundReferences: storyPackage.scenes[index]?.woundReferences ?? [],
+            woundsInflicted:
+              generatedSceneByPly.get(scene.startPly)?.woundsInflicted ?? [],
+            woundReferences: woundReferencesByPly.get(scene.startPly) ?? [],
           })),
           storyPackage.wounds,
           ledger,
@@ -414,13 +541,19 @@ export class FullStoryService {
           const repairResult = await this.provider.repairWoundScenes({
             scenes: storyPackage.scenes
               .filter((scene) => warningPlies.includes(scene.ply))
-              .map((scene) => ({
-                ply: scene.ply,
-                fantasyNarration: scene.fantasyNarration,
-                characters: scene.characters,
-                woundsInflicted: scene.woundsInflicted,
-                woundReferences: scene.woundReferences,
-              })),
+              .map((scene) => {
+                const normalizedScene = scenes.find(
+                  (candidate) => candidate.startPly === scene.ply,
+                );
+                return {
+                  ply: scene.ply,
+                  fantasyNarration:
+                    normalizedScene?.fantasyNarration ?? scene.fantasyNarration,
+                  characters: normalizedScene?.characters ?? scene.characters,
+                  woundsInflicted: scene.woundsInflicted,
+                  woundReferences: woundReferencesByPly.get(scene.ply) ?? [],
+                };
+              }),
             warnings: initialWoundWarnings.map((finding) => ({
               ply: finding.ply ?? 0,
               pieceId: finding.pieceId,
@@ -848,6 +981,29 @@ export function buildWoundStateByPly(
         state.newlyInflictedWoundIds.length > 0 ||
         state.activeWoundIds.length > 0,
     );
+}
+
+export function deriveSceneWoundReferences(
+  scenes: Array<{ startPly: number; characters: string[] }>,
+  wounds: GeneratedStoryPackage['wounds'],
+): Array<{
+  ply: number;
+  woundReferences: Array<{ woundId: string; ownerPieceId: string }>;
+}> {
+  return scenes.map((scene) => ({
+    ply: scene.startPly,
+    woundReferences: wounds
+      .filter(
+        (wound) =>
+          scene.characters.includes(wound.pieceId) &&
+          wound.inflictedAtPly <= scene.startPly &&
+          (wound.recoveryPly === null || scene.startPly < wound.recoveryPly),
+      )
+      .map((wound) => ({
+        woundId: woundIdFor(wound.pieceId, wound.inflictedAtPly),
+        ownerPieceId: wound.pieceId,
+      })),
+  }));
 }
 
 function woundIdFor(pieceId: string, inflictedAtPly: number): string {

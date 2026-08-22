@@ -105,6 +105,9 @@ export class ReportingService {
         retryCalls: ai.total.retryCalls,
         estimatedAiCostMicros: ai.total.estimatedCostMicros,
         estimatedAiCostUsd: microsToUsd(ai.total.estimatedCostMicros),
+        averageAiCostPerCompletedSagaUsd: generation.completed
+          ? microsToUsd(ai.total.estimatedCostMicros) / generation.completed
+          : 0,
         netRevenueCents: billing.netRevenueCents,
         estimatedGrossMarginCents:
           billing.netRevenueCents -

@@ -30,6 +30,7 @@ export interface ReportingOverview {
     retryCalls: number;
     estimatedAiCostMicros: number;
     estimatedAiCostUsd: number;
+    averageAiCostPerCompletedSagaUsd: number;
     netRevenueCents: number;
     estimatedGrossMarginCents: number;
   };

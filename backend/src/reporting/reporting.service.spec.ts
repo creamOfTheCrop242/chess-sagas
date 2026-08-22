@@ -83,6 +83,34 @@ describe('ReportingService', () => {
     expect(report.summary.averageGenerationSeconds).toBe(150);
     expect(report.generation.averageSeconds).toBe(150);
   });
+
+  it('reports average AI cost per completed saga including retry expense', async () => {
+    const prisma = {
+      aiCall: {
+        findMany: jest.fn().mockResolvedValue([
+          aiCall('CONSUMED', 'customer@example.com', 30_000),
+          aiCall('CONSUMED', 'customer@example.com', 20_000),
+        ]),
+      },
+      generationRun: { findMany: jest.fn().mockResolvedValue([]) },
+      sagaGenerationJob: {
+        findMany: jest.fn().mockResolvedValue([
+          generationJob('game-1', 'COMPLETED', 'CONSUMED'),
+          generationJob('game-2', 'COMPLETED', 'CONSUMED'),
+        ]),
+      },
+      creditLedgerEntry: { findMany: jest.fn().mockResolvedValue([]) },
+      stripeEvent: { findMany: jest.fn().mockResolvedValue([]) },
+    };
+    const service = new ReportingService(prisma as never, config as never);
+
+    const report = await service.overview({
+      from: new Date('2026-08-01T00:00:00Z'),
+      to: new Date('2026-08-09T00:00:00Z'),
+    });
+
+    expect(report.summary.averageAiCostPerCompletedSagaUsd).toBe(0.025);
+  });
 });
 
 function generationRun(gameId: string, seconds: number) {

@@ -31,6 +31,28 @@ describe('DeterministicStoryValidator', () => {
     ).toEqual([]);
   });
 
+  it('attributes leaked coordinates to their exact scene for targeted repair', () => {
+    expect(
+      validator.validateSceneTerminology([
+        {
+          ply: 76,
+          fantasyNarration: 'The Queen closed the lower passage.',
+        },
+        {
+          ply: 77,
+          fantasyNarration:
+            'The Queen controlled g8, h8, and g7 around the King.',
+        },
+      ]),
+    ).toEqual([
+      expect.objectContaining({
+        type: 'coordinate-mentioned-in-prose',
+        ply: 77,
+        excerpt: 'g8',
+      }),
+    ]);
+  });
+
   it('repairs prohibited chess terminology deterministically', () => {
     const repaired = validator.repairProhibitedTerminology(
       'The E-file Company recorded checkmate after three plies of chess.',
@@ -89,6 +111,143 @@ describe('DeterministicStoryValidator', () => {
     expect(
       validator.validateTimedCharacterFates(
         [{ ply: 40, fantasyNarration: "Nessa's death broke the company." }],
+        fateLedger,
+      ),
+    ).toEqual([]);
+  });
+
+  it('does not mistake a survivable crushed-limb wound for a premature death', () => {
+    const fateLedger = {
+      pieces: [
+        {
+          id: 'b-n-b8',
+          permanentName: 'Southeast Knight Commander',
+          characterName: 'Godric',
+          pronouns: 'he/him',
+          capturedAtPly: 33,
+        },
+      ],
+    } as GameLedger;
+
+    expect(
+      validator.validateTimedCharacterFates(
+        [
+          {
+            ply: 22,
+            fantasyNarration:
+              "The collapsing hull crushed Godric's lower leg and fractured his hip, but he remained alive and fought on.",
+          },
+        ],
+        fateLedger,
+      ),
+    ).toEqual([]);
+  });
+
+  it('still rejects an explicit premature killing', () => {
+    const fateLedger = {
+      pieces: [
+        {
+          id: 'b-n-b8',
+          permanentName: 'Southeast Knight Commander',
+          characterName: 'Godric',
+          capturedAtPly: 33,
+        },
+      ],
+    } as GameLedger;
+
+    expect(
+      validator.validateTimedCharacterFates(
+        [
+          {
+            ply: 22,
+            fantasyNarration:
+              'The collapsing hull killed Godric before the fighting moved on.',
+          },
+        ],
+        fateLedger,
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        type: 'invented-capture',
+        ply: 22,
+        pieceId: 'b-n-b8',
+        excerpt: 'killed Godric',
+      }),
+    ]);
+  });
+
+  it('rejects a second death in a scene by resolving an unambiguous pronoun', () => {
+    const fateLedger = {
+      pieces: [
+        {
+          id: 'w-p-a2',
+          permanentName: 'Mara',
+          pronouns: 'she/her',
+          capturedAtPly: 65,
+        },
+        {
+          id: 'w-p-b2',
+          permanentName: 'Tarin',
+          pronouns: 'he/him',
+          capturedAtPly: 69,
+        },
+        {
+          id: 'b-n-b8',
+          permanentName: 'Nerys',
+          pronouns: 'she/her',
+        },
+      ],
+    } as GameLedger;
+
+    const findings = validator.validateTimedCharacterFates(
+      [
+        {
+          ply: 65,
+          fantasyNarration:
+            'Nerys struck Mara down. Tarin rushed forward to protect her retreat, and Nerys killed him with a second sweep.',
+        },
+      ],
+      fateLedger,
+    );
+
+    expect(findings).toEqual([
+      expect.objectContaining({
+        type: 'invented-capture',
+        ply: 65,
+        pieceId: 'w-p-b2',
+        excerpt:
+          'Tarin rushed forward to protect her retreat, and Nerys killed him with a second sweep.',
+      }),
+    ]);
+  });
+
+  it('does not resolve an ambiguous death pronoun', () => {
+    const fateLedger = {
+      pieces: [
+        {
+          id: 'w-p-a2',
+          permanentName: 'Tarin',
+          pronouns: 'he/him',
+          capturedAtPly: 69,
+        },
+        {
+          id: 'w-p-b2',
+          permanentName: 'Cedric',
+          pronouns: 'he/him',
+          capturedAtPly: 71,
+        },
+      ],
+    } as GameLedger;
+
+    expect(
+      validator.validateTimedCharacterFates(
+        [
+          {
+            ply: 65,
+            fantasyNarration:
+              'Tarin warned Cedric before the enemy commander killed him.',
+          },
+        ],
         fateLedger,
       ),
     ).toEqual([]);
@@ -239,6 +398,58 @@ describe('DeterministicStoryValidator', () => {
           "Southern Queen's wound is inflicted at ply 16 but appears prematurely at ply 14",
       }),
     ]);
+  });
+
+  it("warns when a commander's wound scene uses another Mythic Arm", () => {
+    const commander = {
+      id: 'b-n-g8',
+      permanentName: 'Knight Commander Brienne',
+      characterName: 'Brienne',
+      fantasyType: 'knight-commander',
+      originalSquare: 'g8',
+      mythicArm: {
+        id: 'stormbound-great-hammer',
+        name: 'stormbound great hammer',
+        description:
+          'a stormbound great hammer whose impacts release concussive thunder',
+      },
+    } as GameLedger['pieces'][number];
+    const woundLedger = {
+      initialFen: 'test-seed',
+      pieces: [commander],
+    } as GameLedger;
+    const findings = validator.validateTimedWounds(
+      [
+        {
+          ply: 12,
+          characters: [commander.id],
+          woundsInflicted: [{ pieceId: commander.id, inflictedAtPly: 12 }],
+          fantasyNarration:
+            'Brienne forced a realm-light strike through the hammer, but the effort tore her shoulder and left her with limited overhead sword movement.',
+        },
+      ],
+      [
+        {
+          pieceId: commander.id,
+          inflictedAtPly: 12,
+          injury: 'A damaged right forearm',
+          lastingEffects: ['Painful weapon use'],
+          recoveryPly: null,
+        },
+      ],
+      woundLedger,
+    );
+
+    expect(findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'mythic-arm-ownership',
+          severity: 'warning',
+          pieceId: commander.id,
+          ply: 12,
+        }),
+      ]),
+    );
   });
 
   it('rejects structured wound references with the wrong owner or timing', () => {
@@ -1290,5 +1501,155 @@ describe('DeterministicStoryValidator', () => {
         injuryLedger,
       ),
     ).toEqual([]);
+  });
+
+  it('detects royal check strain assigned to the checking side own King', () => {
+    const checkLedger = {
+      pieces: [
+        {
+          id: 'w-n-b1',
+          side: 'north',
+          permanentName: 'Knight Commander Catrin',
+          fantasyType: 'knight-commander',
+        },
+        {
+          id: 'w-k-e1',
+          side: 'north',
+          permanentName: 'King Ansel',
+          fantasyType: 'king',
+        },
+        {
+          id: 'b-k-e8',
+          side: 'south',
+          permanentName: 'King Ulric',
+          fantasyType: 'king',
+        },
+      ],
+      events: [
+        {
+          ply: 65,
+          side: 'north',
+          pieceId: 'w-n-b1',
+          isCheck: true,
+        },
+      ],
+    } as GameLedger;
+
+    expect(
+      validator.validateCheckStrainOwnership(
+        [
+          {
+            ply: 65,
+            fantasyNarration:
+              "Catrin checked King Ulric, and the attack further battered King Ansel's already strained Seal defenses.",
+          },
+        ],
+        checkLedger,
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        severity: 'error',
+        ply: 65,
+        pieceId: 'b-k-e8',
+      }),
+    ]);
+  });
+
+  it('allows royal check strain assigned to the threatened King', () => {
+    const checkLedger = {
+      pieces: [
+        {
+          id: 'w-b-c1',
+          side: 'north',
+          permanentName: 'Archwizard Aveline',
+          fantasyType: 'archwizard',
+        },
+        {
+          id: 'w-k-e1',
+          side: 'north',
+          permanentName: 'King Ansel',
+          fantasyType: 'king',
+        },
+        {
+          id: 'b-k-e8',
+          side: 'south',
+          permanentName: 'King Ulric',
+          fantasyType: 'king',
+        },
+      ],
+      events: [
+        {
+          ply: 67,
+          side: 'north',
+          pieceId: 'w-b-c1',
+          isCheck: true,
+        },
+      ],
+    } as GameLedger;
+
+    expect(
+      validator.validateCheckStrainOwnership(
+        [
+          {
+            ply: 67,
+            fantasyNarration:
+              "Aveline checked King Ulric, and the force spell cracked Ulric's personal wards around the Southern Seal.",
+          },
+        ],
+        checkLedger,
+      ),
+    ).toEqual([]);
+  });
+
+  it('detects a distinctive later wound effect before its infliction', () => {
+    const fortressLedger = {
+      pieces: [
+        {
+          id: 'b-r-h8',
+          permanentName: 'Moving Fortress Pilot Roderic',
+          operatorName: 'Roderic',
+          fantasyType: 'moving-fortress',
+        },
+      ],
+      events: [{ ply: 52, isCapture: false }],
+    } as GameLedger;
+    const wounds = [
+      {
+        pieceId: 'b-r-h8',
+        inflictedAtPly: 54,
+        injury:
+          'Fractured armor plates and a pierced outer ward around the command cradle',
+        lastingEffects: [
+          'Continuous magical leakage',
+          'Increasing pain and breath restriction inside the cradle',
+        ],
+        recoveryPly: null,
+      },
+    ];
+
+    expect(
+      validator.validateTimedWounds(
+        [
+          {
+            ply: 52,
+            characters: ['b-r-h8'],
+            fantasyNarration:
+              'Magical leakage strained Roderic’s breathing inside the cradle.',
+            woundsInflicted: [],
+          },
+        ],
+        wounds,
+        fortressLedger,
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'wound-continuity',
+          severity: 'warning',
+          ply: 52,
+          pieceId: 'b-r-h8',
+        }),
+      ]),
+    );
   });
 });

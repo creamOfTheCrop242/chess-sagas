@@ -93,6 +93,7 @@ export class StoryOutlineService {
         candidate = normalizeStoryOutlineEndingSequence(candidate, ledger);
         candidate = normalizeStoryOutlineRequiredEvents(candidate, ledger);
         candidate = normalizeStoryOutlineCharacters(candidate, ledger);
+        candidate = normalizeStoryOutlineCheckStrain(candidate, ledger);
         candidate = normalizeStoryOutlineRelationshipIds(
           candidate,
           narrativeAnalysis,
@@ -249,6 +250,69 @@ export function normalizeStoryOutlineRelationshipIds(
         characterIds: [...planned.characterIds] as [string, string],
       };
     }),
+  };
+}
+
+export function normalizeStoryOutlineCheckStrain(
+  outline: StoryOutline,
+  ledger: GameLedger,
+): StoryOutline {
+  const kingsBySide = new Map(
+    ledger.pieces
+      .filter((piece) => piece.fantasyType === 'king')
+      .map((piece) => [piece.side, piece]),
+  );
+  const checkNotesByScene = new Map<
+    string,
+    Array<{ ply: number; note: string }>
+  >();
+
+  for (const event of ledger.events) {
+    if (!event.isCheck) continue;
+    const threatenedSide = event.side === 'north' ? 'south' : 'north';
+    const threatenedKing = kingsBySide.get(threatenedSide);
+    const protectedKing = kingsBySide.get(event.side);
+    const actor = ledger.pieces.find((piece) => piece.id === event.pieceId);
+    if (!threatenedKing || !actor) continue;
+    const scene = outline.acts
+      .flatMap((act) => act.scenes)
+      .find(
+        (candidate) =>
+          event.ply >= candidate.startPly && event.ply <= candidate.endPly,
+      );
+    if (!scene) continue;
+    const key = `${scene.startPly}:${scene.endPly}`;
+    const notes = checkNotesByScene.get(key) ?? [];
+    notes.push({
+      ply: event.ply,
+      note: `Ply ${event.ply} is a ledger-confirmed check delivered by ${actor.permanentName} against ${threatenedKing.permanentName}. It inflicts exactly one new cumulative royal check-strain increment on ${threatenedKing.permanentName}${protectedKing ? ` and does not damage ${protectedKing.permanentName}` : ''}.`,
+    });
+    checkNotesByScene.set(key, notes);
+  }
+
+  return {
+    ...outline,
+    acts: outline.acts.map((act) => ({
+      ...act,
+      scenes: act.scenes.map((scene) => {
+        const key = `${scene.startPly}:${scene.endPly}`;
+        const authoritativeNotes = checkNotesByScene.get(key) ?? [];
+        return {
+          ...scene,
+          continuityNotes: [
+            ...scene.continuityNotes.filter((note) => {
+              const ply = Number(note.match(/\bPly\s+(\d+)\b/i)?.[1]);
+              return !(
+                Number.isInteger(ply) &&
+                ledger.events.some((event) => event.ply === ply) &&
+                /\b(?:check|checking|royal strain|seal strain)\b/i.test(note)
+              );
+            }),
+            ...authoritativeNotes.map(({ note }) => note),
+          ],
+        };
+      }),
+    })),
   };
 }
 

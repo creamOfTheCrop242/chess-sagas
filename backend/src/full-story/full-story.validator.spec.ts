@@ -6,7 +6,7 @@ import type { GeneratedStoryDraft } from './models/generated-story';
 import {
   assembleStoryMarkdown,
   buildCaptureManifest,
-  buildStoryCorrectionFeedback,
+  buildDeathContracts,
   isAllowedDefeatedKingFate,
   isCorrectableStoryPackageError,
 } from './full-story.service';
@@ -169,7 +169,7 @@ The Southern King poured his strength into the Royal Seal, but every remaining r
     expect(kingDiesFromFate('abandons-seal-and-flees')).toBe(false);
   });
 
-  it('targets deterministic story-package errors for one correction retry', () => {
+  it('classifies deterministic story-package errors for targeted repair', () => {
     const error =
       'Generated story package contains capture attribution errors: Edric must kill Northeast Fortress at ply 66, but the prose reverses the captor and victim. Rejected prose: "The fortress crushed Edric."';
 
@@ -177,23 +177,44 @@ The Southern King poured his strength into the Royal Seal, but every remaining r
     expect(isCorrectableStoryPackageError('OpenAI request timed out')).toBe(
       false,
     );
-    expect(buildStoryCorrectionFeedback(error)).toContain(
-      'the actor kills the victim, never the reverse',
-    );
-    expect(buildStoryCorrectionFeedback(error)).toContain(error);
   });
 
-  it('retries a story that omits a selected verified revenge payoff', () => {
+  it('classifies a missing selected revenge payoff for targeted repair', () => {
     const error =
       "Generated story package omits verified revenge payoffs: King Roderic's capture at ply 8 avenges Queen Isolde's witnessed death at ply 7, but the prose does not connect the payoff to that victim.";
 
     expect(isCorrectableStoryPackageError(error)).toBe(true);
-    expect(buildStoryCorrectionFeedback(error)).toContain(
-      'explicitly name the fallen ally',
-    );
-    expect(buildStoryCorrectionFeedback(error)).toContain(
-      'the emotional reason for the capture, not its victim',
-    );
+  });
+
+  it('builds one binding death contract per beat', () => {
+    const deathLedger = {
+      pieces: [
+        {
+          id: 'b-p-h7',
+          permanentName: 'Southern Dusk Company',
+          viewpointName: 'Emrys',
+        },
+      ],
+      events: [
+        { ply: 1, isCapture: false },
+        { ply: 2, isCapture: true, capturedPieceId: 'b-p-h7' },
+      ],
+    } as GameLedger;
+
+    expect(buildDeathContracts(deathLedger)).toEqual([
+      {
+        ply: 1,
+        authorizedVictimId: null,
+        authorizedVictimNames: [],
+        noOtherDeaths: true,
+      },
+      {
+        ply: 2,
+        authorizedVictimId: 'b-p-h7',
+        authorizedVictimNames: ['Emrys', 'Southern Dusk Company'],
+        noOtherDeaths: true,
+      },
+    ]);
   });
 
   it('builds an explicit capture manifest from ledger identities', () => {

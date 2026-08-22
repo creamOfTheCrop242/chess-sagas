@@ -10,6 +10,7 @@ import type {
   PieceIdentity,
   Side,
 } from './models/game-ledger';
+import { mythicArmForCommander } from './mythic-arms';
 
 const PAWN_COMPANIES = [
   'Dawn Company',
@@ -278,6 +279,14 @@ export class PieceIdentityService {
             identity.pronouns = 'she/her';
           }
         }
+        if (identity.chessType === 'n') {
+          const arm = mythicArmForCommander(identity, seed);
+          identity.mythicArm = {
+            id: arm.id,
+            name: arm.name,
+            description: arm.description,
+          };
+        }
         identity.backstory = pieceBackstory(identity, seed);
         pieces.push(identity);
         squareToId.set(square, identity.id);
@@ -437,8 +446,19 @@ export function normalizePawnViewpoints(ledger: GameLedger): GameLedger {
     ...ledger,
     pieces: ledger.pieces.map((piece) => {
       if (piece.chessType !== 'p') {
+        const mythicArm =
+          piece.chessType === 'n'
+            ? mythicArmForCommander(piece, ledger.initialFen)
+            : undefined;
         return {
           ...piece,
+          mythicArm: mythicArm
+            ? {
+                id: mythicArm.id,
+                name: mythicArm.name,
+                description: mythicArm.description,
+              }
+            : piece.mythicArm,
           kingDisposition:
             piece.chessType === 'k'
               ? (piece.kingDisposition ??
@@ -919,17 +939,7 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       spectralSteedOrigins[
         (steedOriginOffset + commanderIndex) % spectralSteedOrigins.length
       ];
-    const weapons = [
-      'a stormbound great hammer whose impacts release concussive thunder',
-      'a Seal-forged greatsword that burns through hostile wards',
-      'a gravity mace that multiplies its weight at the instant of impact',
-      'a ward-breaking poleaxe charged to tear open magical defenses',
-      'a crescent glaive that throws a short arc of cutting realm-light',
-      'a two-handed war axe whose edge stores the force of every blocked blow',
-      'a matched pair of oathbound swords whose alternating strikes build and release cutting arcs of realm-light',
-    ];
-    const weaponOffset = hashSeed(`${seed}:mythic-arms`);
-    const mythicArm = weapons[(weaponOffset + commanderIndex) % weapons.length];
+    const mythicArm = mythicArmForCommander(piece, seed).description;
     const weaponLegacies = [
       'This Mythic Arm is a legendary relic carried by generations of champions, and soldiers recognize its silhouette before they recognize its bearer',
       'The weapon is legendary throughout the kingdom, its earlier wielders named in military oaths and funeral songs',

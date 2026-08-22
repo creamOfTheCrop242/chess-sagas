@@ -3,7 +3,6 @@ import type { NarrativeAnalysis } from '../narrative-analysis/models/narrative-a
 import type { StoryOutline } from '../story-outline/models/story-outline';
 import {
   buildEndingWorldState,
-  buildStoryCorrectionFeedback,
   buildWoundStateByPly,
   buildWoundTimeline,
   deriveSceneWoundReferences,
@@ -206,15 +205,5 @@ describe('full-story wound timing preparation', () => {
         ],
       },
     ]);
-  });
-
-  it('includes rejected wound prose and temporal instructions in correction feedback', () => {
-    const feedback = buildStoryCorrectionFeedback(
-      'Generated story package contains wound timeline errors: Theron is wounded too early. Rejected prose: "His ward plates were cracked."',
-    );
-
-    expect(feedback).toContain('Rejected prose');
-    expect(feedback).toContain('obey woundTimeline');
-    expect(feedback).toContain('General danger may remain');
   });
 });

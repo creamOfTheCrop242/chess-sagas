@@ -5,6 +5,7 @@ import { SURRENDER_JUDGMENTS } from '../../chess/surrender-context';
 import {
   AFTERMATH_FOCUSES,
   DESTROYED_SEAL_CONSEQUENCES,
+  ENDING_GENRES,
   INTACT_SEAL_CONSEQUENCES,
   LATER_CHRONICLE_LENSES,
 } from '../ending-contract';
@@ -127,6 +128,7 @@ function buildNarrativeAnalysisSchema(pieceIdSchema: z.ZodType<string>) {
     finalImage: z.string().min(1),
     aftermathFocus: z.enum(AFTERMATH_FOCUSES),
     laterChronicleLens: z.enum(LATER_CHRONICLE_LENSES),
+    endingGenre: z.enum(ENDING_GENRES),
     laterChronicleCliffhanger: z.boolean().default(false),
     darkEndingConsequence: z
       .enum([...DESTROYED_SEAL_CONSEQUENCES, ...INTACT_SEAL_CONSEQUENCES])

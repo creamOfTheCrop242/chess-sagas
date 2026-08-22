@@ -311,6 +311,7 @@ function normalizeDeterministicAnalysisFacts(
       defeatedKingFate,
       aftermathFocus: endingContract.creativeDirection.aftermathFocus,
       laterChronicleLens: endingContract.creativeDirection.laterChronicleLens,
+      endingGenre: endingContract.creativeDirection.endingGenre,
       laterChronicleCliffhanger:
         endingContract.creativeDirection.laterChronicleCliffhanger,
       darkEndingConsequence:

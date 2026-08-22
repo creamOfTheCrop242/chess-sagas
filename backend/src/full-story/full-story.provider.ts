@@ -16,6 +16,13 @@ export interface CaptureDirective {
   requiredOutcome: string;
 }
 
+export interface DeathBeatDirective {
+  ply: number;
+  authorizedVictimId: string | null;
+  authorizedVictimNames: string[];
+  noOtherDeaths: true;
+}
+
 export interface WoundTimelineDirective {
   woundId: string;
   pieceId: string;
@@ -29,6 +36,16 @@ export interface WoundTimelineDirective {
   causeType: WoundCauseType;
   sourcePieceId: string | null;
   sourceNames: string[];
+}
+
+export interface CheckStrainDirective {
+  ply: number;
+  checkingPieceId: string;
+  checkingPieceNames: string[];
+  damagedKingId: string;
+  damagedKingNames: string[];
+  protectedKingId: string;
+  protectedKingNames: string[];
 }
 
 export type FortressPowerOutcome = 'retains-seal-power' | 'loses-seal-power';
@@ -54,12 +71,14 @@ export interface FullStoryRequest {
   outline: StoryOutline;
   characterRegistry: PieceIdentity[];
   captureManifest: CaptureDirective[];
+  deathContracts: DeathBeatDirective[];
   woundTimeline: WoundTimelineDirective[];
   woundStateByPly: Array<{
     ply: number;
     newlyInflictedWoundIds: string[];
     activeWoundIds: string[];
   }>;
+  checkStrainTimeline: CheckStrainDirective[];
   endingWorldState: EndingWorldState;
   validationFeedback?: string;
   telemetry: GenerationTelemetryContext;
@@ -111,9 +130,15 @@ export interface StorySceneRepairRequest {
     excerpt: string | null;
   }>;
   captureManifest: CaptureDirective[];
+  deathContracts: Array<
+    DeathBeatDirective & {
+      mustRemainAlive: Array<{ pieceId: string; names: string[] }>;
+    }
+  >;
   woundTimeline: WoundTimelineDirective[];
   characterRegistry: PieceIdentity[];
   selectedRevengePayoffs: StoryOutline['selectedRevengePayoffs'];
+  checkStrainTimeline: CheckStrainDirective[];
   telemetry: GenerationTelemetryContext;
 }
 

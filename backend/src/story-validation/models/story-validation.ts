@@ -23,6 +23,7 @@ export const validationFindingTypeSchema = z.enum([
   'invented-wound',
   'missing-wound',
   'wound-continuity',
+  'mythic-arm-ownership',
   'fortress-entombment-aftermath',
   'inconsistent-piece-name',
   'coordinate-mentioned-in-prose',

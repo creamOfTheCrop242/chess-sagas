@@ -2,6 +2,7 @@ import { GameLedgerService } from '../chess/game-ledger.service';
 import { PieceIdentityService } from '../chess/piece-identity.service';
 import { PgnService } from '../pgn/pgn.service';
 import { buildEndingContract } from './ending-contract';
+import { selectEndingGenre } from './ending-contract';
 
 describe('buildEndingContract', () => {
   const pgn = new PgnService(new GameLedgerService(new PieceIdentityService()));
@@ -27,6 +28,7 @@ describe('buildEndingContract', () => {
     });
     expect(contract.creativeDirection.aftermathFocus).toBeTruthy();
     expect(contract.creativeDirection.laterChronicleLens).toBeTruthy();
+    expect(contract.creativeDirection.endingGenre).toBeTruthy();
     expect(typeof contract.creativeDirection.laterChronicleCliffhanger).toBe(
       'boolean',
     );
@@ -35,6 +37,16 @@ describe('buildEndingContract', () => {
     expect(buildEndingContract(ledger).creativeDirection).toEqual(
       contract.creativeDirection,
     );
+  });
+
+  it('selects ending genres with deterministic weighted boundaries', () => {
+    expect(selectEndingGenre(0)).toBe('magical-catastrophe');
+    expect(selectEndingGenre(19)).toBe('magical-catastrophe');
+    expect(selectEndingGenre(20)).toBe('supernatural-horror');
+    expect(selectEndingGenre(54)).toBe('personal-tragedy');
+    expect(selectEndingGenre(94)).toBe('political-horror');
+    expect(selectEndingGenre(99)).toBe('uneasy-survival');
+    expect(selectEndingGenre(100)).toBe('magical-catastrophe');
   });
 
   it('selects a destroyed-Seal consequence for checkmate', () => {

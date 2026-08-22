@@ -170,6 +170,44 @@ describe('PgnApiService', () => {
 
         expect(api.recentGenerationGameId()).toBeNull();
     });
+
+    it('forgets a restored generation when its backend job no longer exists', () => {
+        api.resumeSaga('deleted-game', () => undefined).subscribe({
+            error: () => undefined,
+        });
+
+        expect(api.recentGenerationGameId()).toBe('deleted-game');
+        http.expectOne('/api/games/deleted-game/generation').flush(
+            { message: 'Generation job not found' },
+            { status: 404, statusText: 'Not Found' },
+        );
+
+        expect(api.recentGenerationGameId()).toBeNull();
+        expect(localStorage.getItem('chess-sagas:active-game-id')).toBeNull();
+    });
+
+    it('forgets a generation after the backend reports terminal failure', async () => {
+        api.resumeSaga('failed-game', () => undefined).subscribe({
+            error: () => undefined,
+        });
+
+        http.expectOne('/api/games/failed-game/generation').flush({
+            state: 'failed',
+            currentStage: 'story',
+            error: 'Story generation failed',
+            stages: { ...emptyStages, analysis: true, outline: true },
+        });
+        await vi.advanceTimersByTimeAsync(0);
+        http.expectOne('/api/games/failed-game/generation').flush({
+            state: 'failed',
+            currentStage: 'story',
+            error: 'Story generation failed',
+            stages: { ...emptyStages, analysis: true, outline: true },
+        });
+
+        expect(api.recentGenerationGameId()).toBeNull();
+        expect(localStorage.getItem('chess-sagas:active-game-id')).toBeNull();
+    });
 });
 
 const emptyStages = {

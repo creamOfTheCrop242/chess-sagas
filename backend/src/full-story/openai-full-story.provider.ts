@@ -233,9 +233,15 @@ Return publishable replacement narration only. Do not explain the edit.`,
         reasoning: { effort: 'low' },
         instructions: `Repair only the supplied broken story scenes. Return exactly one replacement for every scene in scenes and preserve each ply. contextScenes are read-only continuity context and must not be returned or rewritten.
 
-Every finding is authoritative. Correct it without changing any other event. The character registry, captureManifest, woundTimeline, selectedRevengePayoffs, structured scene fields, deaths, captors, victims, promotions, allegiances, and names are binding.
+Every finding is authoritative. Correct it without changing any other event. The character registry, captureManifest, woundTimeline, checkStrainTimeline, selectedRevengePayoffs, structured scene fields, deaths, captors, victims, promotions, allegiances, and names are binding.
+
+The deathContracts are absolute and beat-local. authorizedVictimId is the only character who may die in that replacement; if it is null, nobody may die. Every character in mustRemainAlive must still be alive when the replacement ends. Remove every cited fatal sentence, final breath, corpse, or pronoun-resolved death that violates this contract. On a second repair attempt, the supplied scene is the first rejected replacement: directly replace the cited remaining error instead of restoring earlier wording.
 
 For captures, the manifest actor kills its victim; resistance by the victim must never reverse that outcome. For a selected revenge payoff, explicitly connect the capture to the named witnessed fallen ally while preserving the actual capture victim. Never kill a survivor or describe a future death early. Never reveal the Ascension Seal or its purpose before activation. Preserve all valid active wounds and do not introduce an unplanned or premature wound.
+
+For every checkStrainTimeline entry, only damagedKingId receives the new strain caused by that check. protectedKingId does not receive damage from that event. Preserve earlier strain without inventing another increment on a later escape move.
+
+Never expose board coordinates in reader-facing prose. When repairing a checkmate scene, summarize the fatal attacker and the important allied characters completing the encirclement, state that the King's remaining routes are blocked or controlled, and state that no defender can capture the attacker or interpose. Do not inventory individual escape squares.
 
 Keep the original scene's voice, setting, useful dialogue, relationships, length, and narrative purpose wherever they do not conflict with a finding. Return publishable replacement narration only and do not explain the edit.`,
         input,

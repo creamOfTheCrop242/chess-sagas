@@ -121,6 +121,7 @@ describe('NarrativeAnalysisService', () => {
                 aftermathFocus: endingContract.creativeDirection.aftermathFocus,
                 laterChronicleLens:
                   endingContract.creativeDirection.laterChronicleLens,
+                endingGenre: endingContract.creativeDirection.endingGenre,
                 laterChronicleCliffhanger:
                   endingContract.creativeDirection.laterChronicleCliffhanger,
                 darkEndingConsequence:
@@ -336,12 +337,12 @@ describe('NarrativeAnalysisService', () => {
   });
 
   it('adds deterministic territory when the generated Ascension site omits it', () => {
-    expect(normalizeAscensionSiteTerritory('the flooded star crypt', 'south')).toBe(
-      "the flooded star crypt, at the Dark Kingdom's far southern edge",
-    );
-    expect(normalizeAscensionSiteTerritory('the glass observatory', 'north')).toBe(
-      "the glass observatory, at the Light Kingdom's far northern edge",
-    );
+    expect(
+      normalizeAscensionSiteTerritory('the flooded star crypt', 'south'),
+    ).toBe("the flooded star crypt, at the Dark Kingdom's far southern edge");
+    expect(
+      normalizeAscensionSiteTerritory('the glass observatory', 'north'),
+    ).toBe("the glass observatory, at the Light Kingdom's far northern edge");
   });
 
   it('rejects a lasting wound that is not anchored to the character’s capture', () => {
@@ -514,6 +515,7 @@ function makeAnalysis(ledger: GameLedger): NarrativeAnalysis {
       finalImage: 'Dark towers folding into a red horizon.',
       aftermathFocus: 'survivor-grief-and-personal-reckoning',
       laterChronicleLens: 'a-descendant-inheriting-an-unwanted-legacy',
+      endingGenre: 'personal-tragedy',
     },
     continuityConstraints: ['The captured soldier cannot return after ply 7.'],
   };

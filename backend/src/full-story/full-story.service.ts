@@ -26,6 +26,8 @@ import type { ValidationFinding } from '../story-validation/models/story-validat
 import {
   FULL_STORY_PROVIDER,
   type CaptureDirective,
+  type CheckStrainDirective,
+  type DeathBeatDirective,
   type EndingWorldState,
   type FullStoryRequest,
   type FullStoryProvider,
@@ -69,7 +71,6 @@ export class FullStoryService {
   private async generateOnce(
     gameId: string,
     validationFeedback?: string,
-    correctionAttempt = 0,
   ): Promise<CompletedStoryRun> {
     const [prepared, analysisRun, outlineRun] = await Promise.all([
       this.preparation.prepare(gameId),
@@ -122,6 +123,8 @@ export class FullStoryService {
       const outline = storyOutlineSchema.parse(outlineRun.storyOutline.data);
       const endingWorldState = buildEndingWorldState(ledger, narrativeAnalysis);
       const captureManifest = buildCaptureManifest(ledger);
+      const deathContracts = buildDeathContracts(ledger);
+      const checkStrainTimeline = buildCheckStrainTimeline(ledger);
       const woundTimeline = buildWoundTimeline(
         ledger,
         narrativeAnalysis,
@@ -138,14 +141,16 @@ export class FullStoryService {
           outline,
           characterRegistry: ledger.pieces,
           captureManifest,
+          deathContracts,
           woundTimeline,
           woundStateByPly,
+          checkStrainTimeline,
           endingWorldState,
           validationFeedback: validationFeedback?.trim().slice(0, 4_000),
           telemetry: {
             gameId,
             generationRunId: run.id,
-            attempt: correctionAttempt + 1,
+            attempt: 1,
             repairMode: validationFeedback ? 'full' : 'none',
           },
         }),
@@ -294,49 +299,50 @@ export class FullStoryService {
       const generatedSceneByPly = new Map(
         storyPackage.scenes.map((scene) => [scene.ply, scene]),
       );
-      let timedFateFindings = this.deterministic.validateTimedCharacterFates(
-        scenes.map((scene) => ({
+      const validateStoryScenes = () => {
+        const input = scenes.map((scene) => ({
           ply: scene.startPly,
           fantasyNarration: scene.fantasyNarration,
-        })),
-        ledger,
-      );
-      let captureAttributionFindings =
-        this.deterministic.validateCaptureAttribution(
-          scenes.map((scene) => ({
-            ply: scene.startPly,
-            fantasyNarration: scene.fantasyNarration,
-          })),
-          ledger,
-        );
-      let revengePayoffFindings = this.deterministic.validateRevengePayoffs(
-        scenes.map((scene) => ({
-          ply: scene.startPly,
-          fantasyNarration: scene.fantasyNarration,
-        })),
-        ledger,
-        outline.selectedRevengePayoffs,
-      );
-      let prematureAscensionFindings =
-        this.deterministic.validatePrematureAscensionReveals(
-          scenes.map((scene) => ({
-            ply: scene.startPly,
-            fantasyNarration: scene.fantasyNarration,
-          })),
-          ledger,
-        );
-      const initialSceneFindings = [
-        ...prematureAscensionFindings,
-        ...captureAttributionFindings,
-        ...revengePayoffFindings,
-        ...timedFateFindings,
-      ].filter((finding) => finding.ply !== null);
-      if (initialSceneFindings.length > 0) {
+        }));
+        return {
+          terminologyFindings:
+            this.deterministic.validateSceneTerminology(input),
+          timedFateFindings: this.deterministic.validateTimedCharacterFates(
+            input,
+            ledger,
+          ),
+          captureAttributionFindings:
+            this.deterministic.validateCaptureAttribution(input, ledger),
+          checkStrainFindings: this.deterministic.validateCheckStrainOwnership(
+            input,
+            ledger,
+          ),
+          revengePayoffFindings: this.deterministic.validateRevengePayoffs(
+            input,
+            ledger,
+            outline.selectedRevengePayoffs,
+          ),
+          prematureAscensionFindings:
+            this.deterministic.validatePrematureAscensionReveals(input, ledger),
+        };
+      };
+      let sceneValidation = validateStoryScenes();
+      const allSceneFindings = () =>
+        [
+          ...sceneValidation.terminologyFindings,
+          ...sceneValidation.prematureAscensionFindings,
+          ...sceneValidation.captureAttributionFindings,
+          ...sceneValidation.checkStrainFindings,
+          ...sceneValidation.revengePayoffFindings,
+          ...sceneValidation.timedFateFindings,
+        ].filter((finding) => finding.ply !== null);
+
+      for (let repairAttempt = 1; repairAttempt <= 2; repairAttempt += 1) {
+        const findings = allSceneFindings();
+        if (findings.length === 0) break;
         try {
           const targetPlies = [
-            ...new Set(
-              initialSceneFindings.map((finding) => finding.ply as number),
-            ),
+            ...new Set(findings.map((finding) => finding.ply as number)),
           ];
           const contextPlies = new Set<number>();
           for (const ply of targetPlies) {
@@ -344,22 +350,26 @@ export class FullStoryService {
             if (ply < ledger.events.length) contextPlies.add(ply + 1);
           }
           targetPlies.forEach((ply) => contextPlies.delete(ply));
+          const currentNarrationByPly = new Map(
+            scenes.map((scene) => [scene.startPly, scene.fantasyNarration]),
+          );
           const repairResult = await this.provider.repairStoryScenes({
             scenes: storyPackage.scenes
               .filter((scene) => targetPlies.includes(scene.ply))
-              .map((scene) => {
-                return {
-                  ...scene,
-                  woundReferences: woundReferencesByPly.get(scene.ply) ?? [],
-                };
-              }),
+              .map((scene) => ({
+                ...scene,
+                fantasyNarration:
+                  currentNarrationByPly.get(scene.ply) ??
+                  scene.fantasyNarration,
+                woundReferences: woundReferencesByPly.get(scene.ply) ?? [],
+              })),
             contextScenes: scenes
               .filter((scene) => contextPlies.has(scene.startPly))
               .map((scene) => ({
                 ply: scene.startPly,
                 fantasyNarration: scene.fantasyNarration,
               })),
-            findings: initialSceneFindings.map((finding) => ({
+            findings: findings.map((finding) => ({
               ply: finding.ply as number,
               pieceId: finding.pieceId,
               type: finding.type,
@@ -369,15 +379,19 @@ export class FullStoryService {
             captureManifest: captureManifest.filter((entry) =>
               targetPlies.includes(entry.ply),
             ),
+            deathContracts: buildRepairDeathContracts(ledger, targetPlies),
             woundTimeline,
             characterRegistry: ledger.pieces,
             selectedRevengePayoffs: outline.selectedRevengePayoffs.filter(
               (payoff) => targetPlies.includes(payoff.payoffPly),
             ),
+            checkStrainTimeline: checkStrainTimeline.filter((entry) =>
+              targetPlies.includes(entry.ply),
+            ),
             telemetry: {
               gameId,
               generationRunId: run.id,
-              attempt: correctionAttempt + 1,
+              attempt: repairAttempt,
               repairMode: 'partial',
             },
           });
@@ -408,37 +422,33 @@ export class FullStoryService {
               estimatedDurationSeconds: Math.max(8, Math.ceil(wordCount / 2.5)),
             };
           });
-          const repairedSceneInput = scenes.map((scene) => ({
-            ply: scene.startPly,
-            fantasyNarration: scene.fantasyNarration,
-          }));
-          timedFateFindings = this.deterministic.validateTimedCharacterFates(
-            repairedSceneInput,
-            ledger,
-          );
-          captureAttributionFindings =
-            this.deterministic.validateCaptureAttribution(
-              repairedSceneInput,
-              ledger,
-            );
-          revengePayoffFindings = this.deterministic.validateRevengePayoffs(
-            repairedSceneInput,
-            ledger,
-            outline.selectedRevengePayoffs,
-          );
-          prematureAscensionFindings =
-            this.deterministic.validatePrematureAscensionReveals(
-              repairedSceneInput,
-              ledger,
-            );
+          sceneValidation = validateStoryScenes();
           this.logger.log(
-            `Applied targeted story scene repair gameId=${gameId} runId=${run.id} plies=${targetPlies.join(',')}`,
+            `Applied targeted story scene repair gameId=${gameId} runId=${run.id} attempt=${repairAttempt} plies=${targetPlies.join(',')}`,
           );
         } catch (error) {
           this.logger.warn(
-            `Story scene repair failed gameId=${gameId} runId=${run.id}: ${error instanceof Error ? error.message : 'unknown repair error'}`,
+            `Story scene repair failed gameId=${gameId} runId=${run.id} attempt=${repairAttempt}: ${error instanceof Error ? error.message : 'unknown repair error'}`,
           );
         }
+      }
+      let {
+        terminologyFindings,
+        timedFateFindings,
+        captureAttributionFindings,
+        checkStrainFindings,
+        revengePayoffFindings,
+        prematureAscensionFindings,
+      } = sceneValidation;
+      if (terminologyFindings.length > 0) {
+        throw new Error(
+          `Generated story package contains reader-facing coordinate errors: ${terminologyFindings
+            .map(
+              (finding) =>
+                `${finding.message}. Rejected prose: ${JSON.stringify(finding.excerpt)}`,
+            )
+            .join('; ')}`,
+        );
       }
       if (prematureAscensionFindings.length > 0) {
         throw new Error(
@@ -460,6 +470,16 @@ export class FullStoryService {
             .join('; ')}`,
         );
       }
+      if (checkStrainFindings.length > 0) {
+        throw new Error(
+          `Generated story package assigns royal check strain to the wrong King: ${checkStrainFindings
+            .map(
+              (finding) =>
+                `${finding.message}. Rejected prose: ${JSON.stringify(finding.excerpt)}`,
+            )
+            .join('; ')}`,
+        );
+      }
       if (revengePayoffFindings.length > 0) {
         throw new Error(
           `Generated story package omits verified revenge payoffs: ${revengePayoffFindings
@@ -473,7 +493,10 @@ export class FullStoryService {
       if (timedFateFindings.length > 0) {
         throw new Error(
           `Generated story package contains premature character deaths: ${timedFateFindings
-            .map((finding) => finding.message)
+            .map(
+              (finding) =>
+                `${finding.message} in scene at ply ${finding.ply}. Rejected prose: ${JSON.stringify(finding.excerpt)}`,
+            )
             .join('; ')}`,
         );
       }
@@ -569,7 +592,7 @@ export class FullStoryService {
             telemetry: {
               gameId,
               generationRunId: run.id,
-              attempt: correctionAttempt + 1,
+              attempt: 1,
               repairMode: 'partial',
             },
           });
@@ -608,6 +631,14 @@ export class FullStoryService {
               })),
               ledger,
             );
+          const repairedCheckStrainErrors =
+            this.deterministic.validateCheckStrainOwnership(
+              candidateScenes.map((scene) => ({
+                ply: scene.startPly,
+                fantasyNarration: scene.fantasyNarration,
+              })),
+              ledger,
+            );
           const repairedRevengeErrors =
             this.deterministic.validateRevengePayoffs(
               candidateScenes.map((scene) => ({
@@ -636,6 +667,7 @@ export class FullStoryService {
           const repairedWoundFindings = findTimedWounds(candidateScenes);
           if (
             repairedCaptureErrors.length > 0 ||
+            repairedCheckStrainErrors.length > 0 ||
             repairedRevengeErrors.length > 0 ||
             repairedFateErrors.length > 0 ||
             repairedAscensionErrors.length > 0 ||
@@ -794,16 +826,9 @@ export class FullStoryService {
           error: message,
         },
       });
-      if (correctionAttempt === 0 && isCorrectableStoryPackageError(message)) {
-        return this.generateOnce(
-          gameId,
-          buildStoryCorrectionFeedback(message),
-          correctionAttempt + 1,
-        );
-      }
-      if (correctionAttempt > 0 && isCorrectableStoryPackageError(message)) {
+      if (isCorrectableStoryPackageError(message)) {
         throw new UnprocessableEntityException(
-          `Story correction retry failed: ${message}`,
+          `Targeted story repair could not produce a valid result: ${message}`,
         );
       }
       throw error;
@@ -837,10 +862,7 @@ export class FullStoryService {
   }
 
   private cleanReaderFacingProse(prose: string, pieceIds: string[]): string {
-    let cleaned = this.deterministic
-      .repairProhibitedTerminology(prose)
-      .replace(/\b[a-h][1-8]\b/gi, 'the battlefield')
-      .replace(/\bthe\s+the battlefield\b/gi, 'the battlefield');
+    let cleaned = this.deterministic.repairProhibitedTerminology(prose);
     pieceIds.forEach((pieceId) => {
       cleaned = cleaned.replaceAll(pieceId, 'the warrior');
     });
@@ -855,6 +877,7 @@ export function isCorrectableStoryPackageError(message: string): boolean {
     'Generated story package contains premature character deaths:',
     'Generated story package contains wound timeline errors:',
     'Generated story package contains deterministic errors:',
+    'Generated story package contains reader-facing coordinate errors:',
     'Story package wound ledger must match the validated outline',
     'Story package has incorrect structured capture metadata at ply ',
     'Story package surviving Fortress outcomes must match the ending world state',
@@ -899,22 +922,6 @@ export function buildEndingWorldState(
     surrenderContext: analysis.surrenderContext,
     survivingFortresses,
   };
-}
-
-export function buildStoryCorrectionFeedback(message: string): string {
-  return [
-    message,
-    'This is the single targeted correction attempt.',
-    'For every cited capture, use the exact actor and victim stated in the error: the actor kills the victim, never the reverse.',
-    'For every cited revenge payoff, explicitly name the fallen ally identified in the error and make the avenger connect the current capture to that specific witnessed death. Preserve the actual current capture actor and victim; the fallen ally is the emotional reason for the capture, not its victim.',
-    'Re-audit the captureManifest entry for every capture scene. Each requiredOutcome is authoritative even when nearby dialogue or resistance makes the victim prominent.',
-    'For wounds, obey woundTimeline as an exact temporal permission table. Before prohibitedBeforePly ends, remove the cited injury, its anatomical damage, pain, impairment, and lasting effects from that character. General danger may remain, but it must not state or imply that the future wound already exists.',
-    'For the aftermath, copy endingWorldState exactly. Never apply a destroyed Seal or entombment outcome to a Fortress marked retains-seal-power.',
-    'Replace the rejected sentence while preserving all correct scenes, relationships, wounds, deaths, and story depth.',
-    'Audit every other capture against the ledger before returning the complete corrected package.',
-  ]
-    .join(' ')
-    .slice(0, 4_000);
 }
 
 export function buildWoundTimeline(
@@ -1027,6 +1034,79 @@ export function buildCaptureManifest(ledger: GameLedger): CaptureDirective[] {
         victimId: victim.id,
         victimNames,
         requiredOutcome: `${actorNames[0]} kills ${victimNames[0]}; ${victimNames[0]} must not kill ${actorNames[0]}.`,
+      },
+    ];
+  });
+}
+
+export function buildDeathContracts(ledger: GameLedger): DeathBeatDirective[] {
+  const pieces = new Map(ledger.pieces.map((piece) => [piece.id, piece]));
+  return ledger.events.map((event) => {
+    const victim = event.capturedPieceId
+      ? pieces.get(event.capturedPieceId)
+      : undefined;
+    return {
+      ply: event.ply,
+      authorizedVictimId: victim?.id ?? null,
+      authorizedVictimNames: victim ? narrativeAliases(victim) : [],
+      noOtherDeaths: true as const,
+    };
+  });
+}
+
+function buildRepairDeathContracts(
+  ledger: GameLedger,
+  plies: number[],
+): Array<
+  DeathBeatDirective & {
+    mustRemainAlive: Array<{ pieceId: string; names: string[] }>;
+  }
+> {
+  const selected = new Set(plies);
+  return buildDeathContracts(ledger)
+    .filter((contract) => selected.has(contract.ply))
+    .map((contract) => ({
+      ...contract,
+      mustRemainAlive: ledger.pieces
+        .filter(
+          (piece) =>
+            piece.id !== contract.authorizedVictimId &&
+            (piece.capturedAtPly === undefined ||
+              piece.capturedAtPly > contract.ply),
+        )
+        .map((piece) => ({
+          pieceId: piece.id,
+          names: narrativeAliases(piece),
+        })),
+    }));
+}
+
+export function buildCheckStrainTimeline(
+  ledger: GameLedger,
+): CheckStrainDirective[] {
+  const kingsBySide = new Map(
+    ledger.pieces
+      .filter((piece) => piece.fantasyType === 'king')
+      .map((piece) => [piece.side, piece]),
+  );
+  const pieces = new Map(ledger.pieces.map((piece) => [piece.id, piece]));
+
+  return ledger.events.flatMap((event) => {
+    if (!event.isCheck) return [];
+    const damagedSide = event.side === 'north' ? 'south' : 'north';
+    const damagedKing = kingsBySide.get(damagedSide);
+    const protectedKing = kingsBySide.get(event.side);
+    const checkingPiece = pieces.get(event.pieceId);
+    if (!damagedKing || !protectedKing || !checkingPiece) return [];
+    return [
+      {
+        ply: event.ply,
+        checkingPieceId: checkingPiece.id,
+        checkingPieceNames: narrativeAliases(checkingPiece),
+        damagedKingId: damagedKing.id,
+        damagedKingNames: narrativeAliases(damagedKing),
+        protectedKingId: protectedKing.id,
+        protectedKingNames: narrativeAliases(protectedKing),
       },
     ];
   });

@@ -31,7 +31,7 @@ describe('plain-language story prompt contract', () => {
   });
 
   it('requires final prose and endings to explain literal cause and effect', () => {
-    expect(FULL_STORY_PROMPT_VERSION).toBe('story-package-v93');
+    expect(FULL_STORY_PROMPT_VERSION).toBe('story-package-v94');
     expect(FULL_STORY_INSTRUCTIONS).toContain(
       'plain modern English that a reader can understand on the first pass',
     );

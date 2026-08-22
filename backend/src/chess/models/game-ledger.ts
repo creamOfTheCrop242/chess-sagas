@@ -56,6 +56,11 @@ export interface PieceIdentity {
   deathDisposition?: DeathDisposition;
   kingDisposition?: KingDisposition;
   backstory?: string;
+  mythicArm?: {
+    id: import('../mythic-arms').MythicArmId;
+    name: string;
+    description: string;
+  };
   alive: boolean;
   capturedAtPly?: number;
   promotedFromPawnId?: string;

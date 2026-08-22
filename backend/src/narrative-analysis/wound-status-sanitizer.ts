@@ -1,4 +1,9 @@
 import type { GameLedger, PieceIdentity } from '../chess/models/game-ledger';
+import {
+  mentionsIncompatibleWeaponKind,
+  mentionedMythicArms,
+  mythicArmForCommander,
+} from '../chess/mythic-arms';
 import type { NarrativeAnalysis } from './models/narrative-analysis';
 
 const FALLBACK_INJURY = 'Painful impact injury';
@@ -17,10 +22,36 @@ export function sanitizeWoundStatusText(
       const source = wound.sourcePieceId
         ? piecesById.get(wound.sourcePieceId)
         : undefined;
-      const injury = sanitizeField(wound.injury, ledger.pieces, owner, source);
-      const lastingEffects = wound.lastingEffects
+      let injury = sanitizeField(wound.injury, ledger.pieces, owner, source);
+      let lastingEffects = wound.lastingEffects
         .map((effect) => sanitizeField(effect, ledger.pieces, owner, source))
         .filter(isMeaningfulStatus);
+
+      if (owner?.fantasyType === 'knight-commander') {
+        const assignedArm = mythicArmForCommander(owner, ledger.initialFen);
+        const mentionedArms = mentionedMythicArms(
+          [injury, ...lastingEffects].join(' '),
+        );
+        if (
+          mentionedArms.some((arm) => arm.id !== assignedArm.id) ||
+          (wound.causeType === 'self-inflicted-strain' &&
+            mentionsIncompatibleWeaponKind(
+              [injury, ...lastingEffects].join(' '),
+              assignedArm,
+            ))
+        ) {
+          if (wound.causeType === 'self-inflicted-strain') {
+            injury = assignedArm.strainInjury;
+            lastingEffects = [...assignedArm.strainEffects];
+          } else {
+            injury = genericCommanderInjury(wound.causeType);
+            lastingEffects = [
+              'Persistent pain limits the injured area',
+              'Further close fighting risks worsening the injury',
+            ];
+          }
+        }
+      }
 
       return {
         ...wound,
@@ -30,6 +61,16 @@ export function sanitizeWoundStatusText(
       };
     }),
   };
+}
+
+function genericCommanderInjury(causeType: string): string {
+  if (causeType === 'victim-retaliation') {
+    return 'The opponent’s final counterattack tears through the commander’s armor and leaves a deep combat wound';
+  }
+  if (causeType === 'environmental-hazard') {
+    return 'A violent battlefield impact tears through the commander’s armor and leaves a deep injury';
+  }
+  return 'A violent impact tears through the commander’s armor and leaves a deep injury';
 }
 
 function sanitizeField(
@@ -85,7 +126,10 @@ function sanitizeField(
     .replace(/\b[a-h][1-8]\b/gi, '')
     .replace(/\s+([,.;:!?])/g, '$1')
     .replace(/\s{2,}/g, ' ')
-    .replace(/\b(?:at|on|during|near|from|toward|towards|into)\s*([,.;:!?]|$)/gi, '$1')
+    .replace(
+      /\b(?:at|on|during|near|from|toward|towards|into)\s*([,.;:!?]|$)/gi,
+      '$1',
+    )
     .replace(/\s+([,.;:!?])/g, '$1')
     .replace(/\s{2,}/g, ' ')
     .trim()

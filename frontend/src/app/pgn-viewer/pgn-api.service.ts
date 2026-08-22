@@ -1,6 +1,7 @@
 import { Injectable, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import {
+  catchError,
   filter,
   finalize,
   map,
@@ -161,6 +162,12 @@ export class PgnApiService {
         )
       : this.getGenerationStatus(gameId);
     const generation = initialStatus.pipe(
+      catchError((error: unknown) => {
+        if (!start && error instanceof HttpErrorResponse && error.status === 404) {
+          this.clearRecentGeneration(gameId);
+        }
+        return throwError(() => error);
+      }),
       tap((status) => this.syncGenerationStatus(gameId, status)),
       switchMap(() =>
         timer(0, 2_000).pipe(
@@ -242,6 +249,9 @@ export class PgnApiService {
     gameId: string,
     status: SagaGenerationStatus,
   ): void {
+    if (status.state === 'failed') {
+      this.clearRecentGeneration(gameId);
+    }
     if (status.state === 'queued' || status.state === 'running') {
       this.activeJobObserved.add(gameId);
     }

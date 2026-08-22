@@ -24,6 +24,30 @@ export const LATER_CHRONICLE_LENSES = [
   'a-scavenger-misunderstanding-a-dangerous-discovery',
 ] as const;
 
+export const ENDING_GENRES = [
+  'magical-catastrophe',
+  'supernatural-horror',
+  'personal-tragedy',
+  'environmental-ruin',
+  'military-collapse',
+  'rebellion',
+  'political-horror',
+  'uneasy-survival',
+] as const;
+
+const ENDING_GENRE_WEIGHTS: ReadonlyArray<
+  readonly [genre: EndingGenre, cumulativeWeight: number]
+> = [
+  ['magical-catastrophe', 20],
+  ['supernatural-horror', 40],
+  ['personal-tragedy', 55],
+  ['environmental-ruin', 70],
+  ['military-collapse', 80],
+  ['rebellion', 90],
+  ['political-horror', 95],
+  ['uneasy-survival', 100],
+];
+
 export const DESTROYED_SEAL_CONSEQUENCES = [
   'realm-magic-detonation-threatening-both-kingdoms',
   'devouring-void-consuming-the-defeated-capital',
@@ -54,6 +78,7 @@ export const INTACT_SEAL_CONSEQUENCES = [
 
 export type AftermathFocus = (typeof AFTERMATH_FOCUSES)[number];
 export type LaterChronicleLens = (typeof LATER_CHRONICLE_LENSES)[number];
+export type EndingGenre = (typeof ENDING_GENRES)[number];
 export type DestroyedSealConsequence =
   (typeof DESTROYED_SEAL_CONSEQUENCES)[number];
 export type IntactSealConsequence = (typeof INTACT_SEAL_CONSEQUENCES)[number];
@@ -72,6 +97,7 @@ export interface EndingContract {
   creativeDirection: {
     aftermathFocus: AftermathFocus;
     laterChronicleLens: LaterChronicleLens;
+    endingGenre: EndingGenre;
     laterChronicleCliffhanger: boolean;
     destroyedSealConsequence: DestroyedSealConsequence;
     intactSealConsequence: IntactSealConsequence;
@@ -90,13 +116,15 @@ export function buildEndingContract(ledger: GameLedger): EndingContract {
   const loser =
     winner === 'north' ? 'south' : winner === 'south' ? 'north' : null;
   const finalEvent = ledger.events.at(-1);
-  const variationSeed = stableHash(
-    [
-      ledger.metadata.date ?? '',
-      ledger.metadata.whitePlayer,
-      ledger.metadata.blackPlayer,
-      ledger.events.map((event) => event.san).join(' '),
-    ].join('|'),
+  const variationSource = [
+    ledger.metadata.date ?? '',
+    ledger.metadata.whitePlayer,
+    ledger.metadata.blackPlayer,
+    ledger.events.map((event) => event.san).join(' '),
+  ].join('|');
+  const variationSeed = stableHash(variationSource);
+  const endingGenre = selectEndingGenre(
+    stableHash(`ending-genre|${variationSource}`),
   );
   const consequenceDivisor =
     AFTERMATH_FOCUSES.length * LATER_CHRONICLE_LENSES.length * 4;
@@ -118,6 +146,7 @@ export function buildEndingContract(ledger: GameLedger): EndingContract {
           Math.floor(variationSeed / AFTERMATH_FOCUSES.length) %
             LATER_CHRONICLE_LENSES.length
         ],
+      endingGenre,
       laterChronicleCliffhanger:
         Math.floor(
           variationSeed /
@@ -139,6 +168,15 @@ export function buildEndingContract(ledger: GameLedger): EndingContract {
         ],
     },
   };
+}
+
+export function selectEndingGenre(seed: number): EndingGenre {
+  const roll = (seed >>> 0) % 100;
+  return (
+    ENDING_GENRE_WEIGHTS.find(
+      ([, cumulativeWeight]) => roll < cumulativeWeight,
+    )?.[0] ?? 'uneasy-survival'
+  );
 }
 
 function stableHash(value: string): number {

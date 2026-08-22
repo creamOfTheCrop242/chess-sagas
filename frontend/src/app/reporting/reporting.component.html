@@ -76,6 +76,11 @@
         <strong>{{ minutes(report.summary.averageGenerationSeconds) | number: "1.1-1" }}m</strong>
         <small>stage execution only · {{ report.summary.retryCalls }} AI retry calls</small>
       </article>
+      <article>
+        <span>Average AI cost per saga</span>
+        <strong>{{ report.summary.averageAiCostPerCompletedSagaUsd | currency: "USD" : "symbol" : "1.2-4" }}</strong>
+        <small>completed sagas · includes retries and failed-call expense</small>
+      </article>
     </section>
 
     <section class="report-section">

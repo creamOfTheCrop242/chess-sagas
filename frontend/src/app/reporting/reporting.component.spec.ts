@@ -35,6 +35,7 @@ describe('ReportingComponent', () => {
         const text = fixture.nativeElement.textContent;
         expect(text).toContain('Customer AI cost');
         expect(text).toContain('Unlimited testing');
+        expect(text).toContain('Average AI cost per saga');
         expect(text).toContain('dhudson0242@gmail.com');
         expect(text).toContain('Pipeline stages');
         expect(overview).toHaveBeenCalledWith(30);
@@ -76,6 +77,7 @@ function reportFixture(): ReportingOverview {
             retryCalls: 0,
             estimatedAiCostMicros: 20000,
             estimatedAiCostUsd: 0.02,
+            averageAiCostPerCompletedSagaUsd: 0.02,
             netRevenueCents: 250,
             estimatedGrossMarginCents: 249,
         },

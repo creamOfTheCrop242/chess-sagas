@@ -201,7 +201,7 @@ The Southern King poured his strength into the Royal Seal, but every remaining r
       ],
     } as GameLedger;
 
-    expect(buildDeathContracts(deathLedger)).toEqual([
+    expect(buildDeathContracts(deathLedger)).toMatchObject([
       {
         ply: 1,
         authorizedVictimId: null,

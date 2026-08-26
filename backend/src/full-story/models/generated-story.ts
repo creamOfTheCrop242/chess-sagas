@@ -12,6 +12,7 @@ export type GeneratedStoryDraft = z.infer<typeof generatedStorySchema>;
 export const storyWoundSchema = z.object({
   pieceId: z.string().min(1),
   inflictedAtPly: z.number().int().positive(),
+  woundCatalogId: z.string().min(1).nullable().default(null),
   injury: z.string().min(1),
   lastingEffects: z.array(z.string().min(1)).min(1),
   recoveryPly: z.number().int().positive().nullable(),

@@ -106,6 +106,7 @@ function buildNarrativeAnalysisSchema(pieceIdSchema: z.ZodType<string>) {
   const woundPlanSchema = z.object({
     pieceId: pieceIdSchema,
     inflictedAtPly: z.number().int().positive(),
+    woundCatalogId: z.string().min(1).nullable().default(null),
     injury: z.string().min(1),
     lastingEffects: z.array(z.string().min(1)).min(1),
     recoveryPly: z.number().int().positive().nullable(),

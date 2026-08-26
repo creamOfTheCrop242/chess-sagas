@@ -3,6 +3,7 @@ import type { GameLedger } from '../chess/models/game-ledger';
 import { isSurrenderKingFate } from '../chess/models/story-ending';
 import type { NarrativeAnalysis } from './models/narrative-analysis';
 import { selectRequiredWoundEvents } from './wound-planning';
+import { woundCatalogEntry } from './wound-catalog';
 import { isSpoilerFreeBattleTitle } from '../story-outline/story-title';
 import { selectBattlefieldEnvironment } from '../chess/battlefield-environment';
 import {
@@ -136,10 +137,16 @@ export class NarrativeAnalysisValidator {
       if (
         requiredCause &&
         (wound.causeType !== requiredCause.causeType ||
-          wound.sourcePieceId !== requiredCause.sourcePieceId)
+          wound.sourcePieceId !== requiredCause.sourcePieceId ||
+          wound.woundCatalogId !== requiredCause.woundCatalogId)
       ) {
         errors.push(
-          `Wound cause for ${wound.pieceId} at ply ${wound.inflictedAtPly} must match the seeded cause`,
+          `Wound contract for ${wound.pieceId} at ply ${wound.inflictedAtPly} must match the seeded catalog selection`,
+        );
+      }
+      if (wound.woundCatalogId && !woundCatalogEntry(wound.woundCatalogId)) {
+        errors.push(
+          `Unknown wound catalog ID ${wound.woundCatalogId} for ${wound.pieceId}`,
         );
       }
       if (

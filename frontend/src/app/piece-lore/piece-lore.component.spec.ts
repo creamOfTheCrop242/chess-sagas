@@ -46,13 +46,13 @@ describe('PieceLoreComponent', () => {
         const subclasses = details.querySelectorAll('li');
 
         expect(details.open).toBe(false);
-        expect(subclasses).toHaveLength(13);
+        expect(subclasses).toHaveLength(11);
         expect(details.textContent).toContain('Mage Acolyte');
         expect(details.textContent).toContain('Queen Candidate');
         expect(details.textContent).toContain('identified in childhood');
         expect(details.textContent).toContain('old enough for battle');
-        expect(details.textContent).toContain('Chaplain');
-        expect(details.textContent).toContain('Beast Handler');
+        expect(details.textContent).not.toContain('Chaplain');
+        expect(details.textContent).not.toContain('Beast Handler');
         expect(details.textContent).toContain('Swordsman');
         expect(details.textContent).not.toContain('Sergeant');
 

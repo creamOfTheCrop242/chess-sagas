@@ -120,16 +120,6 @@ export class PieceLoreComponent {
         'A gifted girl identified in childhood and trained as a possible successor should the reigning Queen die or become unable to serve. By the time she enters company service, she is old enough for battle but does not yet possess a Queen’s complete magical augmentation, fortress-grade armor, power, or authority.',
     },
     {
-      name: 'Chaplain',
-      description:
-        'A spiritual counselor who steadies frightened soldiers, performs rites for the dead, and gives the company a moral voice during war.',
-    },
-    {
-      name: 'Beast Handler',
-      description:
-        'A specialist bonded with the kingdom’s trained war beasts, directing them through battle while protecting and understanding the creatures entrusted to the company.',
-    },
-    {
       name: 'Swordsman',
       description:
         'A disciplined close-combat specialist whose practiced blade work is used wherever the company’s formation faces its most dangerous fighting.',
@@ -189,7 +179,7 @@ export class PieceLoreComponent {
       movement:
         'Enchanted wheels drive the Fortress in direct, crushing lines. Its armored mass and reinforced prow make it a devastating ram, but collision is only one of the pilot’s options. The machine never acts alone; every turn and attack is the decision of its named pilot.',
       warfare:
-        'Each Fortress has its own configuration. One may carry a heavy cannon, rotary gatling gun, precision twin cannons, siege bombard, repeating ward-rifles, breach cannon, broadside batteries, or storm-caster firing magical rounds. Specialized attachments can include siege drills, stabilizers, shield generators, bridge frames, smoke projectors, recovery winches, observation masts, blade wheels, or ward-siphons.',
+        'Each Fortress has its own configuration. One may carry a heavy cannon, rotary gatling gun, precision twin cannons, siege bombard, repeating ward-rifles, siegebolt cannon, broadside batteries, or storm-caster firing magical rounds. Specialized attachments can include siege drills, stabilizers, shield generators, bridge frames, smoke projectors, recovery winches, observation masts, blade wheels, or ward-siphons.',
       fate: 'The pilot cannot survive outside the machine or without its magic life-supporting core. Destroying the Fortress kills its pilot; if a defeated kingdom loses its magic, a surviving Fortress slowly becomes both tomb and failing body as its core fades.',
     },
     {

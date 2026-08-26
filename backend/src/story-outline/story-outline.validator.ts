@@ -190,6 +190,7 @@ export class StoryOutlineValidator {
       outlinedWounds.add(key);
       if (
         !planned ||
+        wound.woundCatalogId !== planned.woundCatalogId ||
         wound.injury !== planned.injury ||
         wound.recoveryPly !== planned.recoveryPly ||
         wound.causeType !== planned.causeType ||

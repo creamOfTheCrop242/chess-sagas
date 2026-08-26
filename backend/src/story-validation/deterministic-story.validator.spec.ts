@@ -1334,6 +1334,443 @@ describe('DeterministicStoryValidator', () => {
     ]);
   });
 
+  it('treats substantive Fortress damage as a blocking wound to its integrated pilot', () => {
+    const fortressLedger = {
+      pieces: [
+        {
+          id: 'w-r-a1',
+          permanentName: 'Moving Fortress Pilot Mirelle',
+          operatorName: 'Mirelle',
+          fantasyType: 'moving-fortress',
+        },
+      ],
+      events: [{ ply: 29, isCapture: false }],
+    } as GameLedger;
+
+    expect(
+      validator.validateUnplannedInjuries(
+        [
+          {
+            ply: 29,
+            characters: ['w-r-a1'],
+            fantasyNarration:
+              "A collapsing root shelf crushed the forward armor assembly and shocked Mirelle's left side inside the cradle, leaving steering slow and the twin cannons less precise.",
+          },
+        ],
+        [],
+        fortressLedger,
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        type: 'invented-wound',
+        severity: 'error',
+        ply: 29,
+        pieceId: 'w-r-a1',
+      }),
+    ]);
+  });
+
+  it('does not treat harmless contact with intact Fortress armor as a wound', () => {
+    const fortressLedger = {
+      pieces: [
+        {
+          id: 'w-r-a1',
+          permanentName: 'Moving Fortress Pilot Mirelle',
+          operatorName: 'Mirelle',
+          fantasyType: 'moving-fortress',
+        },
+      ],
+      events: [{ ply: 29, isCapture: false }],
+    } as GameLedger;
+
+    expect(
+      validator.validateUnplannedInjuries(
+        [
+          {
+            ply: 29,
+            characters: ['w-r-a1'],
+            fantasyNarration:
+              "Enemy fire struck Mirelle's forward armor, but the plates held without damage and she continued at full speed.",
+          },
+        ],
+        [],
+        fortressLedger,
+      ),
+    ).toEqual([]);
+  });
+
+  it('does not mistake damage inflicted by Fortress weapons for damage to the Fortress', () => {
+    const fortressLedger = {
+      pieces: [
+        {
+          id: 'w-r-a1',
+          permanentName: 'Moving Fortress Pilot Mirelle',
+          operatorName: 'Mirelle',
+          fantasyType: 'moving-fortress',
+        },
+      ],
+      events: [{ ply: 29, isCapture: false }],
+    } as GameLedger;
+
+    expect(
+      validator.validateUnplannedInjuries(
+        [
+          {
+            ply: 29,
+            characters: ['w-r-a1'],
+            fantasyNarration:
+              "Mirelle's cannon damaged the stone gate and opened a route for the company.",
+          },
+        ],
+        [],
+        fortressLedger,
+      ),
+    ).toEqual([]);
+  });
+
+  it('does not mistake broken terrain near a cannon for Fortress damage', () => {
+    const fortressLedger = {
+      pieces: [
+        {
+          id: 'b-r-a8',
+          permanentName: 'Southeast Fortress',
+          operatorName: 'Mirelle',
+          fantasyType: 'moving-fortress',
+        },
+        {
+          id: 'b-r-h8',
+          permanentName: 'Southwest Fortress',
+          operatorName: 'Ysolde',
+          fantasyType: 'moving-fortress',
+        },
+      ],
+      events: [{ ply: 80, isCapture: false }],
+    } as GameLedger;
+
+    expect(
+      validator.validateUnplannedInjuries(
+        [
+          {
+            ply: 80,
+            characters: ['b-r-a8', 'b-r-h8'],
+            fantasyNarration:
+              "Orin saw the encirclement: Mirelle's friendly Fortress sealed the rear approach, Ysolde controlled the broken ground and the cannon's lane, and Jareth controlled the remaining avenues of escape.",
+          },
+        ],
+        [],
+        fortressLedger,
+      ),
+    ).toEqual([]);
+  });
+
+  it('does not assign a target’s shattered armor to the Fortress firing the round', () => {
+    const fortressLedger = {
+      pieces: [
+        {
+          id: 'b-r-h8',
+          permanentName: 'Southwest Fortress',
+          operatorName: 'Ysolde',
+          fantasyType: 'moving-fortress',
+        },
+        {
+          id: 'w-k-e1',
+          permanentName: 'Northern King',
+          characterName: 'Orin',
+          fantasyType: 'king',
+        },
+      ],
+      events: [{ ply: 80, isCapture: false }],
+    } as GameLedger;
+
+    expect(
+      validator.validateUnplannedInjuries(
+        [
+          {
+            ply: 80,
+            characters: ['b-r-h8', 'w-k-e1'],
+            fantasyNarration:
+              "The final assault tore through Orin's exhausted Seal bond as Ysolde's round shattered his chest armor and drove him to the ground.",
+          },
+        ],
+        [],
+        fortressLedger,
+      ),
+    ).toEqual([]);
+  });
+
+  it('assigns generic broken hull damage to the captured Fortress in a Fortress capture', () => {
+    const fortressLedger = {
+      pieces: [
+        {
+          id: 'b-r-h8',
+          permanentName: 'Southwest Fortress',
+          operatorName: 'Roderic',
+          fantasyType: 'moving-fortress',
+        },
+        {
+          id: 'w-r-h1',
+          permanentName: 'Northwest Fortress',
+          operatorName: 'Ysabet',
+          fantasyType: 'moving-fortress',
+        },
+      ],
+      events: Array.from({ length: 34 }, (_, index) => ({
+        ply: index + 1,
+        isCapture: index === 33,
+        pieceId: index === 33 ? 'b-r-h8' : 'b-p-a7',
+        capturedPieceId: index === 33 ? 'w-r-h1' : undefined,
+      })),
+    } as GameLedger;
+
+    expect(
+      validator.validateUnplannedInjuries(
+        [
+          {
+            ply: 34,
+            characters: ['b-r-h8', 'w-r-h1'],
+            fantasyNarration:
+              "She fired, then drove Southwest Fortress' wedge prow through the broken hull.",
+          },
+        ],
+        [],
+        fortressLedger,
+      ),
+    ).toEqual([]);
+  });
+
+  it('still blocks explicit damage to the attacking Fortress during a Fortress capture', () => {
+    const fortressLedger = {
+      pieces: [
+        {
+          id: 'b-r-h8',
+          permanentName: 'Southwest Fortress',
+          operatorName: 'Roderic',
+          fantasyType: 'moving-fortress',
+        },
+        {
+          id: 'w-r-h1',
+          permanentName: 'Northwest Fortress',
+          operatorName: 'Ysabet',
+          fantasyType: 'moving-fortress',
+        },
+      ],
+      events: Array.from({ length: 34 }, (_, index) => ({
+        ply: index + 1,
+        isCapture: index === 33,
+        pieceId: index === 33 ? 'b-r-h8' : 'b-p-a7',
+        capturedPieceId: index === 33 ? 'w-r-h1' : undefined,
+      })),
+    } as GameLedger;
+
+    expect(
+      validator.validateUnplannedInjuries(
+        [
+          {
+            ply: 34,
+            characters: ['b-r-h8', 'w-r-h1'],
+            fantasyNarration:
+              "Southwest Fortress' own axle snapped as Roderic rammed Northwest Fortress.",
+          },
+        ],
+        [],
+        fortressLedger,
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        type: 'invented-wound',
+        severity: 'error',
+        pieceId: 'b-r-h8',
+      }),
+    ]);
+  });
+
+  it('treats ambiguous component damage during a Fortress capture as a warning', () => {
+    const fortressLedger = {
+      pieces: [
+        {
+          id: 'b-r-h8',
+          permanentName: 'Southwest Fortress',
+          operatorName: 'Roderic',
+          fantasyType: 'moving-fortress',
+        },
+        {
+          id: 'w-r-h1',
+          permanentName: 'Northwest Fortress',
+          operatorName: 'Ysabet',
+          fantasyType: 'moving-fortress',
+        },
+      ],
+      events: Array.from({ length: 34 }, (_, index) => ({
+        ply: index + 1,
+        isCapture: index === 33,
+        pieceId: index === 33 ? 'b-r-h8' : 'b-p-a7',
+        capturedPieceId: index === 33 ? 'w-r-h1' : undefined,
+      })),
+    } as GameLedger;
+
+    expect(
+      validator.validateUnplannedInjuries(
+        [
+          {
+            ply: 34,
+            characters: ['b-r-h8', 'w-r-h1'],
+            fantasyNarration:
+              'Roderic heard metal tear as the axle cracked during the collision before he reached Ysabet.',
+          },
+        ],
+        [],
+        fortressLedger,
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        type: 'invented-wound',
+        severity: 'warning',
+        pieceId: 'b-r-h8',
+      }),
+    ]);
+  });
+
+  it('does not mistake healthy Fortress state or temporary motion for damage', () => {
+    const fortressLedger = {
+      pieces: [
+        {
+          id: 'w-r-a1',
+          permanentName: 'Northeast Fortress',
+          operatorName: 'Mirelle',
+          fantasyType: 'moving-fortress',
+        },
+      ],
+      events: [{ ply: 55, isCapture: false }],
+    } as GameLedger;
+
+    for (const fantasyNarration of [
+      'Mirelle reported that her engine could still maneuver, though the cradle was shaking around her.',
+      'Mirelle kept the Northeast Fortress moving through the smoke and reported that its engine remained responsive.',
+      'Mirelle confirmed that the cannon was ready.',
+      "Moving Fortress Pilot Elowen fired the Northeast Fortress's breach cannon into harbor masonry beside Nessa.",
+      'The engine failed to gain traction on the flooded stones before Mirelle found another route.',
+    ]) {
+      expect(
+        validator.validateUnplannedInjuries(
+          [{ ply: 55, characters: ['w-r-a1'], fantasyNarration }],
+          [],
+          fortressLedger,
+        ),
+      ).toEqual([]);
+    }
+  });
+
+  it('blocks premature Fortress power loss but permits concrete mechanical obstruction', () => {
+    const fortressLedger = {
+      pieces: [
+        {
+          id: 'w-r-a1',
+          permanentName: 'Northeast Fortress',
+          operatorName: 'Mirelle',
+          fantasyType: 'moving-fortress',
+        },
+      ],
+      events: [{ ply: 1, isCheckmate: true }],
+    } as GameLedger;
+
+    expect(
+      validator.validatePrematureFortressPowerLoss(
+        [
+          {
+            ply: 1,
+            characters: ['w-r-a1'],
+            fantasyNarration:
+              "Mirelle's powerless-to-move hull blocked the final route.",
+          },
+        ],
+        fortressLedger,
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        type: 'fortress-power-state',
+        severity: 'error',
+        pieceId: 'w-r-a1',
+      }),
+    ]);
+
+    for (const fantasyNarration of [
+      "Mirelle's damaged hull blocked the final route.",
+      'Mirelle wedged the Fortress between two roots and held it stationary.',
+      'Mirelle could not gain traction in the flooded trench.',
+    ]) {
+      expect(
+        validator.validatePrematureFortressPowerLoss(
+          [{ ply: 1, characters: ['w-r-a1'], fantasyNarration }],
+          fortressLedger,
+        ),
+      ).toEqual([]);
+    }
+  });
+
+  it('still blocks explicit Fortress damage states and destructive events', () => {
+    const fortressLedger = {
+      pieces: [
+        {
+          id: 'w-r-a1',
+          permanentName: 'Northeast Fortress',
+          operatorName: 'Mirelle',
+          fantasyType: 'moving-fortress',
+        },
+      ],
+      events: [{ ply: 55, isCapture: false }],
+    } as GameLedger;
+
+    for (const fantasyNarration of [
+      'Mirelle fought the controls as the engine remained crippled.',
+      'Mirelle reeled inside the cradle as the axle snapped.',
+      'Mirelle called for help when the hull collapsed.',
+      'Mirelle could not advance after the engine failed completely.',
+    ]) {
+      expect(
+        validator.validateUnplannedInjuries(
+          [{ ply: 55, characters: ['w-r-a1'], fantasyNarration }],
+          [],
+          fortressLedger,
+        ),
+      ).toEqual([
+        expect.objectContaining({
+          type: 'invented-wound',
+          severity: 'error',
+          pieceId: 'w-r-a1',
+        }),
+      ]);
+    }
+  });
+
+  it('does not mistake destruction of a nearby bridge for Fortress damage', () => {
+    const fortressLedger = {
+      pieces: [
+        {
+          id: 'w-r-a1',
+          permanentName: 'Northeast Fortress',
+          operatorName: 'Mirelle',
+          fantasyType: 'moving-fortress',
+        },
+      ],
+      events: [{ ply: 55, isCapture: false }],
+    } as GameLedger;
+
+    expect(
+      validator.validateUnplannedInjuries(
+        [
+          {
+            ply: 55,
+            characters: ['w-r-a1'],
+            fantasyNarration:
+              'Mirelle fired the cannon, and a nearby bridge was destroyed before the Northeast Fortress crossed the shattered approach.',
+          },
+        ],
+        [],
+        fortressLedger,
+      ),
+    ).toEqual([]);
+  });
+
   it('warns when a named character inherits another character’s distinctive wounds', () => {
     const injuryLedger = {
       pieces: [
@@ -1391,10 +1828,539 @@ describe('DeterministicStoryValidator', () => {
     ).toEqual([
       expect.objectContaining({
         type: 'invented-wound',
-        severity: 'warning',
+        severity: 'error',
         pieceId: 'b-b-c8',
       }),
     ]);
+  });
+
+  it('does not transfer an explicitly possessed wound to a character in the preceding sentence', () => {
+    const injuryLedger = {
+      pieces: [
+        {
+          id: 'b-q-d8',
+          permanentName: 'Queen Odette',
+          characterName: 'Odette',
+          fantasyType: 'queen',
+        },
+        {
+          id: 'w-n-g1',
+          permanentName: 'Southeast Knight Commander Godric',
+          characterName: 'Godric',
+          fantasyType: 'knight-commander',
+        },
+      ],
+      events: Array.from({ length: 25 }, (_, index) => ({
+        ply: index + 1,
+        isCapture: false,
+      })),
+    } as GameLedger;
+    const wounds = [
+      {
+        pieceId: 'w-n-g1',
+        inflictedAtPly: 24,
+        injury: 'fractured left forearm and torn shoulder',
+        lastingEffects: ['weakened grip', 'restricted greatsword arc'],
+        recoveryPly: null,
+      },
+    ];
+
+    expect(
+      validator.validateWoundOwnershipTransfers(
+        [
+          {
+            ply: 25,
+            characters: ['b-q-d8', 'w-n-g1'],
+            fantasyNarration:
+              "Odette rushed through the broken illusion line before Godric could leave. Godric's left forearm remained fractured and his shoulder torn from Kael's spell at the previous exchange; those injuries weakened his grip and kept him from completing the greatsword's full arc.",
+          },
+        ],
+        wounds,
+        injuryLedger,
+      ),
+    ).toEqual([]);
+  });
+
+  it('keeps a participial wound on the main subject instead of a possessive destination', () => {
+    const injuryLedger = {
+      pieces: [
+        {
+          id: 'b-q-d8',
+          permanentName: 'Northern Queen',
+          characterName: 'Odette',
+          fantasyType: 'queen',
+        },
+        {
+          id: 'b-r-h8',
+          permanentName: 'Southwest Fortress',
+          operatorName: 'Ysolde',
+          fantasyType: 'moving-fortress',
+        },
+      ],
+      events: Array.from({ length: 71 }, (_, index) => ({
+        ply: index + 1,
+        isCapture: false,
+      })),
+    } as GameLedger;
+    const wounds = [
+      {
+        pieceId: 'b-q-d8',
+        inflictedAtPly: 60,
+        injury: 'abdominal puncture',
+        lastingEffects: ['barrier failures'],
+        recoveryPly: null,
+      },
+    ];
+
+    expect(
+      validator.validateWoundOwnershipTransfers(
+        [
+          {
+            ply: 71,
+            characters: ['b-q-d8', 'b-r-h8'],
+            fantasyNarration:
+              "Queen Odette rushed back through the forest toward Ysolde's Southwest Fortress, carrying the abdominal puncture and the barrier failures inflicted during her fight with Sabine.",
+          },
+        ],
+        wounds,
+        injuryLedger,
+      ),
+    ).toEqual([]);
+  });
+
+  it('keeps a pronoun-owned wound on the clause subject instead of a possessive object', () => {
+    const injuryLedger = {
+      pieces: [
+        {
+          id: 'b-q-d8',
+          permanentName: 'Northern Queen',
+          characterName: 'Odette',
+          fantasyType: 'queen',
+        },
+        {
+          id: 'b-r-h8',
+          permanentName: 'Southwest Fortress',
+          operatorName: 'Ysolde',
+          fantasyType: 'moving-fortress',
+        },
+      ],
+      events: Array.from({ length: 71 }, (_, index) => ({
+        ply: index + 1,
+        isCapture: false,
+      })),
+    } as GameLedger;
+    const wounds = [
+      {
+        pieceId: 'b-q-d8',
+        inflictedAtPly: 60,
+        injury: 'puncture in the lower right abdomen',
+        lastingEffects: ['damaged seals leaking beneath her armor'],
+        recoveryPly: null,
+      },
+    ];
+
+    expect(
+      validator.validateWoundOwnershipTransfers(
+        [
+          {
+            ply: 71,
+            characters: ['b-q-d8', 'b-r-h8'],
+            fantasyNarration:
+              "Queen Odette rushed toward Ysolde's possible firing lane, one hand pressed against the puncture in her own lower right abdomen while damaged seals leaked beneath her armor.",
+          },
+        ],
+        wounds,
+        injuryLedger,
+      ),
+    ).toEqual([]);
+  });
+
+  it('downgrades a genuinely ambiguous pronoun owner to a warning', () => {
+    const injuryLedger = {
+      pieces: [
+        {
+          id: 'b-b-c8',
+          permanentName: 'Archwizard Mara',
+          characterName: 'Mara',
+          fantasyType: 'archwizard',
+        },
+        {
+          id: 'b-b-f8',
+          permanentName: 'Archwizard Sabine',
+          characterName: 'Sabine',
+          fantasyType: 'archwizard',
+        },
+      ],
+      events: Array.from({ length: 40 }, (_, index) => ({
+        ply: index + 1,
+        isCapture: false,
+      })),
+    } as GameLedger;
+    const wounds = [
+      {
+        pieceId: 'b-b-f8',
+        inflictedAtPly: 12,
+        injury: 'deeply slashed forearm',
+        lastingEffects: ['persistent pain'],
+        recoveryPly: null,
+      },
+    ];
+
+    expect(
+      validator.validateWoundOwnershipTransfers(
+        [
+          {
+            ply: 40,
+            characters: ['b-b-c8', 'b-b-f8'],
+            fantasyNarration:
+              'Sabine reached Mara while her slashed forearm shook with pain.',
+          },
+        ],
+        wounds,
+        injuryLedger,
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        type: 'invented-wound',
+        severity: 'warning',
+      }),
+    ]);
+  });
+
+  it('still assigns a participial wound to a Fortress when the Fortress is the subject', () => {
+    const injuryLedger = {
+      pieces: [
+        {
+          id: 'b-q-d8',
+          permanentName: 'Northern Queen',
+          characterName: 'Odette',
+          fantasyType: 'queen',
+        },
+        {
+          id: 'b-r-h8',
+          permanentName: 'Southwest Fortress',
+          operatorName: 'Ysolde',
+          fantasyType: 'moving-fortress',
+        },
+      ],
+      events: Array.from({ length: 71 }, (_, index) => ({
+        ply: index + 1,
+        isCapture: false,
+      })),
+    } as GameLedger;
+    const wounds = [
+      {
+        pieceId: 'b-q-d8',
+        inflictedAtPly: 60,
+        injury: 'abdominal puncture',
+        lastingEffects: ['barrier failures'],
+        recoveryPly: null,
+      },
+    ];
+
+    expect(
+      validator.validateWoundOwnershipTransfers(
+        [
+          {
+            ply: 71,
+            characters: ['b-q-d8', 'b-r-h8'],
+            fantasyNarration:
+              "Ysolde's Southwest Fortress moved toward Queen Odette, carrying the abdominal puncture and the barrier failures into the forest.",
+          },
+        ],
+        wounds,
+        injuryLedger,
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        type: 'invented-wound',
+        severity: 'error',
+        pieceId: 'b-r-h8',
+      }),
+    ]);
+  });
+
+  it('still blocks a directly possessed wound transfer', () => {
+    const injuryLedger = {
+      pieces: [
+        {
+          id: 'b-q-d8',
+          permanentName: 'Northern Queen',
+          characterName: 'Odette',
+          fantasyType: 'queen',
+        },
+        {
+          id: 'b-r-h8',
+          permanentName: 'Southwest Fortress',
+          operatorName: 'Ysolde',
+          fantasyType: 'moving-fortress',
+        },
+      ],
+      events: Array.from({ length: 71 }, (_, index) => ({
+        ply: index + 1,
+        isCapture: false,
+      })),
+    } as GameLedger;
+    const wounds = [
+      {
+        pieceId: 'b-q-d8',
+        inflictedAtPly: 60,
+        injury: 'abdominal puncture',
+        lastingEffects: ['barrier failures'],
+        recoveryPly: null,
+      },
+    ];
+
+    expect(
+      validator.validateWoundOwnershipTransfers(
+        [
+          {
+            ply: 71,
+            characters: ['b-q-d8', 'b-r-h8'],
+            fantasyNarration:
+              "Queen Odette reached the trees. Ysolde's abdominal puncture caused the Southwest Fortress's barriers to fail.",
+          },
+        ],
+        wounds,
+        injuryLedger,
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        type: 'invented-wound',
+        severity: 'error',
+        pieceId: 'b-r-h8',
+      }),
+    ]);
+  });
+
+  it('does not block a two-character capture scene because attack language resembles another wound', () => {
+    const injuryLedger = {
+      pieces: [
+        {
+          id: 'w-q-d1',
+          permanentName: 'Northern Queen',
+          characterName: 'Odette',
+          fantasyType: 'queen',
+        },
+        {
+          id: 'b-p-a7',
+          permanentName: 'Ansel',
+          characterName: 'Ansel',
+          fantasyType: 'pawn',
+        },
+        {
+          id: 'w-n-g1',
+          permanentName: 'Southeast Knight Commander',
+          characterName: 'Godric',
+          fantasyType: 'knight-commander',
+        },
+      ],
+      events: Array.from({ length: 67 }, (_, index) => ({
+        ply: index + 1,
+        isCapture: index === 66,
+        pieceId: index === 66 ? 'w-q-d1' : 'w-p-a2',
+        capturedPieceId: index === 66 ? 'b-p-a7' : undefined,
+      })),
+    } as GameLedger;
+    const wounds = [
+      {
+        pieceId: 'w-n-g1',
+        inflictedAtPly: 31,
+        injury: 'ward-burning greatsword cut across the left shoulder',
+        lastingEffects: ['pain beneath the collarbone'],
+        recoveryPly: null,
+      },
+    ];
+
+    expect(
+      validator.validateWoundOwnershipTransfers(
+        [
+          {
+            ply: 67,
+            characters: ['w-q-d1', 'b-p-a7'],
+            fantasyNarration:
+              'Odette cut through the weak ward and struck Ansel from collarbone to heart.',
+          },
+        ],
+        wounds,
+        injuryLedger,
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        type: 'invented-wound',
+        severity: 'warning',
+        pieceId: 'w-q-d1',
+      }),
+    ]);
+  });
+
+  it('detects a future planned wound copied onto the wrong character', () => {
+    const fortressLedger = {
+      pieces: [
+        {
+          id: 'w-r-a1',
+          permanentName: 'Moving Fortress Pilot Mirelle',
+          operatorName: 'Mirelle',
+          fantasyType: 'moving-fortress',
+        },
+        {
+          id: 'w-r-h1',
+          permanentName: 'Moving Fortress Pilot Isolde',
+          operatorName: 'Isolde',
+          fantasyType: 'moving-fortress',
+        },
+      ],
+      events: Array.from({ length: 33 }, (_, index) => ({
+        ply: index + 1,
+        isCapture: false,
+      })),
+    } as GameLedger;
+    const wounds = [
+      {
+        pieceId: 'w-r-h1',
+        inflictedAtPly: 33,
+        injury:
+          "Crushed forward armor assembly with severe shock damage to embedded pilot's left side",
+        lastingEffects: [
+          'Limited steering',
+          'Internal pain',
+          'Reduced cannon precision',
+        ],
+        recoveryPly: null,
+      },
+    ];
+
+    expect(
+      validator.validateWoundOwnershipTransfers(
+        [
+          {
+            ply: 29,
+            characters: ['w-r-a1'],
+            fantasyNarration:
+              "Mirelle's forward armor assembly was crushed, shocking her left side and reducing the Fortress's steering and cannon precision.",
+          },
+        ],
+        wounds,
+        fortressLedger,
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        type: 'invented-wound',
+        severity: 'error',
+        ply: 29,
+        pieceId: 'w-r-a1',
+      }),
+    ]);
+  });
+
+  it('detects a paraphrased active wound transferred between Fortress pilots', () => {
+    const fortressLedger = {
+      pieces: [
+        {
+          id: 'w-r-a1',
+          permanentName: 'Northeast Fortress',
+          operatorName: 'Mirelle',
+          fantasyType: 'moving-fortress',
+        },
+        {
+          id: 'w-r-h1',
+          permanentName: 'Northwest Fortress',
+          operatorName: 'Isolde',
+          fantasyType: 'moving-fortress',
+        },
+      ],
+      events: Array.from({ length: 57 }, (_, index) => ({
+        ply: index + 1,
+        isCapture: false,
+      })),
+    } as GameLedger;
+    const wounds = [
+      {
+        pieceId: 'w-r-h1',
+        inflictedAtPly: 33,
+        injury:
+          "Crushed steering and control linkage with severe trauma to the embedded pilot's left side",
+        lastingEffects: [
+          'Limited control response on the left side of the Fortress',
+          'Constant pain through the life-support cradle',
+          'Reduced ability to maneuver before the machine is captured',
+        ],
+        recoveryPly: null,
+      },
+    ];
+
+    expect(
+      validator.validateWoundOwnershipTransfers(
+        [
+          {
+            ply: 57,
+            characters: ['w-r-a1'],
+            fantasyNarration:
+              'Moving Fortress Pilot Mirelle turned the Northeast Fortress toward the royal corridor. The dead control response on her left side made the turn slow and painful through the cradle.',
+          },
+        ],
+        wounds,
+        fortressLedger,
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        type: 'invented-wound',
+        severity: 'error',
+        ply: 57,
+        pieceId: 'w-r-a1',
+      }),
+    ]);
+  });
+
+  it('allows ordinary shared Fortress terminology without transferred impairment', () => {
+    const fortressLedger = {
+      pieces: [
+        {
+          id: 'w-r-a1',
+          permanentName: 'Northeast Fortress',
+          operatorName: 'Mirelle',
+          fantasyType: 'moving-fortress',
+        },
+        {
+          id: 'w-r-h1',
+          permanentName: 'Northwest Fortress',
+          operatorName: 'Isolde',
+          fantasyType: 'moving-fortress',
+        },
+      ],
+      events: Array.from({ length: 57 }, (_, index) => ({
+        ply: index + 1,
+        isCapture: false,
+      })),
+    } as GameLedger;
+    const wounds = [
+      {
+        pieceId: 'w-r-h1',
+        inflictedAtPly: 33,
+        injury:
+          "Crushed steering and control linkage with severe trauma to the embedded pilot's left side",
+        lastingEffects: [
+          'Limited control response on the left side of the Fortress',
+          'Constant pain through the life-support cradle',
+        ],
+        recoveryPly: null,
+      },
+    ];
+
+    expect(
+      validator.validateWoundOwnershipTransfers(
+        [
+          {
+            ply: 57,
+            characters: ['w-r-a1'],
+            fantasyNarration:
+              'Mirelle checked the steering linkage, settled into the command cradle, and confirmed that the control response remained strong.',
+          },
+        ],
+        wounds,
+        fortressLedger,
+      ),
+    ).toEqual([]);
   });
 
   it('does not guess wound ownership when another wounded character owns the prose', () => {
@@ -1651,5 +2617,82 @@ describe('DeterministicStoryValidator', () => {
         }),
       ]),
     );
+  });
+
+  it('rejects a checkmate scene that explicitly leaves the defeated King alive', () => {
+    const ledger = {
+      metadata: { result: '0-1', termination: 'checkmate' },
+      pieces: [
+        {
+          id: 'w-k-e1',
+          side: 'north',
+          fantasyType: 'king',
+          permanentName: 'Northern King',
+          characterName: 'Orin',
+        },
+      ],
+      events: [
+        {
+          ply: 80,
+          isCheckmate: true,
+          checkmateExplanation: { kingId: 'w-k-e1' },
+        },
+      ],
+    } as GameLedger;
+
+    expect(
+      validator.validateCheckmateKingDeath(
+        [
+          {
+            ply: 80,
+            fantasyNarration:
+              'Ysolde fired. The round ruptured Orin’s Seal conduit, leaving him alive but unable to answer the attack.',
+          },
+        ],
+        ledger,
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        type: 'missing-checkmate',
+        severity: 'error',
+        ply: 80,
+        pieceId: 'w-k-e1',
+      }),
+    ]);
+  });
+
+  it('accepts an explicit on-page death in the final checkmate scene', () => {
+    const ledger = {
+      metadata: { result: '0-1', termination: 'checkmate' },
+      pieces: [
+        {
+          id: 'w-k-e1',
+          side: 'north',
+          fantasyType: 'king',
+          permanentName: 'Northern King',
+          characterName: 'Orin',
+        },
+      ],
+      events: [
+        {
+          ply: 80,
+          isCheckmate: true,
+          checkmateExplanation: { kingId: 'w-k-e1' },
+        },
+      ],
+    } as GameLedger;
+
+    expect(
+      validator.validateCheckmateKingDeath(
+        [
+          {
+            ply: 80,
+            fantasyNarration:
+              'Ysolde fired. The round ruptured Orin’s exhausted Seal conduit and killed him.',
+          },
+        ],
+        ledger,
+      ),
+    ).toEqual([]);
   });
 });

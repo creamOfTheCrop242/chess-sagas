@@ -5,6 +5,7 @@ import {
   selectRequiredWoundEvents,
   woundProbability,
 } from './wound-planning';
+import { woundCatalogEntry } from './wound-catalog';
 
 describe('wound planning', () => {
   const ledger = {
@@ -95,6 +96,13 @@ describe('wound planning', () => {
       expect(wound.sourcePieceId).toBe(
         wound.causeType === 'victim-retaliation' ? wound.capturedPieceId : null,
       );
+      const catalog = woundCatalogEntry(wound.woundCatalogId);
+      expect(catalog).toBeDefined();
+      expect(catalog?.ownerTypes).toContain(event.pieceType);
+      expect(catalog?.causeTypes).toContain(wound.causeType);
+      expect(wound.woundCatalog.narrationGuidance).toBe(
+        catalog?.narrationGuidance,
+      );
     }
   });
 });
@@ -103,7 +111,12 @@ function piece(
   id: string,
   permanentName: string,
 ): GameLedger['pieces'][number] {
-  return { id, permanentName } as GameLedger['pieces'][number];
+  const fantasyType: FantasyPieceType = id.includes('-p-')
+    ? 'grunt'
+    : id.includes('-q-')
+      ? 'queen'
+      : 'moving-fortress';
+  return { id, permanentName, fantasyType } as GameLedger['pieces'][number];
 }
 
 function capture(

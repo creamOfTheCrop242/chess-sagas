@@ -47,6 +47,7 @@ const endingBeatSchema = z.object({
 const woundBeatSchema = z.object({
   pieceId: z.string().min(1),
   inflictedAtPly: z.number().int().positive(),
+  woundCatalogId: z.string().min(1).nullable().default(null),
   injury: z.string().min(1),
   continuityPlies: z.array(z.number().int().positive()),
   recoveryPly: z.number().int().positive().nullable(),

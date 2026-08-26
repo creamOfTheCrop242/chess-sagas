@@ -9,8 +9,158 @@ import {
   mythicArmForCommander,
 } from '../chess/mythic-arms';
 
+export interface DeterministicSceneInput {
+  ply: number;
+  fantasyNarration: string;
+  characters: string[];
+  woundsInflicted?: Array<{ pieceId: string; inflictedAtPly: number }>;
+  woundReferences?: Array<{ woundId: string; ownerPieceId: string }>;
+}
+
+export interface ScenePackageValidation {
+  terminologyFindings: ValidationFinding[];
+  timedFateFindings: ValidationFinding[];
+  captureAttributionFindings: ValidationFinding[];
+  checkStrainFindings: ValidationFinding[];
+  revengePayoffFindings: ValidationFinding[];
+  prematureAscensionFindings: ValidationFinding[];
+  checkmateDeathFindings: ValidationFinding[];
+  fortressPowerFindings: ValidationFinding[];
+  woundFindings: ValidationFinding[];
+  findings: ValidationFinding[];
+}
+
 @Injectable()
 export class DeterministicStoryValidator {
+  /**
+   * Canonical deterministic scene validation. Every caller that accepts or
+   * repairs scene prose should use this method so a repair cannot accidentally
+   * skip a validator that ran during initial generation.
+   */
+  validateScenePackage(
+    scenes: DeterministicSceneInput[],
+    ledger: GameLedger,
+    wounds: GeneratedStoryPackage['wounds'] = [],
+    selectedRevengePayoffs: StoryOutline['selectedRevengePayoffs'] = [],
+  ): ScenePackageValidation {
+    const proseScenes = scenes.map(({ ply, fantasyNarration }) => ({
+      ply,
+      fantasyNarration,
+    }));
+    const terminologyFindings = this.validateSceneTerminology(proseScenes);
+    const timedFateFindings = this.validateTimedCharacterFates(
+      proseScenes,
+      ledger,
+    );
+    const captureAttributionFindings = this.validateCaptureAttribution(
+      proseScenes,
+      ledger,
+    );
+    const checkStrainFindings = this.validateCheckStrainOwnership(
+      proseScenes,
+      ledger,
+    );
+    const revengePayoffFindings = this.validateRevengePayoffs(
+      proseScenes,
+      ledger,
+      selectedRevengePayoffs,
+    );
+    const prematureAscensionFindings = this.validatePrematureAscensionReveals(
+      proseScenes,
+      ledger,
+    );
+    const checkmateDeathFindings = this.validateCheckmateKingDeath(
+      proseScenes,
+      ledger,
+    );
+    const fortressPowerFindings = this.validatePrematureFortressPowerLoss(
+      scenes,
+      ledger,
+    );
+    const hasStructuredWoundMetadata = scenes.every(
+      (scene) =>
+        scene.woundsInflicted !== undefined &&
+        scene.woundReferences !== undefined,
+    );
+    const woundFindings = [
+      ...(hasStructuredWoundMetadata
+        ? this.validateStructuredWoundReferences(scenes, wounds)
+        : []),
+      ...this.validateTimedWounds(
+        scenes,
+        wounds,
+        ledger,
+        hasStructuredWoundMetadata,
+      ),
+      ...this.validateUnplannedInjuries(scenes, wounds, ledger),
+      ...this.validateWoundOwnershipTransfers(scenes, wounds, ledger),
+    ];
+    const findings = [
+      ...terminologyFindings,
+      ...prematureAscensionFindings,
+      ...captureAttributionFindings,
+      ...checkStrainFindings,
+      ...revengePayoffFindings,
+      ...timedFateFindings,
+      ...checkmateDeathFindings,
+      ...fortressPowerFindings,
+      ...woundFindings,
+    ];
+    return {
+      terminologyFindings,
+      timedFateFindings,
+      captureAttributionFindings,
+      checkStrainFindings,
+      revengePayoffFindings,
+      prematureAscensionFindings,
+      checkmateDeathFindings,
+      fortressPowerFindings,
+      woundFindings,
+      findings,
+    };
+  }
+
+  validatePrematureFortressPowerLoss(
+    scenes: Array<{
+      ply: number;
+      fantasyNarration: string;
+      characters: string[];
+    }>,
+    ledger: GameLedger,
+  ): ValidationFinding[] {
+    const fortresses = ledger.pieces.filter(
+      (piece) => piece.fantasyType === 'moving-fortress',
+    );
+    const findings: ValidationFinding[] = [];
+
+    for (const scene of scenes) {
+      for (const fortress of fortresses) {
+        if (
+          fortress.capturedAtPly !== undefined &&
+          scene.ply >= fortress.capturedAtPly
+        ) {
+          continue;
+        }
+        if (!scene.characters.includes(fortress.id)) continue;
+        const excerpt = prematureFortressPowerLossExcerpt(
+          scene.fantasyNarration,
+          characterAliases(fortress),
+        );
+        if (!excerpt) continue;
+        findings.push({
+          type: 'fortress-power-state',
+          severity: 'error',
+          message: `${fortress.permanentName} is still powered by its living King's Royal Seal at ply ${scene.ply}; power loss may occur only after that King dies`,
+          ply: scene.ply,
+          pieceId: fortress.id,
+          excerpt,
+        });
+      }
+    }
+
+    return findings;
+  }
+
   repairProhibitedTerminology(storyMarkdown: string): string {
     return storyMarkdown
       .replace(/\bcheckmate\b/gi, 'final defeat')
@@ -179,6 +329,55 @@ export class DeterministicStoryValidator {
     });
   }
 
+  validateCheckmateKingDeath(
+    scenes: Array<{ ply: number; fantasyNarration: string }>,
+    ledger: GameLedger,
+  ): ValidationFinding[] {
+    if (ledger.metadata.termination !== 'checkmate') return [];
+    const checkmateEvent = ledger.events.find((event) => event.isCheckmate);
+    if (!checkmateEvent) return [];
+    const kingId = checkmateEvent.checkmateExplanation?.kingId;
+    const king = ledger.pieces.find((piece) => piece.id === kingId);
+    const scene = scenes.find(
+      (candidate) => candidate.ply === checkmateEvent.ply,
+    );
+    if (!king || !scene) return [];
+
+    const aliases = characterAliases(king);
+    const aliasPattern = aliases
+      .filter((alias) => alias.trim().length > 0)
+      .sort((left, right) => right.length - left.length)
+      .map(escapeRegex)
+      .join('|');
+    const contradiction = scene.fantasyNarration.match(
+      new RegExp(
+        `(?:\\b(?:${aliasPattern})\\b[^.!?]{0,160}\\b(?:alive|survived|survives)\\b|\\b(?:leaving|left|kept)\\s+(?:him|the King)\\s+alive\\b)`,
+        'i',
+      ),
+    )?.[0];
+    const explicitDeath =
+      /\b(?:killed|dies|died|dead|slain|lifeless|perished)\b/i.test(
+        scene.fantasyNarration,
+      ) ||
+      /\b(?:ended|claimed|took)\s+(?:the\s+)?(?:King['’]s|his)\s+life\b/i.test(
+        scene.fantasyNarration,
+      );
+    if (!contradiction && explicitDeath) return [];
+
+    return [
+      {
+        type: 'missing-checkmate',
+        severity: 'error',
+        message: contradiction
+          ? `${king.permanentName} must die in the final checkmate scene but is explicitly described as alive`
+          : `${king.permanentName} must die visibly in the final checkmate scene`,
+        ply: checkmateEvent.ply,
+        pieceId: king.id,
+        excerpt: contradiction ?? scene.fantasyNarration.slice(0, 240),
+      },
+    ];
+  }
+
   validateCaptureAttribution(
     scenes: Array<{ ply: number; fantasyNarration: string }>,
     ledger: GameLedger,
@@ -298,6 +497,7 @@ export class DeterministicStoryValidator {
     }>,
     wounds: GeneratedStoryPackage['wounds'],
     ledger: GameLedger,
+    validateStructuredMarkers = true,
   ): ValidationFinding[] {
     const findings: ValidationFinding[] = [];
     const pieces = new Map(ledger.pieces.map((piece) => [piece.id, piece]));
@@ -351,7 +551,7 @@ export class DeterministicStoryValidator {
           marker.pieceId === wound.pieceId &&
           marker.inflictedAtPly === wound.inflictedAtPly,
       );
-      if (!hasExactMarker) {
+      if (validateStructuredMarkers && !hasExactMarker) {
         findings.push({
           type: 'missing-wound',
           severity: 'error',
@@ -395,6 +595,8 @@ export class DeterministicStoryValidator {
         }
       }
     }
+
+    if (!validateStructuredMarkers) return findings;
 
     const expectedMarkers = new Set(
       wounds.map((wound) => `${wound.pieceId}:${wound.inflictedAtPly}`),
@@ -527,16 +729,32 @@ export class DeterministicStoryValidator {
         const otherAliases = ledger.pieces
           .filter((candidate) => candidate.id !== pieceId)
           .flatMap((candidate) => characterAliases(candidate));
-        const excerpt = unplannedInjuryExcerpt(
-          scene.fantasyNarration,
-          aliases,
-          otherAliases,
-        );
+        const captureVictim = event?.capturedPieceId
+          ? pieces.get(event.capturedPieceId)
+          : undefined;
+        const fortressDamage =
+          piece.fantasyType === 'moving-fortress'
+            ? unplannedFortressDamageFinding(
+                scene.fantasyNarration,
+                aliases,
+                otherAliases,
+                event?.isCapture && event.pieceId === pieceId
+                  ? captureVictim
+                  : undefined,
+              )
+            : undefined;
+        const excerpt =
+          fortressDamage?.excerpt ??
+          unplannedInjuryExcerpt(scene.fantasyNarration, aliases, otherAliases);
         if (!excerpt) continue;
         findings.push({
           type: 'invented-wound',
-          severity: 'warning',
-          message: `${piece.permanentName} has no active planned wound at ply ${scene.ply} but is described with a bodily injury`,
+          severity: fortressDamage?.severity ?? 'warning',
+          message: fortressDamage
+            ? fortressDamage.severity === 'error'
+              ? `${piece.permanentName} has no active planned wound at ply ${scene.ply} but the Fortress explicitly sustains substantive damage; damage to the integrated Fortress counts as damage to its pilot`
+              : `${piece.permanentName} may sustain ambiguous Fortress damage at ply ${scene.ply}; ownership is not explicit enough to block the story`
+            : `${piece.permanentName} has no active planned wound at ply ${scene.ply} but is described with a bodily injury`,
           ply: scene.ply,
           pieceId,
           excerpt,
@@ -560,12 +778,10 @@ export class DeterministicStoryValidator {
 
     for (const scene of scenes) {
       const event = ledger.events[scene.ply - 1];
-      const activeWounds = wounds.filter(
-        (wound) =>
-          wound.inflictedAtPly <= scene.ply &&
-          (wound.recoveryPly === null || wound.recoveryPly >= scene.ply),
+      const relevantWounds = wounds.filter(
+        (wound) => wound.recoveryPly === null || wound.recoveryPly >= scene.ply,
       );
-      if (activeWounds.length === 0) continue;
+      if (relevantWounds.length === 0) continue;
 
       for (const targetId of scene.characters) {
         const target = pieces.get(targetId);
@@ -573,69 +789,117 @@ export class DeterministicStoryValidator {
         if (event?.isCapture && event.capturedPieceId === targetId) continue;
         const targetAliases = characterAliases(target);
         if (!mentionsCharacter(scene.fantasyNarration, targetAliases)) continue;
-        const targetWoundTexts = activeWounds
-          .filter((wound) => wound.pieceId === targetId)
+        const targetWoundTexts = relevantWounds
+          .filter(
+            (wound) =>
+              wound.pieceId === targetId && wound.inflictedAtPly <= scene.ply,
+          )
           .map((wound) => [wound.injury, ...wound.lastingEffects].join(' '));
-        const otherAliases = ledger.pieces
-          .filter((piece) => piece.id !== targetId)
-          .flatMap((piece) => characterAliases(piece));
-        const sentences = scene.fantasyNarration.match(/[^.!?]+[.!?]?/g) ?? [
+        const scenePieces = scene.characters
+          .map((pieceId) => pieces.get(pieceId))
+          .filter((piece): piece is GameLedger['pieces'][number] =>
+            Boolean(piece),
+          );
+        const rawClauses = scene.fantasyNarration.match(/[^.!?;]+[.!?;]?/g) ?? [
           scene.fantasyNarration,
         ];
+        const clauses = rawClauses.map((clause, index) => ({
+          text: clause.trim(),
+          inheritedSubjectId:
+            index > 0
+              ? uniqueMentionedPieceId(rawClauses[index - 1], scenePieces)
+              : null,
+        }));
 
         for (const ownerId of new Set(
-          activeWounds
+          relevantWounds
             .map((wound) => wound.pieceId)
             .filter((pieceId) => pieceId !== targetId),
         )) {
           const owner = pieces.get(ownerId);
           if (!owner) continue;
-          const ownerWoundText = activeWounds
+          const ownerWoundText = relevantWounds
             .filter((wound) => wound.pieceId === ownerId)
             .flatMap((wound) => [wound.injury, ...wound.lastingEffects])
             .join(' ');
-          const excerpt = sentences
-            .map((sentence) => sentence.trim())
-            .find((sentence) => {
-              if (!mentionsCharacter(sentence, targetAliases)) return false;
-              if (!highConfidenceWoundSignature(sentence, ownerWoundText)) {
-                return false;
+          const ownershipMatch = clauses
+            .map(({ text: clause, inheritedSubjectId }) => {
+              if (
+                !mentionsCharacter(clause, targetAliases) &&
+                inheritedSubjectId !== targetId
+              ) {
+                return null;
               }
+              const fortressOwnershipTransfer =
+                target.fantasyType === 'moving-fortress' &&
+                owner.fantasyType === 'moving-fortress' &&
+                highConfidenceFortressWoundTransfer(clause, ownerWoundText);
+              if (
+                !fortressOwnershipTransfer &&
+                !highConfidenceWoundSignature(clause, ownerWoundText)
+              ) {
+                return null;
+              }
+              const fortressConceptTerms = fortressOwnershipTransfer
+                ? matchingFamilies(
+                    ownerWoundText,
+                    FORTRESS_WOUND_CONCEPT_FAMILIES,
+                  )
+                    .filter((family) => hasAny(clause, family))
+                    .flat()
+                : [];
               const signatureTerms = [
                 ...matchingFamilies(ownerWoundText, ANATOMY_FAMILIES).flat(),
                 ...matchingFamilies(ownerWoundText, INJURY_FAMILIES).flat(),
+                ...fortressConceptTerms,
+                ...FORTRESS_COMPONENT_TERMS.filter((term) =>
+                  hasAny(ownerWoundText, [term]),
+                ),
+                ...SUBSTANTIVE_FORTRESS_DAMAGE_TERMS.filter((term) =>
+                  hasAny(ownerWoundText, [term]),
+                ),
               ];
               if (
-                !namedCharacterPrecedesWound(
-                  sentence,
-                  targetAliases,
-                  signatureTerms,
-                )
-              ) {
-                return false;
-              }
-              if (
                 targetWoundTexts.some((woundText) =>
-                  highConfidenceWoundSignature(sentence, woundText),
+                  highConfidenceWoundSignature(clause, woundText),
                 )
               ) {
-                return false;
+                return null;
               }
-              return woundMentionFollowsTargetMoreClosely(
-                sentence,
-                targetAliases,
-                otherAliases,
+              const ownership = explicitlyAttributedWoundOwner(
+                clause,
+                scenePieces,
                 signatureTerms,
+                inheritedSubjectId,
               );
-            });
-          if (!excerpt) continue;
+              return ownership?.pieceId === targetId
+                ? { excerpt: clause, ownership }
+                : null;
+            })
+            .find(
+              (
+                match,
+              ): match is {
+                excerpt: string;
+                ownership: NonNullable<
+                  ReturnType<typeof explicitlyAttributedWoundOwner>
+                >;
+              } => match !== null,
+            );
+          if (!ownershipMatch) continue;
           findings.push({
             type: 'invented-wound',
-            severity: 'warning',
+            // Possessives are explicit contradictions. Plain proximity is a
+            // useful suspicion, but cannot safely block multi-character scenes.
+            severity:
+              ownershipMatch.ownership.basis === 'possessive' ||
+              ownershipMatch.ownership.basis === 'pronoun'
+                ? 'error'
+                : 'warning',
             message: `${target.permanentName} appears to inherit distinctive wound details belonging to ${owner.permanentName} at ply ${scene.ply}`,
             ply: scene.ply,
             pieceId: targetId,
-            excerpt,
+            excerpt: ownershipMatch.excerpt,
           });
           break;
         }
@@ -708,6 +972,156 @@ const DISTINCTIVE_WOUND_FAMILIES = [
   ['ward-siphon array', 'ward siphon array'],
 ] as const;
 
+// These families describe composite pilot-machine limitations rather than
+// generic Fortress vocabulary. Requiring multiple concepts lets ownership
+// validation recognize a paraphrased transfer (for example, another pilot
+// inheriting both Isolde's left-side trauma and control impairment) without
+// treating ordinary mentions of an engine, cannon, or cradle as wounds.
+const FORTRESS_WOUND_CONCEPT_FAMILIES = [
+  [
+    'steering linkage',
+    'steering linkages',
+    'control linkage',
+    'control linkages',
+    'control response',
+    'steering response',
+  ],
+  ['left side', 'left-side'],
+  ['right side', 'right-side'],
+  [
+    'pain through the cradle',
+    'pain through the life-support cradle',
+    'painful through the cradle',
+    'painful through the life-support cradle',
+    'agony through the cradle',
+    'agony through the life-support cradle',
+  ],
+  [
+    'reduced ability to maneuver',
+    'limited ability to maneuver',
+    'limited maneuvering',
+    'reduced maneuvering',
+    'slow to maneuver',
+    'turn slow',
+    'turning slow',
+  ],
+  [
+    'reduced cannon precision',
+    'limited cannon precision',
+    'cannons less precise',
+    'gun less precise',
+    'guns less precise',
+  ],
+] as const;
+
+const FORTRESS_IMPAIRMENT_TERMS = [
+  'dead',
+  'failed',
+  'failing',
+  'limited',
+  'reduced',
+  'slow',
+  'sluggish',
+  'impaired',
+  'crippled',
+  'damaged',
+  'pain',
+  'painful',
+  'agony',
+  'unable',
+  'could not',
+  'would not',
+] as const;
+
+const FORTRESS_COMPONENT_TERMS = [
+  'armor',
+  'armour',
+  'armor assembly',
+  'armour assembly',
+  'hull',
+  'engine',
+  'drive',
+  'steering',
+  'steering linkage',
+  'wheel',
+  'wheels',
+  'axle',
+  'tread',
+  'treads',
+  'cannon',
+  'cannons',
+  'gun',
+  'guns',
+  'weapon',
+  'weapons',
+  'prow',
+  'ram',
+  'ward plate',
+  'ward plates',
+  'command cradle',
+  'cradle',
+  'restraint',
+  'restraints',
+  'life support',
+  'life-support',
+  'core',
+  'mechanism',
+  'mechanisms',
+] as const;
+
+const SUBSTANTIVE_FORTRESS_DAMAGE_TERMS = [
+  'damage',
+  'damaged',
+  'crush',
+  'crushed',
+  'rupture',
+  'ruptured',
+  'crack',
+  'cracked',
+  'shatter',
+  'shattered',
+  'breached',
+  'pierce',
+  'pierced',
+  'break',
+  'broken',
+  'fracture',
+  'fractured',
+  'tear',
+  'torn',
+  'buckle',
+  'buckled',
+  'split',
+  'destroy',
+  'destroyed',
+  'jam',
+  'jammed',
+  'cripple',
+  'crippled',
+  'disable',
+  'disabled',
+] as const;
+
+function prematureFortressPowerLossExcerpt(
+  narration: string,
+  aliases: string[],
+): string | undefined {
+  const sentences = narration.match(/[^.!?]+[.!?]?/g) ?? [narration];
+  return sentences
+    .map((sentence) => sentence.trim())
+    .find((sentence) => {
+      if (!mentionsCharacter(sentence, aliases)) return false;
+      return (
+        /\b(?:depowered|powerless[- ]to[- ]move|lost (?:all )?power|without (?:Seal |magical )?power|magic(?:al)?(?: systems?)? (?:failed|died|went dark)|Seal power (?:failed|vanished|was gone)|(?:engine|Fortress|systems?|core) (?:shut|shuts|shutting) down|life-support core (?:failed|died|went dark))\b/i.test(
+          sentence,
+        ) ||
+        /\b(?:unable|could not|couldn't) to move\b[^.!?]{0,80}\b(?:because|after|when|as)\b[^.!?]{0,80}\b(?:magic|Seal|power)\b[^.!?]{0,30}\b(?:failed|died|vanished|ended|was gone)\b/i.test(
+          sentence,
+        )
+      );
+    });
+}
+
 const CHECK_STRAIN_TERMS = [
   'strain',
   'strained',
@@ -753,6 +1167,15 @@ function highConfidenceWoundSignature(
   narration: string,
   woundDescription: string,
 ): boolean {
+  const sharedFortressComponents = FORTRESS_COMPONENT_TERMS.filter(
+    (term) => hasAny(woundDescription, [term]) && hasAny(narration, [term]),
+  );
+  const sharesFortressDamage = SUBSTANTIVE_FORTRESS_DAMAGE_TERMS.some(
+    (term) => hasAny(woundDescription, [term]) && hasAny(narration, [term]),
+  );
+  if (sharedFortressComponents.length >= 2 && sharesFortressDamage) {
+    return true;
+  }
   const hasDistinctiveSignature = matchingFamilies(
     woundDescription,
     DISTINCTIVE_WOUND_FAMILIES,
@@ -772,6 +1195,18 @@ function highConfidenceWoundSignature(
       (hasGenericInjury || specificInjuryMatches.length > 0)) ||
     (anatomyMatches.length >= 1 && specificInjuryMatches.length >= 1)
   );
+}
+
+function highConfidenceFortressWoundTransfer(
+  narration: string,
+  woundDescription: string,
+): boolean {
+  if (!hasAny(narration, FORTRESS_IMPAIRMENT_TERMS)) return false;
+  const sharedConceptCount = matchingFamilies(
+    woundDescription,
+    FORTRESS_WOUND_CONCEPT_FAMILIES,
+  ).filter((family) => hasAny(narration, family)).length;
+  return sharedConceptCount >= 2;
 }
 
 function misassignedCheckStrainExcerpt(
@@ -810,42 +1245,226 @@ function woundIdFor(wound: {
   return `wound:${wound.pieceId}:${wound.inflictedAtPly}`;
 }
 
-function namedCharacterPrecedesWound(
-  sentence: string,
-  aliases: string[],
+function explicitlyAttributedWoundOwner(
+  clause: string,
+  pieces: GameLedger['pieces'],
   woundTerms: readonly string[],
-): boolean {
-  const woundPositions = matchPositions(sentence, woundTerms);
-  if (woundPositions.length === 0) return false;
-  const firstWoundPosition = Math.min(...woundPositions);
-  const precedingAliases = matchPositions(sentence, aliases).filter(
-    (position) => position <= firstWoundPosition,
+  inheritedSubjectId: string | null = null,
+): {
+  pieceId: string;
+  basis: 'possessive' | 'pronoun' | 'proximity';
+} | null {
+  const woundPositions = matchPositions(clause, woundTerms);
+  if (woundPositions.length === 0) return null;
+
+  // Direct possessive ownership is the strongest available prose signal, but
+  // only inside the same grammatical phrase as the wound.
+  for (const woundPosition of woundPositions) {
+    const possessiveOwners = pieces.filter((piece) =>
+      characterAliases(piece).some((alias) => {
+        const position = nearestPrecedingPosition(
+          matchPossessiveAliasPositions(clause, alias),
+          woundPosition,
+        );
+        return (
+          position !== null &&
+          isLocalPossessiveAttribution(clause, position, woundPosition)
+        );
+      }),
+    );
+    if (possessiveOwners.length === 1) {
+      return { pieceId: possessiveOwners[0].id, basis: 'possessive' };
+    }
+  }
+
+  // Participial phrases and possessive pronouns inherit a clause subject. This
+  // avoids assigning "her wound" to a closer possessive object such as
+  // "Ysolde's firing lane" while retaining explicit subject-pronoun ownership.
+  for (const woundPosition of woundPositions) {
+    const subjectOwner = clauseSubjectWoundOwner(clause, pieces, woundPosition);
+    if (subjectOwner) {
+      return { pieceId: subjectOwner, basis: 'pronoun' };
+    }
+  }
+
+  const candidates = pieces.flatMap((piece) => {
+    const aliases = characterAliases(piece);
+    return woundPositions.flatMap((woundPosition) => {
+      const nearestAlias = nearestPrecedingPosition(
+        matchPositions(clause, aliases),
+        woundPosition,
+      );
+      if (nearestAlias === null || woundPosition - nearestAlias > 120) {
+        return [];
+      }
+      return [
+        {
+          pieceId: piece.id,
+          distance: woundPosition - nearestAlias,
+        },
+      ];
+    });
+  });
+  if (candidates.length === 0) {
+    return inheritedSubjectId &&
+      possessivePronounPrecedesWound(clause, woundPositions)
+      ? { pieceId: inheritedSubjectId, basis: 'pronoun' }
+      : null;
+  }
+
+  candidates.sort((left, right) => left.distance - right.distance);
+  const best = candidates[0];
+  const equallyStrongOwners = new Set(
+    candidates
+      .filter((candidate) => candidate.distance === best.distance)
+      .map((candidate) => candidate.pieceId),
   );
-  if (precedingAliases.length === 0) return false;
-  return firstWoundPosition - Math.max(...precedingAliases) <= 160;
+  if (equallyStrongOwners.size !== 1) return null;
+  return {
+    pieceId: best.pieceId,
+    basis: 'proximity',
+  };
 }
 
-function woundMentionFollowsTargetMoreClosely(
-  sentence: string,
-  targetAliases: string[],
-  otherAliases: string[],
-  woundTerms: readonly string[],
-): boolean {
-  const woundPositions = matchPositions(sentence, woundTerms);
-  if (woundPositions.length === 0) return false;
-  const firstWoundPosition = Math.min(...woundPositions);
-  const precedingDistance = (aliases: string[]) => {
-    const positions = matchPositions(sentence, aliases).filter(
-      (position) => position <= firstWoundPosition,
-    );
-    return positions.length
-      ? firstWoundPosition - Math.max(...positions)
-      : Number.POSITIVE_INFINITY;
-  };
-  return (
-    precedingDistance(targetAliases) < precedingDistance(otherAliases) &&
-    precedingDistance(targetAliases) <= 160
+function clauseSubjectWoundOwner(
+  clause: string,
+  pieces: GameLedger['pieces'],
+  woundPosition: number,
+): string | null {
+  const pronounPosition = nearestPrecedingPosition(
+    matchPositions(clause, ['his', 'her', 'their', 'its']),
+    woundPosition,
   );
+  const commaPosition = clause.lastIndexOf(',', woundPosition);
+  const localBoundary = commaPosition >= 0 ? commaPosition + 1 : 0;
+  const localText = clause.slice(localBoundary, woundPosition);
+  const isParticipial =
+    commaPosition >= 0 &&
+    /^\s*(?:while\s+)?(?:carrying|bearing|nursing|suffering|favoring|clutching|guarding|bleeding\s+from|limping\s+from|one\s+(?:hand|arm)\b)/i.test(
+      localText,
+    );
+  const hasLocalPronoun =
+    pronounPosition !== null &&
+    pronounPosition >= localBoundary &&
+    woundPosition - pronounPosition <= 80;
+  if (!isParticipial && !hasLocalPronoun) return null;
+
+  const localOwners = mentionedPiecesInRange(
+    clause,
+    pieces,
+    localBoundary,
+    pronounPosition ?? woundPosition,
+  );
+  if (localOwners.length === 1) return localOwners[0].pieceId;
+  if (localOwners.length > 1) return null;
+
+  const mainEnd = commaPosition >= 0 ? commaPosition : woundPosition;
+  const mainOwners = mentionedPiecesInRange(clause, pieces, 0, mainEnd);
+  if (mainOwners.length === 0) return null;
+  const subject = mainOwners[0];
+  if (isParticipial) return subject.pieceId;
+  const competingOwners = mainOwners.filter(
+    (owner) => owner.pieceId !== subject.pieceId,
+  );
+  // Later possessive names identify objects ("Ysolde's firing lane") and do
+  // not replace the main subject. Other multi-character antecedents are
+  // genuinely ambiguous and must fall through to a non-blocking proximity
+  // finding instead of becoming a hard contradiction.
+  if (
+    competingOwners.some(
+      (owner) => !isPossessiveMentionAt(clause, owner.position),
+    )
+  ) {
+    return null;
+  }
+  return subject.pieceId;
+}
+
+function mentionedPiecesInRange(
+  clause: string,
+  pieces: GameLedger['pieces'],
+  start: number,
+  end: number,
+): Array<{ pieceId: string; position: number }> {
+  const earliestByPiece = new Map<string, number>();
+  for (const piece of pieces) {
+    const positions = matchPositions(clause, characterAliases(piece)).filter(
+      (position) => position >= start && position < end,
+    );
+    if (positions.length > 0)
+      earliestByPiece.set(piece.id, Math.min(...positions));
+  }
+  return [...earliestByPiece.entries()]
+    .map(([pieceId, position]) => ({ pieceId, position }))
+    .sort((left, right) => left.position - right.position);
+}
+
+function isPossessiveMentionAt(clause: string, position: number): boolean {
+  const tail = clause.slice(position);
+  const word = tail.match(/^[\p{L}\p{N}_-]+(?:\s+[\p{L}\p{N}_-]+)*/u)?.[0];
+  if (!word) return false;
+  return /^(?:['’]s)/.test(tail.slice(word.length));
+}
+
+function isLocalPossessiveAttribution(
+  clause: string,
+  possessivePosition: number,
+  woundPosition: number,
+): boolean {
+  const distance = woundPosition - possessivePosition;
+  if (distance < 0 || distance > 80) return false;
+  // A comma, semicolon, colon, or dash closes the noun phrase governed by the
+  // possessive. This prevents an object such as "Ysolde's Fortress" from
+  // claiming a wound described in the following clause.
+  return !/[,;:\u2014\u2013]/.test(
+    clause.slice(possessivePosition, woundPosition),
+  );
+}
+
+function uniqueMentionedPieceId(
+  clause: string,
+  pieces: GameLedger['pieces'],
+): string | null {
+  const mentioned = pieces
+    .filter((piece) => mentionsCharacter(clause, characterAliases(piece)))
+    .map((piece) => piece.id);
+  return mentioned.length === 1 ? mentioned[0] : null;
+}
+
+function possessivePronounPrecedesWound(
+  clause: string,
+  woundPositions: number[],
+): boolean {
+  const pronounPositions = matchPositions(clause, [
+    'his',
+    'her',
+    'their',
+    'its',
+  ]);
+  return woundPositions.some((woundPosition) => {
+    const pronounPosition = nearestPrecedingPosition(
+      pronounPositions,
+      woundPosition,
+    );
+    return pronounPosition !== null && woundPosition - pronounPosition <= 80;
+  });
+}
+
+function matchPossessiveAliasPositions(text: string, alias: string): number[] {
+  const positions: number[] = [];
+  const pattern = new RegExp(`\\b${escapeRegex(alias)}(?:['’]s)\\b`, 'gi');
+  for (const match of text.matchAll(pattern)) {
+    if (match.index !== undefined) positions.push(match.index);
+  }
+  return positions;
+}
+
+function nearestPrecedingPosition(
+  positions: number[],
+  boundary: number,
+): number | null {
+  const preceding = positions.filter((position) => position <= boundary);
+  return preceding.length ? Math.max(...preceding) : null;
 }
 
 function mentionsCharacter(narration: string, aliases: string[]): boolean {
@@ -944,6 +1563,195 @@ function unplannedInjuryExcerpt(
       // planned-wound validator instead of guessing that Tarin owns the injury.
       return matchPositions(sentence, otherCharacterAliases).length === 0;
     });
+}
+
+function unplannedFortressDamageFinding(
+  narration: string,
+  aliases: string[],
+  otherCharacterAliases: string[],
+  captureVictim?: GameLedger['pieces'][number],
+): { excerpt: string; severity: 'error' | 'warning' } | undefined {
+  const sentences = narration.match(/[^.!?]+[.!?]?/g) ?? [narration];
+  const damageSentence = sentences
+    .map((sentence) => sentence.trim())
+    .find((sentence) => {
+      if (
+        /\b(?:without|no)\s+(?:lasting\s+)?damage\b|\bundamaged\b|\b(?:armor|armour|plates?|hull)\s+held\s+intact\b/i.test(
+          sentence,
+        )
+      ) {
+        return false;
+      }
+      if (
+        !mentionsCharacter(sentence, aliases) ||
+        !fortressComponentSustainsDamage(sentence, aliases)
+      ) {
+        return false;
+      }
+
+      // A sentence naming several characters can make deterministic ownership
+      // ambiguous. Only accept it when the damage language is closer to this
+      // Fortress pilot than to every other named character.
+      if (!mentionsCharacter(sentence, otherCharacterAliases)) return true;
+      return nearestWoundMentionBelongsTo(
+        sentence,
+        aliases,
+        otherCharacterAliases,
+        [...FORTRESS_COMPONENT_TERMS, ...SUBSTANTIVE_FORTRESS_DAMAGE_TERMS],
+      );
+    });
+  if (!damageSentence) return undefined;
+
+  if (
+    captureVictim?.fantasyType === 'moving-fortress' &&
+    captureDamageBelongsToFortressVictim(
+      damageSentence,
+      characterAliases(captureVictim),
+    )
+  ) {
+    return undefined;
+  }
+
+  if (
+    captureVictim?.fantasyType === 'moving-fortress' &&
+    !explicitlyOwnedFortressDamage(damageSentence, aliases)
+  ) {
+    return { excerpt: damageSentence, severity: 'warning' };
+  }
+
+  return { excerpt: damageSentence, severity: 'error' };
+}
+
+function captureDamageBelongsToFortressVictim(
+  sentence: string,
+  victimAliases: string[],
+): boolean {
+  if (
+    victimAliases.some((alias) =>
+      new RegExp(
+        `\\b${escapeRegex(alias)}(?:['’]s)?\\b[^.!?;]{0,100}\\b(?:${SUBSTANTIVE_FORTRESS_DAMAGE_TERMS.map(escapeRegex).join('|')})\\b`,
+        'i',
+      ).test(sentence),
+    )
+  ) {
+    return true;
+  }
+
+  const damage = [
+    ...SUBSTANTIVE_FORTRESS_DAMAGE_TERMS,
+    'snap',
+    'snapped',
+    'collapse',
+    'collapsed',
+    'fail',
+    'failed',
+  ]
+    .map(escapeRegex)
+    .join('|');
+  const component = FORTRESS_COMPONENT_TERMS.map(escapeRegex).join('|');
+  // During a confirmed Fortress capture, an unpossessed damaged component in
+  // the path or object of the attack belongs to the ledger victim by default.
+  return new RegExp(
+    `\\b(?:drove|rammed|fired|struck|smashed|tore|cut|plowed|ploughed|punched)\\b[^.!?;]{0,140}\\b(?:through|into|against|open)\\s+(?:the\\s+)?(?:${damage})\\s+(?:${component})\\b`,
+    'i',
+  ).test(sentence);
+}
+
+function explicitlyOwnedFortressDamage(
+  sentence: string,
+  aliases: string[],
+): boolean {
+  const alias = aliases
+    .filter((value) => value.trim().length > 0)
+    .sort((left, right) => right.length - left.length)
+    .map(escapeRegex)
+    .join('|');
+  if (!alias) return false;
+  const damage = [
+    ...SUBSTANTIVE_FORTRESS_DAMAGE_TERMS,
+    'snap',
+    'snapped',
+    'collapse',
+    'collapsed',
+    'fail',
+    'failed',
+  ]
+    .map(escapeRegex)
+    .join('|');
+  const component = FORTRESS_COMPONENT_TERMS.map(escapeRegex).join('|');
+  return (
+    new RegExp(
+      `\\b(?:${alias})(?:['’]s|['’])\\s+(?:(?:own|forward|rear|left|right|outer|inner)\\s+){0,2}(?:${component})\\b[^.!?;]{0,80}\\b(?:${damage})\\b`,
+      'i',
+    ).test(sentence) ||
+    new RegExp(
+      `\\b(?:${damage})\\b[^.!?;]{0,60}\\b(?:${alias})(?:['’]s|['’])\\s+(?:(?:own|forward|rear|left|right|outer|inner)\\s+){0,2}(?:${component})\\b`,
+      'i',
+    ).test(sentence) ||
+    new RegExp(
+      `\\b(?:${alias})\\b[^.!?;]{0,80}\\b(?:her|his|its)\\s+own\\s+(?:${component})\\b[^.!?;]{0,60}\\b(?:${damage})\\b`,
+      'i',
+    ).test(sentence)
+  );
+}
+
+function fortressComponentSustainsDamage(
+  sentence: string,
+  aliases: string[],
+): boolean {
+  if (
+    /\b(?:enemy|enemy's|opposing|hostile)\b[^.!?;]{0,30}\b(?:armor|armour|hull|engine|drive|steering|wheels?|axle|treads?|cannons?|guns?|weapons?|prow|ram|cradle|core)\b/i.test(
+      sentence,
+    )
+  ) {
+    return false;
+  }
+
+  const componentPattern = FORTRESS_COMPONENT_TERMS.map(escapeRegex).join('|');
+  const damagePattern =
+    SUBSTANTIVE_FORTRESS_DAMAGE_TERMS.map(escapeRegex).join('|');
+  const aliasPattern = aliases
+    .filter((alias) => alias.trim().length > 0)
+    .sort((left, right) => right.length - left.length)
+    .map(escapeRegex)
+    .join('|');
+  const explicitOwner = aliasPattern
+    ? `(?:(?:${aliasPattern})['’]s|its)`
+    : 'its';
+  const componentDescriptor =
+    '(?:(?:forward|rear|outer|inner|left|right|lateral|frontal|lower|upper|main|primary|secondary|twin|broadside|armored|armoured|warded)\\s+){0,2}';
+  const determiner = '(?:(?:the|an?)\\s+)?';
+
+  // Damage must be grammatically attached to a Fortress component. Do not use
+  // loose proximity: "broken ground beside the cannon" damages the terrain,
+  // while "the broken cannon" damages the integrated pilot and machine.
+  const damagedOwnedComponent = new RegExp(
+    `\\b(?:${damagePattern})\\b\\s+${explicitOwner}\\s+${componentDescriptor}(?:${componentPattern})\\b`,
+    'i',
+  );
+  const directlyDamagedComponent = new RegExp(
+    `\\b(?:${damagePattern})\\b\\s+${determiner}${componentDescriptor}(?:${componentPattern})\\b`,
+    'i',
+  );
+  const ownedComponentReceivesDamage = new RegExp(
+    `\\b${explicitOwner}\\s+${componentDescriptor}(?:${componentPattern})\\b\\s+(?:was|were|is|are|had been|became|remained|was left|were left)\\s+(?:${damagePattern})\\b`,
+    'i',
+  );
+  const componentHasDamageState = new RegExp(
+    `\\b${determiner}${componentDescriptor}(?:${componentPattern})\\b\\s+(?:was|were|is|are|had been|became|remained|was left|were left)\\s+(?:${damagePattern})\\b`,
+    'i',
+  );
+  const componentSuffersDestructiveEvent = new RegExp(
+    `\\b${determiner}${componentDescriptor}(?:${componentPattern})\\b\\s+(?:split|splintered|broke|buckled|ruptured|cracked|shattered|jammed|collapsed|snapped|failed(?!\\s+to\\b))\\b`,
+    'i',
+  );
+  return (
+    damagedOwnedComponent.test(sentence) ||
+    directlyDamagedComponent.test(sentence) ||
+    ownedComponentReceivesDamage.test(sentence) ||
+    componentHasDamageState.test(sentence) ||
+    componentSuffersDestructiveEvent.test(sentence)
+  );
 }
 
 function nearestWoundMentionBelongsTo(

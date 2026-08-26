@@ -4,6 +4,10 @@ import type {
   GameLedger,
   PieceIdentity,
 } from '../chess/models/game-ledger';
+import {
+  eligibleWoundCatalogEntries,
+  type WoundCatalogId,
+} from './wound-catalog';
 
 export interface RequiredWoundEvent {
   pieceId: string;
@@ -12,6 +16,15 @@ export interface RequiredWoundEvent {
   capturedPieceType: FantasyPieceType;
   causeType: WoundCauseType;
   sourcePieceId: string | null;
+  woundCatalogId: WoundCatalogId;
+  woundCatalog: {
+    label: string;
+    bodyArea: string;
+    severity: string;
+    effects: readonly string[];
+    recoverability: string;
+    narrationGuidance: string;
+  };
 }
 
 export const WOUND_CAUSE_TYPES = [
@@ -34,7 +47,7 @@ export function selectRequiredWoundEvents(
   ledger: GameLedger,
 ): RequiredWoundEvent[] {
   const pieces = new Map(ledger.pieces.map((piece) => [piece.id, piece]));
-  return ledger.events
+  const eligibleEvents = ledger.events
     .filter(
       (
         event,
@@ -53,19 +66,55 @@ export function selectRequiredWoundEvents(
         deterministicWoundRoll(ledger, event, attacker, victim) <
         woundProbability(event.pieceType, event.capturedPieceType)
       );
-    })
-    .map((event) => {
-      const causeType = selectWoundCause(ledger, event);
-      return {
-        pieceId: event.pieceId,
-        inflictedAtPly: event.ply,
-        capturedPieceId: event.capturedPieceId,
-        capturedPieceType: event.capturedPieceType,
-        causeType,
-        sourcePieceId:
-          causeType === 'victim-retaliation' ? event.capturedPieceId : null,
-      };
     });
+
+  const usedCatalogIdsByPiece = new Map<string, Set<string>>();
+  return eligibleEvents.map((event) => {
+    const causeType = selectWoundCause(ledger, event);
+    const attacker = pieces.get(event.pieceId);
+    if (!attacker) {
+      throw new Error(`Cannot select wound for unknown piece ${event.pieceId}`);
+    }
+    const compatible = eligibleWoundCatalogEntries(
+      attacker.fantasyType,
+      causeType,
+      causeType === 'victim-retaliation'
+        ? pieces.get(event.capturedPieceId)?.viewpointRole
+        : undefined,
+    );
+    if (compatible.length === 0) {
+      throw new Error(
+        `No wound catalog entry supports ${attacker.fantasyType}/${causeType}`,
+      );
+    }
+    const used = usedCatalogIdsByPiece.get(event.pieceId) ?? new Set<string>();
+    const unused = compatible.filter((entry) => !used.has(entry.id));
+    const pool = unused.length > 0 ? unused : compatible;
+    const roll = deterministicSeededRoll(ledger, event, 'wound-catalog');
+    const selected =
+      pool[Math.min(pool.length - 1, Math.floor(roll * pool.length))];
+    used.add(selected.id);
+    usedCatalogIdsByPiece.set(event.pieceId, used);
+
+    return {
+      pieceId: event.pieceId,
+      inflictedAtPly: event.ply,
+      capturedPieceId: event.capturedPieceId,
+      capturedPieceType: event.capturedPieceType,
+      causeType,
+      sourcePieceId:
+        causeType === 'victim-retaliation' ? event.capturedPieceId : null,
+      woundCatalogId: selected.id as WoundCatalogId,
+      woundCatalog: {
+        label: selected.label,
+        bodyArea: selected.bodyArea,
+        severity: selected.severity,
+        effects: selected.effects,
+        recoverability: selected.recoverability,
+        narrationGuidance: selected.narrationGuidance,
+      },
+    };
+  });
 }
 
 export function selectWoundCause(

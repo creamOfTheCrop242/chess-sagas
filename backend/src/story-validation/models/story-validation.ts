@@ -25,6 +25,7 @@ export const validationFindingTypeSchema = z.enum([
   'wound-continuity',
   'mythic-arm-ownership',
   'fortress-entombment-aftermath',
+  'fortress-power-state',
   'inconsistent-piece-name',
   'coordinate-mentioned-in-prose',
   'chess-terminology',

@@ -4,6 +4,18 @@ import type { StoryOutline } from '../story-outline/models/story-outline';
 import type { GeneratedStoryPackage } from './models/generated-story';
 import type { GenerationTelemetryContext } from '../openai/openai-generation';
 import type { WoundCauseType } from '../narrative-analysis/wound-planning';
+import type {
+  DeathCatalogId,
+  DeathEventKind,
+  DeathMethod,
+  DeathTargetArea,
+} from '../narrative-analysis/death-catalog';
+import type {
+  WoundBodyArea,
+  WoundCatalogId,
+  WoundEffect,
+  WoundSeverity,
+} from '../narrative-analysis/wound-catalog';
 
 export const FULL_STORY_PROVIDER = Symbol('FULL_STORY_PROVIDER');
 
@@ -21,6 +33,14 @@ export interface DeathBeatDirective {
   authorizedVictimId: string | null;
   authorizedVictimNames: string[];
   noOtherDeaths: true;
+  deathCatalogId: DeathCatalogId | null;
+  eventKind: DeathEventKind | null;
+  decisiveActorId: string | null;
+  decisiveActorNames: string[];
+  method: DeathMethod | null;
+  targetArea: DeathTargetArea | null;
+  narrationGuidance: string | null;
+  forbiddenClaims: readonly string[];
 }
 
 export interface WoundTimelineDirective {
@@ -36,6 +56,12 @@ export interface WoundTimelineDirective {
   causeType: WoundCauseType;
   sourcePieceId: string | null;
   sourceNames: string[];
+  woundCatalogId: WoundCatalogId;
+  bodyArea: WoundBodyArea;
+  severity: WoundSeverity;
+  requiredEffects: readonly WoundEffect[];
+  recoverability: 'recoverable-with-scar' | 'persistent' | 'permanent';
+  narrationGuidance: string;
 }
 
 export interface CheckStrainDirective {
@@ -57,6 +83,20 @@ export interface SurvivingFortressOutcome {
   powerOutcome: FortressPowerOutcome;
 }
 
+export type FortressOperatingState = 'operational' | 'damaged-but-mobile';
+
+export interface FortressOperatingDirective {
+  pieceId: string;
+  operatorName: string;
+  stateIntervals: Array<{
+    startPly: number;
+    endPly: number;
+    state: FortressOperatingState;
+  }>;
+  afterBattleState:
+    'destroyed-in-battle' | 'retains-seal-power' | 'depowered-by-seal-loss';
+}
+
 export interface EndingWorldState {
   termination: GameLedger['metadata']['termination'];
   defeatedSide: 'north' | 'south' | null;
@@ -72,6 +112,7 @@ export interface FullStoryRequest {
   characterRegistry: PieceIdentity[];
   captureManifest: CaptureDirective[];
   deathContracts: DeathBeatDirective[];
+  endingDeathContract: DeathBeatDirective | null;
   woundTimeline: WoundTimelineDirective[];
   woundStateByPly: Array<{
     ply: number;
@@ -79,6 +120,7 @@ export interface FullStoryRequest {
     activeWoundIds: string[];
   }>;
   checkStrainTimeline: CheckStrainDirective[];
+  fortressOperatingTimeline: FortressOperatingDirective[];
   endingWorldState: EndingWorldState;
   validationFeedback?: string;
   telemetry: GenerationTelemetryContext;
@@ -97,6 +139,14 @@ export interface WoundSceneRepairRequest {
     pieceId: string | null;
     message: string;
     excerpt: string | null;
+  }>;
+  repairContracts: Array<{
+    key: string;
+    ply: number;
+    pieceId: string | null;
+    characterName: string | null;
+    requirement: string;
+    forbiddenClaims: string[];
   }>;
   wounds: GeneratedStoryPackage['wounds'];
   woundTimeline: WoundTimelineDirective[];
@@ -139,11 +189,55 @@ export interface StorySceneRepairRequest {
   characterRegistry: PieceIdentity[];
   selectedRevengePayoffs: StoryOutline['selectedRevengePayoffs'];
   checkStrainTimeline: CheckStrainDirective[];
+  fortressOperatingTimeline: FortressOperatingDirective[];
   telemetry: GenerationTelemetryContext;
 }
 
 export interface StorySceneRepairResult {
   scenes: Array<{ ply: number; fantasyNarration: string }>;
+}
+
+export interface SemanticDeathAdjudicationRequest {
+  findings: Array<{
+    findingIndex: number;
+    ply: number;
+    characterName: string;
+    expectedStatus: 'survives-story' | 'alive-until-later-capture';
+    capturedAtPly: number | null;
+    flaggedExcerpt: string;
+    sceneNarration: string;
+  }>;
+  telemetry: GenerationTelemetryContext;
+}
+
+export interface SemanticDeathAdjudicationResult {
+  findings: Array<{
+    findingIndex: number;
+    contradiction: boolean;
+    confidence: 'high' | 'medium' | 'low';
+    rationale: string;
+  }>;
+}
+
+export interface StorySectionRepairRequest {
+  sections: Array<{
+    sectionId: string;
+    sectionPurpose: string;
+    text: string;
+  }>;
+  findings: Array<{
+    sectionId: string;
+    type: string;
+    message: string;
+    excerpt: string | null;
+  }>;
+  characterRegistry: PieceIdentity[];
+  endingWorldState: EndingWorldState;
+  telemetry: GenerationTelemetryContext;
+}
+
+export interface StorySectionRepairResult {
+  sections: Array<{ sectionId: string; text: string }>;
 }
 
 export interface FullStoryProvider {
@@ -155,4 +249,10 @@ export interface FullStoryProvider {
   repairStoryScenes(
     request: StorySceneRepairRequest,
   ): Promise<StorySceneRepairResult>;
+  adjudicatePossiblePrematureDeaths(
+    request: SemanticDeathAdjudicationRequest,
+  ): Promise<SemanticDeathAdjudicationResult>;
+  repairStorySections(
+    request: StorySectionRepairRequest,
+  ): Promise<StorySectionRepairResult>;
 }

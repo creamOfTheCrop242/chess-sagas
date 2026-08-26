@@ -2,13 +2,102 @@ import type { GameLedger } from '../chess/models/game-ledger';
 import type { NarrativeAnalysis } from '../narrative-analysis/models/narrative-analysis';
 import type { StoryOutline } from '../story-outline/models/story-outline';
 import {
+  buildDeathContracts,
+  buildEndingDeathContract,
   buildEndingWorldState,
+  buildFortressOperatingTimeline,
   buildWoundStateByPly,
   buildWoundTimeline,
   deriveSceneWoundReferences,
+  isAmbiguousTimedFateFinding,
+  normalizeStructuredCaptureMetadata,
 } from './full-story.service';
 
+describe('semantic premature-death fallback selection', () => {
+  it('sends ambiguous recoil language for semantic adjudication', () => {
+    expect(
+      isAmbiguousTimedFateFinding({
+        type: 'invented-capture',
+        severity: 'error',
+        message: 'Northeast Archwizard is described as dead before capture',
+        ply: 33,
+        pieceId: 'w-b-c1',
+        excerpt:
+          "spell at contact, sending a hard recoil into Gwendolyn's chest",
+      }),
+    ).toBe(true);
+  });
+
+  it('keeps explicit death language deterministic and blocking', () => {
+    expect(
+      isAmbiguousTimedFateFinding({
+        type: 'invented-capture',
+        severity: 'error',
+        message: 'Northeast Archwizard is described as dead before capture',
+        ply: 33,
+        pieceId: 'w-b-c1',
+        excerpt: "Gwendolyn's final breath",
+      }),
+    ).toBe(false);
+  });
+});
+
 describe('full-story wound timing preparation', () => {
+  it('keeps a wounded Fortress powered through battle and depowers it only afterward', () => {
+    const ledger = {
+      metadata: { result: '0-1', termination: 'checkmate' },
+      events: Array.from({ length: 5 }, (_, index) => ({ ply: index + 1 })),
+      pieces: [
+        {
+          id: 'w-r-a1',
+          side: 'north',
+          alive: true,
+          fantasyType: 'moving-fortress',
+          permanentName: 'Northeast Fortress',
+          operatorName: 'Mirelle',
+        },
+      ],
+    } as GameLedger;
+    const endingWorldState = {
+      termination: 'checkmate',
+      defeatedSide: 'north',
+      defeatedSealFate: 'destroyed',
+      surrenderContext: null,
+      survivingFortresses: [
+        {
+          pieceId: 'w-r-a1',
+          operatorName: 'Mirelle',
+          side: 'north',
+          powerOutcome: 'loses-seal-power',
+        },
+      ],
+    } as ReturnType<typeof buildEndingWorldState>;
+
+    expect(
+      buildFortressOperatingTimeline(
+        ledger,
+        [
+          {
+            pieceId: 'w-r-a1',
+            inflictedAtPly: 3,
+            activeThroughPly: 5,
+          },
+        ] as Parameters<typeof buildFortressOperatingTimeline>[1],
+        endingWorldState,
+      ),
+    ).toEqual([
+      {
+        pieceId: 'w-r-a1',
+        operatorName: 'Mirelle',
+        stateIntervals: [
+          { startPly: 1, endPly: 2, state: 'operational' },
+          { startPly: 3, endPly: 5, state: 'damaged-but-mobile' },
+        ],
+        afterBattleState: 'depowered-by-seal-loss',
+      },
+    ]);
+  });
+
   it('keeps a victorious surviving Fortress powered by its intact Seal', () => {
     const ledger = {
       metadata: { result: '0-1', termination: 'resignation' },
@@ -80,6 +169,7 @@ describe('full-story wound timing preparation', () => {
         {
           pieceId: 'w-r-a1',
           inflictedAtPly: 55,
+          woundCatalogId: 'fortress-hull-breach',
           injury: 'cracked ward plates',
           lastingEffects: ['exposed maintenance channels'],
           recoveryPly: null,
@@ -98,7 +188,7 @@ describe('full-story wound timing preparation', () => {
       ],
     } as StoryOutline;
 
-    expect(buildWoundTimeline(ledger, analysis, outline)).toEqual([
+    expect(buildWoundTimeline(ledger, analysis, outline)).toMatchObject([
       {
         woundId: 'wound:w-r-a1:55',
         pieceId: 'w-r-a1',
@@ -203,6 +293,118 @@ describe('full-story wound timing preparation', () => {
         woundReferences: [
           { woundId: 'wound:b-p-e7:4', ownerPieceId: 'b-p-e7' },
         ],
+      },
+    ]);
+  });
+
+  it('authorizes the defeated King as the sole death on the final checkmate ply', () => {
+    const ledger = {
+      metadata: { result: '0-1', termination: 'checkmate' },
+      pieces: [
+        {
+          id: 'w-k-e1',
+          side: 'north',
+          fantasyType: 'king',
+          permanentName: 'Northern King',
+          characterName: 'Orin',
+        },
+        {
+          id: 'b-q-d8',
+          side: 'south',
+          fantasyType: 'queen',
+          permanentName: 'Southern Queen',
+          characterName: 'Lyra',
+        },
+      ],
+      events: [
+        {
+          ply: 1,
+          pieceId: 'b-q-d8',
+          pieceType: 'queen',
+          isCapture: false,
+          isCheckmate: true,
+          checkmateExplanation: { kingId: 'w-k-e1' },
+        },
+      ],
+    } as GameLedger;
+
+    const contracts = buildDeathContracts(ledger);
+    expect(contracts).toMatchObject([
+      {
+        ply: 1,
+        authorizedVictimId: 'w-k-e1',
+        authorizedVictimNames: ['Orin', 'Northern King'],
+        noOtherDeaths: true,
+        eventKind: 'checkmate',
+        decisiveActorId: 'b-q-d8',
+      },
+    ]);
+    expect(contracts[0].deathCatalogId).not.toBeNull();
+    expect(contracts[0].targetArea).not.toBe('royal-seal-bond');
+    expect(contracts[0].narrationGuidance).toContain('King');
+  });
+
+  it('catalogs a rejected-surrender execution as an ending death', () => {
+    const ledger = {
+      metadata: { result: '0-1', termination: 'resignation' },
+      pieces: [
+        {
+          id: 'w-k-e1',
+          side: 'north',
+          fantasyType: 'king',
+          permanentName: 'Northern King',
+          characterName: 'Orin',
+        },
+      ],
+      events: [{ ply: 12 }],
+    } as GameLedger;
+    const analysis = {
+      endingPlan: {
+        defeatedKingFate: 'executed-after-rejected-surrender',
+      },
+    } as NarrativeAnalysis;
+
+    expect(buildEndingDeathContract(ledger, analysis)).toMatchObject({
+      ply: 12,
+      authorizedVictimId: 'w-k-e1',
+      deathCatalogId: 'king-surrender-execution',
+      eventKind: 'rejected-surrender',
+    });
+  });
+
+  it('normalizes AI capture metadata from the ledger while keeping checkmate narrative-only', () => {
+    const ledger = {
+      events: [
+        {
+          ply: 1,
+          pieceId: 'b-r-h8',
+          isCapture: false,
+          capturedPieceId: undefined,
+          isCheckmate: true,
+        },
+      ],
+    } as GameLedger;
+
+    expect(
+      normalizeStructuredCaptureMetadata(
+        [
+          {
+            ply: 1,
+            captureActorId: 'b-r-h8',
+            captureVictimId: 'w-k-e1',
+            victimDies: true,
+            fantasyNarration: 'The final cannon blast killed King Orin.',
+          },
+        ],
+        ledger,
+      ),
+    ).toEqual([
+      {
+        ply: 1,
+        captureActorId: null,
+        captureVictimId: null,
+        victimDies: false,
+        fantasyNarration: 'The final cannon blast killed King Orin.',
       },
     ]);
   });

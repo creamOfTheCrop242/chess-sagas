@@ -87,17 +87,21 @@ describe('ReportingService', () => {
   it('reports average AI cost per completed saga including retry expense', async () => {
     const prisma = {
       aiCall: {
-        findMany: jest.fn().mockResolvedValue([
-          aiCall('CONSUMED', 'customer@example.com', 30_000),
-          aiCall('CONSUMED', 'customer@example.com', 20_000),
-        ]),
+        findMany: jest
+          .fn()
+          .mockResolvedValue([
+            aiCall('CONSUMED', 'customer@example.com', 30_000),
+            aiCall('CONSUMED', 'customer@example.com', 20_000),
+          ]),
       },
       generationRun: { findMany: jest.fn().mockResolvedValue([]) },
       sagaGenerationJob: {
-        findMany: jest.fn().mockResolvedValue([
-          generationJob('game-1', 'COMPLETED', 'CONSUMED'),
-          generationJob('game-2', 'COMPLETED', 'CONSUMED'),
-        ]),
+        findMany: jest
+          .fn()
+          .mockResolvedValue([
+            generationJob('game-1', 'COMPLETED', 'CONSUMED'),
+            generationJob('game-2', 'COMPLETED', 'CONSUMED'),
+          ]),
       },
       creditLedgerEntry: { findMany: jest.fn().mockResolvedValue([]) },
       stripeEvent: { findMany: jest.fn().mockResolvedValue([]) },

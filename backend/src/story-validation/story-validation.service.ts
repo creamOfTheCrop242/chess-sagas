@@ -87,10 +87,24 @@ export class StoryValidationService {
       const sourceBreakdown = sceneBreakdownSchema.parse(
         storyRun.sceneBreakdown.data,
       );
-      const deterministicFindings = this.deterministic.validate(
-        storyRun.generatedStory.storyMarkdown,
-        ledger,
-      );
+      const deterministicFindings = [
+        ...this.deterministic.validate(
+          storyRun.generatedStory.storyMarkdown,
+          ledger,
+        ),
+        ...this.deterministic.validateScenePackage(
+          sourceBreakdown.scenes.map((scene) => ({
+            ply: scene.startPly,
+            fantasyNarration: scene.fantasyNarration,
+            characters: scene.characters,
+            woundsInflicted: scene.woundsInflicted,
+            woundReferences: scene.woundReferences,
+          })),
+          ledger,
+          sourceBreakdown.wounds,
+          outline.selectedRevengePayoffs,
+        ).findings,
+      ];
       const result = storyValidationResultSchema.parse(
         await this.provider.validate({
           ledger,
@@ -140,10 +154,21 @@ export class StoryValidationService {
         outline.acts.map((act) => act.title),
       );
       if (repairApplied) {
-        const remainingFindings = this.deterministic.validate(
-          repairedStoryMarkdown,
-          ledger,
-        );
+        const remainingFindings = [
+          ...this.deterministic.validate(repairedStoryMarkdown, ledger),
+          ...this.deterministic.validateScenePackage(
+            repairedBreakdown.scenes.map((scene) => ({
+              ply: scene.startPly,
+              fantasyNarration: scene.fantasyNarration,
+              characters: scene.characters,
+              woundsInflicted: scene.woundsInflicted,
+              woundReferences: scene.woundReferences,
+            })),
+            ledger,
+            repairedBreakdown.wounds,
+            outline.selectedRevengePayoffs,
+          ).findings,
+        ].filter((finding) => finding.severity === 'error');
         if (remainingFindings.length > 0) {
           throw new BadGatewayException(
             `Repaired story still has deterministic errors: ${remainingFindings

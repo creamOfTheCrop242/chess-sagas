@@ -16,6 +16,22 @@ export const storySceneSchema = z.object({
   deaths: z.array(z.string().min(1)),
   captureActorId: z.string().min(1).nullable().optional(),
   captureVictimId: z.string().min(1).nullable().optional(),
+  woundsInflicted: z
+    .array(
+      z.object({
+        pieceId: z.string().min(1),
+        inflictedAtPly: z.number().int().positive(),
+      }),
+    )
+    .optional(),
+  woundReferences: z
+    .array(
+      z.object({
+        woundId: z.string().min(1),
+        ownerPieceId: z.string().min(1),
+      }),
+    )
+    .optional(),
   promotions: z.array(z.string().min(1)),
   visualPrompt: z.string().min(1),
   videoPrompt: z.string().min(1),

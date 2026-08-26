@@ -3,6 +3,7 @@ import { PieceIdentityService } from '../chess/piece-identity.service';
 import { PgnService } from '../pgn/pgn.service';
 import { buildEndingContract } from './ending-contract';
 import { selectEndingGenre } from './ending-contract';
+import type { EndingGenre } from './ending-contract';
 
 describe('buildEndingContract', () => {
   const pgn = new PgnService(new GameLedgerService(new PieceIdentityService()));
@@ -55,5 +56,54 @@ describe('buildEndingContract', () => {
 
     expect(contract.termination).toBe('checkmate');
     expect(contract.creativeDirection.destroyedSealConsequence).toBeTruthy();
+  });
+
+  it('keeps non-political genres out of political aftermath focuses', () => {
+    const politicalFocuses = new Set([
+      'political-succession-and-accountability',
+      'occupation-and-the-victors-burden',
+    ]);
+
+    for (let index = 0; index < 250; index += 1) {
+      const ledger = pgn.parse(
+        `[Date "2026.08.${String((index % 28) + 1).padStart(2, '0')}"]\n[White "North${index}"]\n[Black "South${index}"]\n[Result "0-1"]\n\n1. f3 e5 2. g4 Qh4# 0-1`,
+      ).ledger;
+      const direction = buildEndingContract(ledger).creativeDirection;
+
+      if (
+        direction.endingGenre !== 'political-horror' &&
+        direction.endingGenre !== 'rebellion'
+      ) {
+        expect(politicalFocuses.has(direction.aftermathFocus)).toBe(false);
+      }
+    }
+  });
+
+  it('selects consequences compatible with representative genres', () => {
+    const allowed: Partial<Record<EndingGenre, Set<string>>> = {
+      'magical-catastrophe': new Set([
+        'realm-magic-detonation-threatening-both-kingdoms',
+        'devouring-void-consuming-the-defeated-capital',
+        'reality-fracture-scattering-survivors-across-worlds',
+        'time-wound-trapping-the-battlefield-in-repeating-moments',
+        'magical-contamination-transforming-land-and-survivors',
+      ]),
+      rebellion: new Set([
+        'surviving-character-leading-an-uprising-against-the-victor',
+        'civilian-third-power-rising-against-both-crowns',
+      ]),
+    };
+
+    for (let index = 0; index < 500; index += 1) {
+      const ledger = pgn.parse(
+        `[White "GenreNorth${index}"]\n[Black "GenreSouth${index}"]\n[Result "0-1"]\n\n1. f3 e5 2. g4 Qh4# 0-1`,
+      ).ledger;
+      const direction = buildEndingContract(ledger).creativeDirection;
+      const genreAllowed = allowed[direction.endingGenre];
+
+      if (genreAllowed) {
+        expect(genreAllowed.has(direction.destroyedSealConsequence)).toBe(true);
+      }
+    }
   });
 });

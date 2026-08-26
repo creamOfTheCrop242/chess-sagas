@@ -14,6 +14,8 @@ import type { NarrativeAnalysis } from './models/narrative-analysis';
 import { sealFateForKingFate } from '../chess/models/story-ending';
 import type { GameLedger } from '../chess/models/game-ledger';
 import { sanitizeWoundStatusText } from './wound-status-sanitizer';
+import { selectRequiredWoundEvents } from './wound-planning';
+import { woundCatalogEntry } from './wound-catalog';
 
 @Injectable()
 export class NarrativeAnalysisService {
@@ -68,19 +70,22 @@ export class NarrativeAnalysisService {
         }),
       );
       const analysis = sanitizeWoundStatusText(
-        normalizeRelationshipChronology(
-          normalizeSharedAscensionSites(
-            normalizePromotionDamageOwnership(
-              normalizeDeterministicAnalysisFacts(
-                generatedAnalysis,
-                battlefieldEnvironment,
-                surrenderContext,
-                endingContract,
+        normalizeWoundCatalogPlans(
+          normalizeRelationshipChronology(
+            normalizeSharedAscensionSites(
+              normalizePromotionDamageOwnership(
+                normalizeDeterministicAnalysisFacts(
+                  generatedAnalysis,
+                  battlefieldEnvironment,
+                  surrenderContext,
+                  endingContract,
+                ),
+                ledger,
               ),
               ledger,
             ),
-            ledger,
           ),
+          ledger,
         ),
         ledger,
       );
@@ -149,6 +154,39 @@ export class NarrativeAnalysisService {
     }
     return run;
   }
+}
+
+export function normalizeWoundCatalogPlans(
+  analysis: NarrativeAnalysis,
+  ledger: GameLedger,
+): NarrativeAnalysis {
+  const requiredByKey = new Map(
+    selectRequiredWoundEvents(ledger).map((required) => [
+      `${required.pieceId}:${required.inflictedAtPly}`,
+      required,
+    ]),
+  );
+
+  return narrativeAnalysisSchema.parse({
+    ...analysis,
+    woundPlans: analysis.woundPlans.map((plan) => {
+      const required = requiredByKey.get(
+        `${plan.pieceId}:${plan.inflictedAtPly}`,
+      );
+      if (!required) return plan;
+      const catalog = woundCatalogEntry(required.woundCatalogId);
+      return {
+        ...plan,
+        woundCatalogId: required.woundCatalogId,
+        causeType: required.causeType,
+        sourcePieceId: required.sourcePieceId,
+        recoveryPly:
+          catalog?.recoverability === 'recoverable-with-scar'
+            ? plan.recoveryPly
+            : null,
+      };
+    }),
+  });
 }
 
 export function normalizeRelationshipChronology(

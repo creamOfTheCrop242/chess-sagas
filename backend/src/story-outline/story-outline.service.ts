@@ -460,6 +460,7 @@ export function normalizeStoryOutlineWounds(
       return {
         pieceId: wound.pieceId,
         inflictedAtPly: wound.inflictedAtPly,
+        woundCatalogId: wound.woundCatalogId,
         injury: wound.injury,
         continuityPlies: [...continuityPlies].sort(
           (left, right) => left - right,

@@ -270,6 +270,78 @@ describe('DeterministicStoryValidator', () => {
     });
   });
 
+  it('allows the defeated King to die at the exact checkmate ply', () => {
+    const fateLedger = {
+      metadata: { termination: 'checkmate' },
+      pieces: [
+        {
+          id: 'w-k-e1',
+          permanentName: 'Northern King',
+          characterName: 'Gareth',
+        },
+      ],
+      events: [
+        {
+          ply: 122,
+          isCheckmate: true,
+          checkmateExplanation: { kingId: 'w-k-e1' },
+        },
+      ],
+    } as GameLedger;
+
+    expect(
+      validator.validateTimedCharacterFates(
+        [
+          {
+            ply: 122,
+            fantasyNarration:
+              "Aldren's reinforced prow crushed Gareth against the basin wall and killed him.",
+          },
+        ],
+        fateLedger,
+      ),
+    ).toEqual([]);
+  });
+
+  it('still rejects the defeated King dying before the checkmate ply', () => {
+    const fateLedger = {
+      metadata: { termination: 'checkmate' },
+      pieces: [
+        {
+          id: 'w-k-e1',
+          permanentName: 'Northern King',
+          characterName: 'Gareth',
+        },
+      ],
+      events: [
+        {
+          ply: 122,
+          isCheckmate: true,
+          checkmateExplanation: { kingId: 'w-k-e1' },
+        },
+      ],
+    } as GameLedger;
+
+    expect(
+      validator.validateTimedCharacterFates(
+        [
+          {
+            ply: 121,
+            fantasyNarration:
+              'Gareth was killed before Aldren reached the basin.',
+          },
+        ],
+        fateLedger,
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        type: 'survivor-killed',
+        ply: 121,
+        pieceId: 'w-k-e1',
+      }),
+    ]);
+  });
+
   it('protects a surviving Moving Fortress operator from invented death', () => {
     const fateLedger = {
       pieces: [
@@ -450,6 +522,52 @@ describe('DeterministicStoryValidator', () => {
         }),
       ]),
     );
+  });
+
+  it("rejects another commander's Mythic Arm in a death scene", () => {
+    const commander = {
+      id: 'b-n-g8',
+      permanentName: 'Knight Commander Falk',
+      characterName: 'Falk',
+      fantasyType: 'knight-commander',
+      originalSquare: 'g8',
+      mythicArm: {
+        id: 'stormbound-great-hammer',
+        name: 'stormbound great hammer',
+        description:
+          'a stormbound great hammer whose impacts release concussive thunder',
+      },
+      capturedAtPly: 13,
+    } as GameLedger['pieces'][number];
+    const ledger = {
+      initialFen: 'test-seed',
+      pieces: [commander],
+      events: [],
+      metadata: {},
+    } as GameLedger;
+
+    const findings = validator.validateMythicArmOwnership(
+      [
+        {
+          ply: 13,
+          characters: [commander.id],
+          fantasyNarration:
+            'Falk alternated his oathbound swords, calculating routes through the rubble before the final blow killed him.',
+        },
+      ],
+      ledger,
+    );
+
+    expect(findings).toEqual([
+      expect.objectContaining({
+        type: 'mythic-arm-ownership',
+        severity: 'error',
+        ply: 13,
+        pieceId: commander.id,
+        message:
+          "Knight Commander Falk is attributed another Knight Commander's Mythic Arm; the assigned weapon is stormbound great hammer",
+      }),
+    ]);
   });
 
   it('rejects structured wound references with the wrong owner or timing', () => {
@@ -2560,6 +2678,52 @@ describe('DeterministicStoryValidator', () => {
             ply: 67,
             fantasyNarration:
               "Aveline checked King Ulric, and the force spell cracked Ulric's personal wards around the Southern Seal.",
+          },
+        ],
+        checkLedger,
+      ),
+    ).toEqual([]);
+  });
+
+  it("does not mistake a Queen's active wound for her protected King's check strain", () => {
+    const checkLedger = {
+      pieces: [
+        {
+          id: 'b-q-d8',
+          side: 'south',
+          permanentName: 'Queen Catrin',
+          fantasyType: 'queen',
+        },
+        {
+          id: 'w-k-e1',
+          side: 'north',
+          permanentName: 'King Gareth',
+          fantasyType: 'king',
+        },
+        {
+          id: 'b-k-e8',
+          side: 'south',
+          permanentName: 'King Emrys',
+          fantasyType: 'king',
+        },
+      ],
+      events: [
+        {
+          ply: 86,
+          side: 'south',
+          pieceId: 'b-q-d8',
+          isCheck: true,
+        },
+      ],
+    } as GameLedger;
+
+    expect(
+      validator.validateCheckStrainOwnership(
+        [
+          {
+            ply: 86,
+            fantasyNarration:
+              'Catrin’s burned side tightened beneath her armor, the old pain flaring along the breach, but she kept pressure on him while King Emrys remained unharmed.',
           },
         ],
         checkLedger,

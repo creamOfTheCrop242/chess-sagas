@@ -2,6 +2,11 @@ import type { GameLedger } from '../chess/models/game-ledger';
 import type { NarrativeAnalysis } from '../narrative-analysis/models/narrative-analysis';
 import type { StoryOutline } from '../story-outline/models/story-outline';
 import {
+  DeterministicStoryValidator,
+  type ScenePackageValidation,
+} from '../story-validation/deterministic-story.validator';
+import {
+  applyMissingCheckmateDeathFallback,
   buildDeathContracts,
   buildEndingDeathContract,
   buildEndingWorldState,
@@ -12,6 +17,118 @@ import {
   isAmbiguousTimedFateFinding,
   normalizeStructuredCaptureMetadata,
 } from './full-story.service';
+
+describe('deterministic checkmate death completion', () => {
+  const ledger = {
+    initialFen: 'checkmate-fallback-seed',
+    metadata: {
+      result: '0-1',
+      termination: 'checkmate',
+      whitePlayer: 'North',
+      blackPlayer: 'South',
+    },
+    pieces: [
+      {
+        id: 'w-k-e1',
+        side: 'north',
+        fantasyType: 'king',
+        permanentName: 'Northern King',
+        characterName: 'Orin',
+      },
+      {
+        id: 'b-r-a8',
+        side: 'south',
+        fantasyType: 'moving-fortress',
+        permanentName: 'Southeast Fortress',
+        characterName: 'Aldren',
+        operatorName: 'Aldren',
+      },
+    ],
+    events: [
+      {
+        ply: 122,
+        san: 'Ra1#',
+        pieceId: 'b-r-a8',
+        pieceType: 'rook',
+        isCapture: false,
+        isCheckmate: true,
+        checkmateExplanation: { kingId: 'w-k-e1' },
+      },
+    ],
+  } as GameLedger;
+
+  const missingDeathValidation = {
+    checkmateDeathFindings: [
+      {
+        type: 'missing-checkmate',
+        severity: 'error',
+        message: 'Northern King must die visibly in the final checkmate scene',
+        ply: 122,
+        pieceId: 'w-k-e1',
+        excerpt: 'Aldren delivered the final assault.',
+      },
+    ],
+    findings: [
+      {
+        type: 'missing-checkmate',
+        severity: 'error',
+        message: 'Northern King must die visibly in the final checkmate scene',
+        ply: 122,
+        pieceId: 'w-k-e1',
+        excerpt: 'Aldren delivered the final assault.',
+      },
+    ],
+  } as ScenePackageValidation;
+
+  it('adds a concrete fatal method when the mating actor is already credited', () => {
+    const result = applyMissingCheckmateDeathFallback(
+      [
+        {
+          startPly: 122,
+          fantasyNarration:
+            'Moving Fortress pilot Aldren drove the reinforced prow into the tidal basin and delivered the final assault.',
+        },
+      ],
+      ledger,
+      missingDeathValidation,
+    );
+
+    expect(result.applied).toBe(true);
+    expect(result.scenes[0].fantasyNarration).toMatch(/Aldren/);
+    expect(result.scenes[0].fantasyNarration).toMatch(/Orin/);
+    expect(result.scenes[0].fantasyNarration).toMatch(/killed him/);
+    expect(result.scenes[0].fantasyNarration).toMatch(
+      /(?:reinforced prow|fatal shot)/,
+    );
+    expect(
+      new DeterministicStoryValidator().validateCheckmateKingDeath(
+        [
+          {
+            ply: 122,
+            fantasyNarration: result.scenes[0].fantasyNarration,
+          },
+        ],
+        ledger,
+      ),
+    ).toEqual([]);
+  });
+
+  it('does not patch a scene that fails to credit the mating actor', () => {
+    const result = applyMissingCheckmateDeathFallback(
+      [
+        {
+          startPly: 122,
+          fantasyNarration:
+            'Queen Catrin sealed the ground and delivered the final assault.',
+        },
+      ],
+      ledger,
+      missingDeathValidation,
+    );
+
+    expect(result.applied).toBe(false);
+  });
+});
 
 describe('semantic premature-death fallback selection', () => {
   it('sends ambiguous recoil language for semantic adjudication', () => {

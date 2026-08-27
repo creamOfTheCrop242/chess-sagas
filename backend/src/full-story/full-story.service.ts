@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import type { GameLedger } from '../chess/models/game-ledger';
+import { mythicArmForCommander } from '../chess/mythic-arms';
 import {
   isSurrenderKingFate,
   kingDiesFromFate,
@@ -375,6 +376,7 @@ export class FullStoryService {
           ...sceneValidation.timedFateFindings,
           ...sceneValidation.checkmateDeathFindings,
           ...sceneValidation.fortressPowerFindings,
+          ...sceneValidation.mythicArmFindings,
         ].filter((finding) => finding.ply !== null);
 
       for (let repairAttempt = 1; repairAttempt <= 2; repairAttempt += 1) {
@@ -481,6 +483,25 @@ export class FullStoryService {
           );
         }
       }
+      const checkmateFallback = applyMissingCheckmateDeathFallback(
+        scenes,
+        ledger,
+        sceneValidation,
+      );
+      if (checkmateFallback.applied) {
+        scenes = checkmateFallback.scenes;
+        sceneValidation = await this.adjudicateAmbiguousTimedFates(
+          validateStoryScenes(),
+          scenes,
+          ledger,
+          gameId,
+          run.id,
+          4,
+        );
+        this.logger.log(
+          `Applied deterministic checkmate death completion gameId=${gameId} runId=${run.id} ply=${checkmateFallback.ply}`,
+        );
+      }
       const {
         terminologyFindings,
         timedFateFindings,
@@ -490,6 +511,7 @@ export class FullStoryService {
         prematureAscensionFindings,
         checkmateDeathFindings,
         fortressPowerFindings,
+        mythicArmFindings,
       } = sceneValidation;
       if (terminologyFindings.length > 0) {
         throw new Error(
@@ -524,6 +546,16 @@ export class FullStoryService {
       if (fortressPowerFindings.length > 0) {
         throw new Error(
           `Generated story package contains premature Fortress power loss: ${fortressPowerFindings
+            .map(
+              (finding) =>
+                `${finding.message}. Rejected prose: ${JSON.stringify(finding.excerpt)}`,
+            )
+            .join('; ')}`,
+        );
+      }
+      if (mythicArmFindings.length > 0) {
+        throw new Error(
+          `Generated story package contains Mythic Arm ownership errors: ${mythicArmFindings
             .map(
               (finding) =>
                 `${finding.message}. Rejected prose: ${JSON.stringify(finding.excerpt)}`,
@@ -1524,6 +1556,116 @@ function buildRepairDeathContracts(
           names: narrativeAliases(piece),
         })),
     }));
+}
+
+export function applyMissingCheckmateDeathFallback<
+  T extends { startPly: number; fantasyNarration: string },
+>(
+  scenes: T[],
+  ledger: GameLedger,
+  validation: ScenePackageValidation,
+): { scenes: T[]; applied: boolean; ply: number | null } {
+  const checkmateEvent = ledger.events.find((event) => event.isCheckmate);
+  if (!checkmateEvent) return { scenes, applied: false, ply: null };
+
+  const missingDeath = validation.checkmateDeathFindings;
+  const otherErrors = validation.findings.filter(
+    (finding) =>
+      finding.severity === 'error' && finding.type !== 'missing-checkmate',
+  );
+  if (
+    missingDeath.length !== 1 ||
+    otherErrors.length > 0 ||
+    !missingDeath[0].message.includes('must die visibly')
+  ) {
+    return { scenes, applied: false, ply: null };
+  }
+
+  const actor = ledger.pieces.find(
+    (piece) => piece.id === checkmateEvent.pieceId,
+  );
+  const king = ledger.pieces.find(
+    (piece) => piece.id === checkmateEvent.checkmateExplanation?.kingId,
+  );
+  const scene = scenes.find(
+    (candidate) => candidate.startPly === checkmateEvent.ply,
+  );
+  const contract = buildDeathContracts(ledger).find(
+    (candidate) => candidate.ply === checkmateEvent.ply,
+  );
+  if (!actor || !king || !scene || !contract?.method) {
+    return { scenes, applied: false, ply: null };
+  }
+
+  const normalizedNarration = scene.fantasyNarration.toLocaleLowerCase();
+  const actorIsCredited = narrativeAliases(actor).some((alias) =>
+    normalizedNarration.includes(alias.toLocaleLowerCase()),
+  );
+  const actorActs =
+    /\b(?:attack(?:ed|s)?|assault(?:ed|s)?|charg(?:e|ed|es|ing)|drove|drive|driven|fire(?:d|s)?|fought|hammer(?:ed|s)?|hit|ram(?:med|s)?|shot|struck|strike|thrust|wound(?:ed|s)?)\b/i.test(
+      scene.fantasyNarration,
+    );
+  if (!actorIsCredited || !actorActs) {
+    return { scenes, applied: false, ply: null };
+  }
+
+  const sentence = deterministicCheckmateDeathSentence(
+    actor,
+    king,
+    contract.method,
+    ledger,
+  );
+  return {
+    scenes: scenes.map((candidate) =>
+      candidate.startPly === checkmateEvent.ply
+        ? {
+            ...candidate,
+            fantasyNarration: `${candidate.fantasyNarration.trim()} ${sentence}`,
+          }
+        : candidate,
+    ),
+    applied: true,
+    ply: checkmateEvent.ply,
+  };
+}
+
+function deterministicCheckmateDeathSentence(
+  actor: GameLedger['pieces'][number],
+  king: GameLedger['pieces'][number],
+  method: DeathBeatDirective['method'],
+  ledger: GameLedger,
+): string {
+  const actorName = narrativeAliases(actor)[0] ?? actor.permanentName;
+  const kingName = narrativeAliases(king)[0] ?? king.permanentName;
+
+  if (method === 'fortress-ram') {
+    return `${actorName} drove ${actor.permanentName}'s reinforced prow into ${kingName}, crushing his body against the stone; the impact killed him.`;
+  }
+  if (method === 'projectile' || method === 'fortress-round') {
+    return `${actorName} fired through ${kingName}'s chest; the fatal shot killed him.`;
+  }
+  if (method === 'hostile-magic') {
+    return `${actorName}'s final spell tore through ${kingName}'s body and killed him.`;
+  }
+  if (method === 'mythic-arm') {
+    const arm = mythicArmForCommander(actor, ledger.initialFen);
+    return `${actorName} struck ${kingName} with the ${arm.name}, inflicting the fatal wound that killed him.`;
+  }
+  if (method === 'blunt-force') {
+    const weapon =
+      actor.fantasyType === 'knight-commander'
+        ? `the ${mythicArmForCommander(actor, ledger.initialFen).name}`
+        : 'the final blow';
+    return `${actorName} struck ${kingName}'s head with ${weapon}; the blow killed him.`;
+  }
+  if (method === 'penetration') {
+    const weapon =
+      actor.fantasyType === 'knight-commander'
+        ? `the ${mythicArmForCommander(actor, ledger.initialFen).name}`
+        : 'an established weapon';
+    return `${actorName} drove ${weapon} through ${kingName}'s chest; the wound killed him.`;
+  }
+  return `${actorName}'s final attack inflicted a fatal wound on ${kingName} and killed him.`;
 }
 
 export function buildCheckStrainTimeline(

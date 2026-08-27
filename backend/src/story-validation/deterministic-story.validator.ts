@@ -26,6 +26,7 @@ export interface ScenePackageValidation {
   prematureAscensionFindings: ValidationFinding[];
   checkmateDeathFindings: ValidationFinding[];
   fortressPowerFindings: ValidationFinding[];
+  mythicArmFindings: ValidationFinding[];
   woundFindings: ValidationFinding[];
   findings: ValidationFinding[];
 }
@@ -77,6 +78,7 @@ export class DeterministicStoryValidator {
       scenes,
       ledger,
     );
+    const mythicArmFindings = this.validateMythicArmOwnership(scenes, ledger);
     const hasStructuredWoundMetadata = scenes.every(
       (scene) =>
         scene.woundsInflicted !== undefined &&
@@ -104,6 +106,7 @@ export class DeterministicStoryValidator {
       ...timedFateFindings,
       ...checkmateDeathFindings,
       ...fortressPowerFindings,
+      ...mythicArmFindings,
       ...woundFindings,
     ];
     return {
@@ -115,9 +118,53 @@ export class DeterministicStoryValidator {
       prematureAscensionFindings,
       checkmateDeathFindings,
       fortressPowerFindings,
+      mythicArmFindings,
       woundFindings,
       findings,
     };
+  }
+
+  validateMythicArmOwnership(
+    scenes: Array<{
+      ply: number;
+      fantasyNarration: string;
+      characters: string[];
+    }>,
+    ledger: GameLedger,
+  ): ValidationFinding[] {
+    const commanders = ledger.pieces.filter(
+      (piece) => piece.fantasyType === 'knight-commander',
+    );
+    const findings: ValidationFinding[] = [];
+
+    for (const scene of scenes) {
+      const sentences = scene.fantasyNarration.match(/[^.!?]+[.!?]?/g) ?? [
+        scene.fantasyNarration,
+      ];
+      for (const commander of commanders) {
+        if (!scene.characters.includes(commander.id)) continue;
+        const assignedArm = mythicArmForCommander(commander, ledger.initialFen);
+        const aliases = characterAliases(commander);
+        const conflictingSentence = sentences.find(
+          (sentence) =>
+            mentionsCharacter(sentence, aliases) &&
+            mentionedMythicArms(sentence).some(
+              (arm) => arm.id !== assignedArm.id,
+            ),
+        );
+        if (!conflictingSentence) continue;
+        findings.push({
+          type: 'mythic-arm-ownership',
+          severity: 'error',
+          message: `${commander.permanentName} is attributed another Knight Commander's Mythic Arm; the assigned weapon is ${assignedArm.name}`,
+          ply: scene.ply,
+          pieceId: commander.id,
+          excerpt: conflictingSentence.trim().slice(0, 300),
+        });
+      }
+    }
+
+    return findings;
   }
 
   validatePrematureFortressPowerLoss(
@@ -248,8 +295,16 @@ export class DeterministicStoryValidator {
     ledger: GameLedger,
   ): ValidationFinding[] {
     const findings: ValidationFinding[] = [];
+    const checkmateEvent =
+      ledger.metadata?.termination === 'checkmate'
+        ? ledger.events?.find((event) => event.isCheckmate)
+        : undefined;
     for (const scene of scenes) {
       for (const piece of ledger.pieces) {
+        const isAuthorizedCheckmateDeath =
+          checkmateEvent?.ply === scene.ply &&
+          checkmateEvent.checkmateExplanation?.kingId === piece.id;
+        if (isAuthorizedCheckmateDeath) continue;
         if (
           piece.capturedAtPly !== undefined &&
           piece.capturedAtPly <= scene.ply
@@ -1215,27 +1270,49 @@ function misassignedCheckStrainExcerpt(
   protectedKingAliases: string[],
 ): string | undefined {
   const sentences = narration.match(/[^.!?]+[.!?]?/g) ?? [narration];
-  return sentences
-    .map((sentence) => sentence.trim())
-    .find((sentence) => {
-      if (
-        !hasAny(sentence, CHECK_STRAIN_TERMS) ||
-        !hasAny(sentence, ROYAL_DAMAGE_TERMS) ||
-        !mentionsCharacter(sentence, protectedKingAliases)
-      ) {
-        return false;
-      }
-      const strainPositions = matchPositions(sentence, CHECK_STRAIN_TERMS);
-      const protectedDistance = nearestDistance(
-        matchPositions(sentence, protectedKingAliases),
-        strainPositions,
-      );
-      const damagedDistance = nearestDistance(
-        matchPositions(sentence, damagedKingAliases),
-        strainPositions,
-      );
-      return protectedDistance < damagedDistance && protectedDistance <= 100;
-    });
+  const clauses = sentences.flatMap((sentence) =>
+    sentence
+      .split(/[,;]?\s+\b(?:and|while|but|although|whereas)\b\s+/i)
+      .map((clause) => clause.trim())
+      .filter(Boolean),
+  );
+  return clauses.find((clause) => {
+    if (
+      !hasAny(clause, CHECK_STRAIN_TERMS) ||
+      !hasAny(clause, ROYAL_DAMAGE_TERMS) ||
+      !mentionsCharacter(clause, protectedKingAliases)
+    ) {
+      return false;
+    }
+
+    const protectedPattern = protectedKingAliases
+      .sort((left, right) => right.length - left.length)
+      .map(escapeRegex)
+      .join('|');
+    const strainPattern = CHECK_STRAIN_TERMS.map(escapeRegex).join('|');
+    const royalPattern = ROYAL_DAMAGE_TERMS.map(escapeRegex).join('|');
+    const explicitlyOwnedByProtectedKing =
+      new RegExp(
+        `\\b(?:${protectedPattern})(?:['’]s)?\\b[^.!?;]{0,100}\\b(?:${strainPattern}|${royalPattern})\\b`,
+        'i',
+      ).test(clause) ||
+      new RegExp(
+        `\\b(?:${strainPattern})\\b[^.!?;]{0,80}\\b(?:${protectedPattern})(?:['’]s)?\\b[^.!?;]{0,60}\\b(?:${royalPattern})\\b`,
+        'i',
+      ).test(clause);
+    if (!explicitlyOwnedByProtectedKing) return false;
+
+    const strainPositions = matchPositions(clause, CHECK_STRAIN_TERMS);
+    const protectedDistance = nearestDistance(
+      matchPositions(clause, protectedKingAliases),
+      strainPositions,
+    );
+    const damagedDistance = nearestDistance(
+      matchPositions(clause, damagedKingAliases),
+      strainPositions,
+    );
+    return protectedDistance < damagedDistance;
+  });
 }
 
 function woundIdFor(wound: {

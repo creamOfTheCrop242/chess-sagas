@@ -7,6 +7,7 @@ import {
   mentionsIncompatibleWeaponKind,
   mentionedMythicArms,
   mythicArmForCommander,
+  type MythicArm,
 } from '../chess/mythic-arms';
 
 export interface DeterministicSceneInput {
@@ -144,13 +145,13 @@ export class DeterministicStoryValidator {
       for (const commander of commanders) {
         if (!scene.characters.includes(commander.id)) continue;
         const assignedArm = mythicArmForCommander(commander, ledger.initialFen);
-        const aliases = characterAliases(commander);
-        const conflictingSentence = sentences.find(
-          (sentence) =>
-            mentionsCharacter(sentence, aliases) &&
-            mentionedMythicArms(sentence).some(
-              (arm) => arm.id !== assignedArm.id,
-            ),
+        const sceneCommanders = commanders.filter((candidate) =>
+          scene.characters.includes(candidate.id),
+        );
+        const conflictingSentence = sentences.find((sentence) =>
+          attributedMythicArms(sentence, commander, sceneCommanders).some(
+            (arm) => arm.id !== assignedArm.id,
+          ),
         );
         if (!conflictingSentence) continue;
         findings.push({
@@ -1548,6 +1549,67 @@ function mentionsCharacter(narration: string, aliases: string[]): boolean {
   return aliases.some((alias) =>
     new RegExp(`\\b${escapeRegex(alias)}(?:['’]s)?\\b`, 'i').test(narration),
   );
+}
+
+function attributedMythicArms(
+  sentence: string,
+  commander: GameLedger['pieces'][number],
+  sceneCommanders: GameLedger['pieces'],
+): MythicArm[] {
+  const mentionedArms = mentionedMythicArms(sentence);
+  if (mentionedArms.length === 0) return [];
+
+  const aliases = characterAliases(commander).sort(
+    (left, right) => right.length - left.length,
+  );
+  const otherAliases = sceneCommanders
+    .filter((candidate) => candidate.id !== commander.id)
+    .flatMap(characterAliases)
+    .sort((left, right) => right.length - left.length);
+  const attributed = new Map<string, MythicArm>();
+
+  for (const arm of mentionedArms) {
+    const signaturePattern = arm.signatures
+      .map(escapeRegex)
+      .sort((left, right) => right.length - left.length)
+      .join('|');
+    const possessiveOwner = aliases.some((alias) => {
+      const possessivePattern = new RegExp(
+        `\\b${escapeRegex(alias)}(?:['’]s)\\b([^.!?;]{0,100}?)\\b(?:${signaturePattern})\\b`,
+        'i',
+      );
+      const possessiveMatch = possessivePattern.exec(sentence);
+      if (!possessiveMatch) return false;
+      const betweenOwnerAndArm = possessiveMatch[1] ?? '';
+      return (
+        mentionedMythicArms(betweenOwnerAndArm).length === 0 &&
+        !/\\b(?:his|her|their|its)\\b/i.test(betweenOwnerAndArm)
+      );
+    });
+    if (possessiveOwner) {
+      attributed.set(arm.id, arm);
+      continue;
+    }
+
+    for (const alias of aliases) {
+      const subjectPattern = new RegExp(
+        `(?:^[“"'\\s]*|[,;]\\s*|\\b(?:and|but|while|as)\\s+)${escapeRegex(alias)}\\b([^.!?;]{0,140}?)\\b(?:${signaturePattern})\\b`,
+        'i',
+      );
+      const subjectMatch = subjectPattern.exec(sentence);
+      if (!subjectMatch) continue;
+      const betweenOwnerAndArm = subjectMatch[1] ?? '';
+      const namesAnotherCommander = otherAliases.some((otherAlias) =>
+        new RegExp(`\\b${escapeRegex(otherAlias)}(?:['’]s)?\\b`, 'i').test(
+          betweenOwnerAndArm,
+        ),
+      );
+      if (!namesAnotherCommander) attributed.set(arm.id, arm);
+      break;
+    }
+  }
+
+  return [...attributed.values()];
 }
 
 function matchingCharacterWoundExcerpt(

@@ -570,6 +570,161 @@ describe('DeterministicStoryValidator', () => {
     ]);
   });
 
+  it('allows two commanders to use their own Mythic Arms in the same sentence', () => {
+    const tamsin = {
+      id: 'w-n-b1',
+      permanentName: 'Northwest Knight Commander',
+      characterName: 'Tamsin',
+      fantasyType: 'knight-commander',
+      originalSquare: 'b1',
+      mythicArm: {
+        id: 'ward-breaking-poleaxe',
+        name: 'ward-breaking poleaxe',
+        description:
+          'a ward-breaking poleaxe charged to tear open magical defenses',
+      },
+    } as GameLedger['pieces'][number];
+    const helena = {
+      id: 'b-n-g8',
+      permanentName: 'Southeast Knight Commander',
+      characterName: 'Helena',
+      fantasyType: 'knight-commander',
+      originalSquare: 'g8',
+      mythicArm: {
+        id: 'crescent-glaive',
+        name: 'crescent glaive',
+        description:
+          'a crescent glaive that throws a short arc of cutting realm-light',
+      },
+    } as GameLedger['pieces'][number];
+    const ledger = {
+      initialFen: 'test-seed',
+      pieces: [tamsin, helena],
+    } as GameLedger;
+
+    expect(
+      validator.validateMythicArmOwnership(
+        [
+          {
+            ply: 18,
+            characters: [tamsin.id, helena.id],
+            fantasyNarration:
+              'Helena dismounted, caught Tamsin’s ward-breaking poleaxe on her crescent glaive, and drove her shoulder into the northern commander.',
+          },
+        ],
+        ledger,
+      ),
+    ).toEqual([]);
+  });
+
+  it('rejects an explicitly swapped Mythic Arm in a two-commander scene', () => {
+    const tamsin = {
+      id: 'w-n-b1',
+      permanentName: 'Northwest Knight Commander',
+      characterName: 'Tamsin',
+      fantasyType: 'knight-commander',
+      originalSquare: 'b1',
+      mythicArm: {
+        id: 'ward-breaking-poleaxe',
+        name: 'ward-breaking poleaxe',
+        description:
+          'a ward-breaking poleaxe charged to tear open magical defenses',
+      },
+    } as GameLedger['pieces'][number];
+    const helena = {
+      id: 'b-n-g8',
+      permanentName: 'Southeast Knight Commander',
+      characterName: 'Helena',
+      fantasyType: 'knight-commander',
+      originalSquare: 'g8',
+      mythicArm: {
+        id: 'crescent-glaive',
+        name: 'crescent glaive',
+        description:
+          'a crescent glaive that throws a short arc of cutting realm-light',
+      },
+    } as GameLedger['pieces'][number];
+    const ledger = {
+      initialFen: 'test-seed',
+      pieces: [tamsin, helena],
+    } as GameLedger;
+
+    const findings = validator.validateMythicArmOwnership(
+      [
+        {
+          ply: 18,
+          characters: [tamsin.id, helena.id],
+          fantasyNarration:
+            'Tamsin’s crescent glaive struck Helena’s ward-breaking poleaxe.',
+        },
+      ],
+      ledger,
+    );
+
+    expect(findings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'mythic-arm-ownership',
+          severity: 'error',
+          pieceId: tamsin.id,
+          ply: 18,
+        }),
+        expect.objectContaining({
+          type: 'mythic-arm-ownership',
+          severity: 'error',
+          pieceId: helena.id,
+          ply: 18,
+        }),
+      ]),
+    );
+  });
+
+  it('does not block an ambiguous two-commander weapon inventory', () => {
+    const tamsin = {
+      id: 'w-n-b1',
+      permanentName: 'Northwest Knight Commander',
+      characterName: 'Tamsin',
+      fantasyType: 'knight-commander',
+      originalSquare: 'b1',
+      mythicArm: {
+        id: 'ward-breaking-poleaxe',
+        name: 'ward-breaking poleaxe',
+        description:
+          'a ward-breaking poleaxe charged to tear open magical defenses',
+      },
+    } as GameLedger['pieces'][number];
+    const helena = {
+      id: 'b-n-g8',
+      permanentName: 'Southeast Knight Commander',
+      characterName: 'Helena',
+      fantasyType: 'knight-commander',
+      originalSquare: 'g8',
+      mythicArm: {
+        id: 'crescent-glaive',
+        name: 'crescent glaive',
+        description:
+          'a crescent glaive that throws a short arc of cutting realm-light',
+      },
+    } as GameLedger['pieces'][number];
+
+    expect(
+      validator.validateMythicArmOwnership(
+        [
+          {
+            ply: 18,
+            characters: [tamsin.id, helena.id],
+            fantasyNarration:
+              'Tamsin and Helena clashed in the smoke, poleaxe against crescent glaive.',
+          },
+        ],
+        {
+          initialFen: 'test-seed',
+          pieces: [tamsin, helena],
+        } as GameLedger,
+      ),
+    ).toEqual([]);
+  });
+
   it('rejects structured wound references with the wrong owner or timing', () => {
     const wounds = [
       {

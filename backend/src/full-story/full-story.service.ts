@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import type { GameLedger } from '../chess/models/game-ledger';
-import { mythicArmForCommander } from '../chess/mythic-arms';
+import { MYTHIC_ARMS, mythicArmForCommander } from '../chess/mythic-arms';
 import {
   isSurrenderKingFate,
   kingDiesFromFate,
@@ -432,6 +432,12 @@ export class FullStoryService {
               targetPlies.includes(entry.ply),
             ),
             fortressOperatingTimeline,
+            mythicArmContracts: buildMythicArmRepairContracts(
+              ledger,
+              targetPlies,
+              storyPackage.scenes,
+              findings,
+            ),
             telemetry: {
               gameId,
               generationRunId: run.id,
@@ -1172,6 +1178,71 @@ export class FullStoryService {
   }
 }
 
+export function buildMythicArmRepairContracts(
+  ledger: GameLedger,
+  targetPlies: number[],
+  scenes: Array<{ ply: number; characters: string[] }>,
+  findings: Array<{ ply: number | null; pieceId: string | null }>,
+) {
+  const targetPlySet = new Set(targetPlies);
+  const relevantPieceIds = new Set<string>();
+  for (const scene of scenes) {
+    if (!targetPlySet.has(scene.ply)) continue;
+    scene.characters.forEach((pieceId) => relevantPieceIds.add(pieceId));
+  }
+  for (const finding of findings) {
+    if (
+      finding.pieceId &&
+      finding.ply !== null &&
+      targetPlySet.has(finding.ply)
+    ) {
+      relevantPieceIds.add(finding.pieceId);
+    }
+  }
+
+  return ledger.pieces
+    .filter(
+      (piece) =>
+        piece.fantasyType === 'knight-commander' &&
+        relevantPieceIds.has(piece.id),
+    )
+    .map((piece) => {
+      const assignedArm = mythicArmForCommander(piece, ledger.initialFen);
+      const applicablePlies = scenes
+        .filter(
+          (scene) =>
+            targetPlySet.has(scene.ply) &&
+            (scene.characters.includes(piece.id) ||
+              findings.some(
+                (finding) =>
+                  finding.ply === scene.ply && finding.pieceId === piece.id,
+              )),
+        )
+        .map((scene) => scene.ply);
+      return {
+        pieceId: piece.id,
+        characterNames: [piece.permanentName, piece.characterName].filter(
+          (name): name is string => Boolean(name),
+        ),
+        applicablePlies,
+        assignedArm: {
+          id: assignedArm.id,
+          name: assignedArm.name,
+          description: assignedArm.description,
+          signatures: [...assignedArm.signatures],
+        },
+        forbiddenArms: MYTHIC_ARMS.filter(
+          (arm) => arm.id !== assignedArm.id,
+        ).map((arm) => ({
+          id: arm.id,
+          name: arm.name,
+          signatures: [...arm.signatures],
+        })),
+      };
+    })
+    .filter((contract) => contract.applicablePlies.length > 0);
+}
+
 export function isAmbiguousTimedFateFinding(
   finding: ValidationFinding,
 ): boolean {
@@ -1594,18 +1665,6 @@ export function applyMissingCheckmateDeathFallback<
     (candidate) => candidate.ply === checkmateEvent.ply,
   );
   if (!actor || !king || !scene || !contract?.method) {
-    return { scenes, applied: false, ply: null };
-  }
-
-  const normalizedNarration = scene.fantasyNarration.toLocaleLowerCase();
-  const actorIsCredited = narrativeAliases(actor).some((alias) =>
-    normalizedNarration.includes(alias.toLocaleLowerCase()),
-  );
-  const actorActs =
-    /\b(?:attack(?:ed|s)?|assault(?:ed|s)?|charg(?:e|ed|es|ing)|drove|drive|driven|fire(?:d|s)?|fought|hammer(?:ed|s)?|hit|ram(?:med|s)?|shot|struck|strike|thrust|wound(?:ed|s)?)\b/i.test(
-      scene.fantasyNarration,
-    );
-  if (!actorIsCredited || !actorActs) {
     return { scenes, applied: false, ply: null };
   }
 

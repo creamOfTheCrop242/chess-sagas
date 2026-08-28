@@ -190,6 +190,22 @@ export interface StorySceneRepairRequest {
   selectedRevengePayoffs: StoryOutline['selectedRevengePayoffs'];
   checkStrainTimeline: CheckStrainDirective[];
   fortressOperatingTimeline: FortressOperatingDirective[];
+  mythicArmContracts: Array<{
+    pieceId: string;
+    characterNames: string[];
+    applicablePlies: number[];
+    assignedArm: {
+      id: string;
+      name: string;
+      description: string;
+      signatures: string[];
+    };
+    forbiddenArms: Array<{
+      id: string;
+      name: string;
+      signatures: string[];
+    }>;
+  }>;
   telemetry: GenerationTelemetryContext;
 }
 

@@ -11,12 +11,85 @@ import {
   buildEndingDeathContract,
   buildEndingWorldState,
   buildFortressOperatingTimeline,
+  buildMythicArmRepairContracts,
   buildWoundStateByPly,
   buildWoundTimeline,
   deriveSceneWoundReferences,
   isAmbiguousTimedFateFinding,
   normalizeStructuredCaptureMetadata,
 } from './full-story.service';
+
+describe('Mythic Arm repair contracts', () => {
+  it('gives each affected commander one required arm and forbids the other commander arm', () => {
+    const ledger = {
+      initialFen: 'mythic-contract-seed',
+      pieces: [
+        {
+          id: 'w-n-b1',
+          fantasyType: 'knight-commander',
+          permanentName: 'Knight Commander Ulric',
+          characterName: 'Ulric',
+          originalSquare: 'b1',
+          mythicArm: {
+            id: 'gravity-mace',
+            name: 'gravity mace',
+            description:
+              'a gravity mace that multiplies its weight at the instant of impact',
+          },
+        },
+        {
+          id: 'b-n-g8',
+          fantasyType: 'knight-commander',
+          permanentName: 'Knight Commander Xavian',
+          characterName: 'Xavian',
+          originalSquare: 'g8',
+          mythicArm: {
+            id: 'oathbound-swords',
+            name: 'matched pair of oathbound swords',
+            description:
+              'a matched pair of oathbound swords whose alternating strikes build and release cutting arcs of realm-light',
+          },
+        },
+      ],
+    } as GameLedger;
+
+    const contracts = buildMythicArmRepairContracts(
+      ledger,
+      [11, 46],
+      [
+        { ply: 11, characters: ['w-n-b1', 'b-n-g8'] },
+        { ply: 46, characters: ['w-n-b1', 'b-n-g8'] },
+      ],
+      [
+        { ply: 11, pieceId: 'w-n-b1' },
+        { ply: 46, pieceId: 'b-n-g8' },
+      ],
+    );
+
+    expect(contracts).toHaveLength(2);
+    expect(contracts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          pieceId: 'w-n-b1',
+          characterNames: ['Knight Commander Ulric', 'Ulric'],
+          applicablePlies: [11, 46],
+          assignedArm: expect.objectContaining({ id: 'gravity-mace' }),
+          forbiddenArms: expect.arrayContaining([
+            expect.objectContaining({ id: 'oathbound-swords' }),
+          ]),
+        }),
+        expect.objectContaining({
+          pieceId: 'b-n-g8',
+          applicablePlies: [11, 46],
+          assignedArm: expect.objectContaining({ id: 'oathbound-swords' }),
+          forbiddenArms: expect.arrayContaining([
+            expect.objectContaining({ id: 'gravity-mace' }),
+          ]),
+        }),
+      ]),
+    );
+  });
+});
 
 describe('deterministic checkmate death completion', () => {
   const ledger = {
@@ -113,20 +186,34 @@ describe('deterministic checkmate death completion', () => {
     ).toEqual([]);
   });
 
-  it('does not patch a scene that fails to credit the mating actor', () => {
+  it('adds the ledger-authorized fatal attack when the AI only describes containment', () => {
     const result = applyMissingCheckmateDeathFallback(
       [
         {
           startPly: 122,
           fantasyNarration:
-            'Queen Catrin sealed the ground and delivered the final assault.',
+            'Queen Catrin sealed the ground while King Orin stood trapped with every route controlled.',
         },
       ],
       ledger,
       missingDeathValidation,
     );
 
-    expect(result.applied).toBe(false);
+    expect(result.applied).toBe(true);
+    expect(result.scenes[0].fantasyNarration).toContain('Aldren');
+    expect(result.scenes[0].fantasyNarration).toContain('Orin');
+    expect(result.scenes[0].fantasyNarration).toContain('killed him');
+    expect(
+      new DeterministicStoryValidator().validateCheckmateKingDeath(
+        [
+          {
+            ply: 122,
+            fantasyNarration: result.scenes[0].fantasyNarration,
+          },
+        ],
+        ledger,
+      ),
+    ).toEqual([]);
   });
 });
 

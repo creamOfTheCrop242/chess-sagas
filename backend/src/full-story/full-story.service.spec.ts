@@ -16,8 +16,19 @@ import {
   buildWoundTimeline,
   deriveSceneWoundReferences,
   isAmbiguousTimedFateFinding,
+  isWoundRepairFinding,
   normalizeStructuredCaptureMetadata,
 } from './full-story.service';
+
+describe('targeted repair routing', () => {
+  it('keeps Mythic Arm findings out of the wound-repair contract', () => {
+    expect(isWoundRepairFinding({ type: 'invented-wound' })).toBe(true);
+    expect(isWoundRepairFinding({ type: 'wound-continuity' })).toBe(true);
+    expect(isWoundRepairFinding({ type: 'missing-wound' })).toBe(true);
+    expect(isWoundRepairFinding({ type: 'mythic-arm-ownership' })).toBe(false);
+    expect(isWoundRepairFinding({ type: 'wrong-captor' })).toBe(false);
+  });
+});
 
 describe('Mythic Arm repair contracts', () => {
   it('gives each affected commander one required arm and forbids the other commander arm', () => {

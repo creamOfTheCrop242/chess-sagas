@@ -60,6 +60,18 @@ type CompletedStoryRun = Prisma.GenerationRunGetPayload<{
   include: { generatedStory: true; sceneBreakdown: true };
 }>;
 
+const WOUND_REPAIR_FINDING_TYPES = new Set<ValidationFinding['type']>([
+  'invented-wound',
+  'missing-wound',
+  'wound-continuity',
+]);
+
+export function isWoundRepairFinding(
+  finding: Pick<ValidationFinding, 'type'>,
+): boolean {
+  return WOUND_REPAIR_FINDING_TYPES.has(finding.type);
+}
+
 @Injectable()
 export class FullStoryService {
   private readonly logger = new Logger(FullStoryService.name);
@@ -379,116 +391,122 @@ export class FullStoryService {
           ...sceneValidation.mythicArmFindings,
         ].filter((finding) => finding.ply !== null);
 
-      for (let repairAttempt = 1; repairAttempt <= 2; repairAttempt += 1) {
-        const findings = allSceneFindings();
-        if (findings.length === 0) break;
-        try {
-          const targetPlies = [
-            ...new Set(findings.map((finding) => finding.ply as number)),
-          ];
-          const contextPlies = new Set<number>();
-          for (const ply of targetPlies) {
-            if (ply > 1) contextPlies.add(ply - 1);
-            if (ply < ledger.events.length) contextPlies.add(ply + 1);
-          }
-          targetPlies.forEach((ply) => contextPlies.delete(ply));
-          const currentNarrationByPly = new Map(
-            scenes.map((scene) => [scene.startPly, scene.fantasyNarration]),
-          );
-          const repairResult = await this.provider.repairStoryScenes({
-            scenes: storyPackage.scenes
-              .filter((scene) => targetPlies.includes(scene.ply))
-              .map((scene) => ({
+      const repairTargetedStoryFindings = async (attemptOffset = 0) => {
+        for (let repairAttempt = 1; repairAttempt <= 2; repairAttempt += 1) {
+          const findings = allSceneFindings();
+          if (findings.length === 0) break;
+          try {
+            const targetPlies = [
+              ...new Set(findings.map((finding) => finding.ply as number)),
+            ];
+            const contextPlies = new Set<number>();
+            for (const ply of targetPlies) {
+              if (ply > 1) contextPlies.add(ply - 1);
+              if (ply < ledger.events.length) contextPlies.add(ply + 1);
+            }
+            targetPlies.forEach((ply) => contextPlies.delete(ply));
+            const currentNarrationByPly = new Map(
+              scenes.map((scene) => [scene.startPly, scene.fantasyNarration]),
+            );
+            const repairResult = await this.provider.repairStoryScenes({
+              scenes: storyPackage.scenes
+                .filter((scene) => targetPlies.includes(scene.ply))
+                .map((scene) => ({
+                  ...scene,
+                  fantasyNarration:
+                    currentNarrationByPly.get(scene.ply) ??
+                    scene.fantasyNarration,
+                  woundReferences:
+                    allowedWoundReferencesByPly.get(scene.ply) ?? [],
+                })),
+              contextScenes: scenes
+                .filter((scene) => contextPlies.has(scene.startPly))
+                .map((scene) => ({
+                  ply: scene.startPly,
+                  fantasyNarration: scene.fantasyNarration,
+                })),
+              findings: findings.map((finding) => ({
+                ply: finding.ply as number,
+                pieceId: finding.pieceId,
+                type: finding.type,
+                message: finding.message,
+                excerpt: finding.excerpt,
+              })),
+              captureManifest: captureManifest.filter((entry) =>
+                targetPlies.includes(entry.ply),
+              ),
+              deathContracts: buildRepairDeathContracts(ledger, targetPlies),
+              woundTimeline,
+              characterRegistry: ledger.pieces,
+              selectedRevengePayoffs: outline.selectedRevengePayoffs.filter(
+                (payoff) => targetPlies.includes(payoff.payoffPly),
+              ),
+              checkStrainTimeline: checkStrainTimeline.filter((entry) =>
+                targetPlies.includes(entry.ply),
+              ),
+              fortressOperatingTimeline,
+              mythicArmContracts: buildMythicArmRepairContracts(
+                ledger,
+                targetPlies,
+                storyPackage.scenes,
+                findings,
+              ),
+              telemetry: {
+                gameId,
+                generationRunId: run.id,
+                attempt: repairAttempt + attemptOffset,
+                repairMode: 'partial',
+              },
+            });
+            const repairedByPly = new Map(
+              repairResult.scenes.map((scene) => [scene.ply, scene]),
+            );
+            if (
+              repairedByPly.size !== targetPlies.length ||
+              targetPlies.some((ply) => !repairedByPly.has(ply))
+            ) {
+              throw new Error(
+                'Story scene repair returned incomplete ply coverage',
+              );
+            }
+            scenes = scenes.map((scene) => {
+              const repair = repairedByPly.get(scene.startPly);
+              if (!repair) return scene;
+              const fantasyNarration = this.cleanReaderFacingProse(
+                repair.fantasyNarration,
+                [...pieceIds],
+              );
+              const wordCount = fantasyNarration.trim().split(/\s+/).length;
+              return {
                 ...scene,
-                fantasyNarration:
-                  currentNarrationByPly.get(scene.ply) ??
-                  scene.fantasyNarration,
-                woundReferences:
-                  allowedWoundReferencesByPly.get(scene.ply) ?? [],
-              })),
-            contextScenes: scenes
-              .filter((scene) => contextPlies.has(scene.startPly))
-              .map((scene) => ({
-                ply: scene.startPly,
-                fantasyNarration: scene.fantasyNarration,
-              })),
-            findings: findings.map((finding) => ({
-              ply: finding.ply as number,
-              pieceId: finding.pieceId,
-              type: finding.type,
-              message: finding.message,
-              excerpt: finding.excerpt,
-            })),
-            captureManifest: captureManifest.filter((entry) =>
-              targetPlies.includes(entry.ply),
-            ),
-            deathContracts: buildRepairDeathContracts(ledger, targetPlies),
-            woundTimeline,
-            characterRegistry: ledger.pieces,
-            selectedRevengePayoffs: outline.selectedRevengePayoffs.filter(
-              (payoff) => targetPlies.includes(payoff.payoffPly),
-            ),
-            checkStrainTimeline: checkStrainTimeline.filter((entry) =>
-              targetPlies.includes(entry.ply),
-            ),
-            fortressOperatingTimeline,
-            mythicArmContracts: buildMythicArmRepairContracts(
+                fantasyNarration,
+                visualPrompt: fantasyNarration,
+                videoPrompt: fantasyNarration,
+                estimatedDurationSeconds: Math.max(
+                  8,
+                  Math.ceil(wordCount / 2.5),
+                ),
+              };
+            });
+            sceneValidation = await this.adjudicateAmbiguousTimedFates(
+              validateStoryScenes(),
+              scenes,
               ledger,
-              targetPlies,
-              storyPackage.scenes,
-              findings,
-            ),
-            telemetry: {
               gameId,
-              generationRunId: run.id,
-              attempt: repairAttempt,
-              repairMode: 'partial',
-            },
-          });
-          const repairedByPly = new Map(
-            repairResult.scenes.map((scene) => [scene.ply, scene]),
-          );
-          if (
-            repairedByPly.size !== targetPlies.length ||
-            targetPlies.some((ply) => !repairedByPly.has(ply))
-          ) {
-            throw new Error(
-              'Story scene repair returned incomplete ply coverage',
+              run.id,
+              repairAttempt + attemptOffset + 1,
+            );
+            this.logger.log(
+              `Applied targeted story scene repair gameId=${gameId} runId=${run.id} attempt=${repairAttempt} plies=${targetPlies.join(',')}`,
+            );
+          } catch (error) {
+            this.logger.warn(
+              `Story scene repair failed gameId=${gameId} runId=${run.id} attempt=${repairAttempt}: ${error instanceof Error ? error.message : 'unknown repair error'}`,
             );
           }
-          scenes = scenes.map((scene) => {
-            const repair = repairedByPly.get(scene.startPly);
-            if (!repair) return scene;
-            const fantasyNarration = this.cleanReaderFacingProse(
-              repair.fantasyNarration,
-              [...pieceIds],
-            );
-            const wordCount = fantasyNarration.trim().split(/\s+/).length;
-            return {
-              ...scene,
-              fantasyNarration,
-              visualPrompt: fantasyNarration,
-              videoPrompt: fantasyNarration,
-              estimatedDurationSeconds: Math.max(8, Math.ceil(wordCount / 2.5)),
-            };
-          });
-          sceneValidation = await this.adjudicateAmbiguousTimedFates(
-            validateStoryScenes(),
-            scenes,
-            ledger,
-            gameId,
-            run.id,
-            repairAttempt + 1,
-          );
-          this.logger.log(
-            `Applied targeted story scene repair gameId=${gameId} runId=${run.id} attempt=${repairAttempt} plies=${targetPlies.join(',')}`,
-          );
-        } catch (error) {
-          this.logger.warn(
-            `Story scene repair failed gameId=${gameId} runId=${run.id} attempt=${repairAttempt}: ${error instanceof Error ? error.message : 'unknown repair error'}`,
-          );
         }
-      }
+      };
+      await repairTargetedStoryFindings();
       const checkmateFallback = applyMissingCheckmateDeathFallback(
         scenes,
         ledger,
@@ -630,7 +648,8 @@ export class FullStoryService {
         );
       }
       const initialWoundWarnings = timedWoundFindings.filter(
-        (finding) => finding.severity === 'warning',
+        (finding) =>
+          finding.severity === 'warning' && isWoundRepairFinding(finding),
       );
       const repairableWoundFindings = [
         ...repairableWoundErrors,
@@ -727,7 +746,8 @@ export class FullStoryService {
             repairedWoundFindings = repairedValidation.woundFindings;
             const repairedDeterministicErrors =
               repairedValidation.findings.filter(
-                (finding) => finding.severity === 'error',
+                (finding) =>
+                  finding.severity === 'error' && isWoundRepairFinding(finding),
               );
             const unresolvedContracts = unresolvedRepairContracts(
               woundRepairContracts,
@@ -774,6 +794,28 @@ export class FullStoryService {
             `Wound scene repair skipped gameId=${gameId} runId=${run.id}: ${error instanceof Error ? error.message : 'unknown repair error'}`,
           );
         }
+      }
+      // A wound-only repair is judged against wound contracts above. It may
+      // still accidentally introduce a different contradiction (for example,
+      // swapping two commanders' Mythic Arms). Re-run the complete validator
+      // and hand those findings to the general targeted scene repair rather
+      // than failing them inside the wound-repair path.
+      sceneValidation = await this.adjudicateAmbiguousTimedFates(
+        validateStoryScenes(),
+        scenes,
+        ledger,
+        gameId,
+        run.id,
+        4,
+      );
+      if (allSceneFindings().length > 0) {
+        await repairTargetedStoryFindings(2);
+      }
+      const unresolvedPostWoundFindings = allSceneFindings();
+      if (unresolvedPostWoundFindings.length > 0) {
+        throw new Error(
+          `Targeted post-wound story repair could not produce a valid result: ${formatWoundFindings(unresolvedPostWoundFindings, 'Rejected prose')}`,
+        );
       }
       const remainingWoundWarnings = timedWoundFindings.filter(
         (finding) => finding.severity === 'warning',

@@ -36,10 +36,14 @@ export class BillingService {
   }
 
   async status(userId: string) {
+    const subscriptionPriceIds = this.subscriptionPriceIds();
     const [creditState, subscription] = await Promise.all([
       this.credits.state(userId),
       this.prisma.billingSubscription.findFirst({
-        where: { userId },
+        where: {
+          userId,
+          priceId: { in: subscriptionPriceIds },
+        },
         orderBy: { updatedAt: 'desc' },
       }),
     ]);
@@ -62,7 +66,11 @@ export class BillingService {
 
     if (definition.mode === 'subscription') {
       const active = await this.prisma.billingSubscription.findFirst({
-        where: { userId, status: { in: ['active', 'trialing', 'past_due'] } },
+        where: {
+          userId,
+          priceId: { in: this.subscriptionPriceIds() },
+          status: { in: ['active', 'trialing', 'past_due'] },
+        },
       });
       if (active) {
         throw new BadRequestException(
@@ -342,7 +350,18 @@ export class BillingService {
     const stripe = this.requireStripe();
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
-    if (user.stripeCustomerId) return user.stripeCustomerId;
+
+    if (user.stripeCustomerId) {
+      try {
+        const existing = await stripe.customers.retrieve(user.stripeCustomerId);
+        if (!existing.deleted) return existing.id;
+      } catch (error) {
+        if (!this.isMissingStripeCustomer(error)) throw error;
+        this.logger.warn(
+          `Replacing unavailable Stripe customer userId=${userId} customerId=${user.stripeCustomerId}`,
+        );
+      }
+    }
 
     const customer = await stripe.customers.create({
       email: user.email,
@@ -354,6 +373,23 @@ export class BillingService {
       data: { stripeCustomerId: customer.id },
     });
     return customer.id;
+  }
+
+  private isMissingStripeCustomer(error: unknown): boolean {
+    if (!error || typeof error !== 'object') return false;
+    const candidate = error as { code?: unknown; param?: unknown };
+    return (
+      candidate.code === 'resource_missing' && candidate.param === 'customer'
+    );
+  }
+
+  private subscriptionPriceIds(): string[] {
+    return (
+      ['scribe', 'chronicler', 'realm_founder'] as const
+    ).flatMap((product) => {
+      const priceId = this.definition(product).priceId;
+      return priceId ? [priceId] : [];
+    });
   }
 
   private definition(product: BillingProduct): ProductDefinition {

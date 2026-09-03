@@ -77,7 +77,12 @@ describe('BillingService', () => {
     });
     const service = new BillingService(prisma as never, credits as never);
     Object.defineProperty(service, 'stripe', {
-      value: { checkout: { sessions: { create } } },
+      value: {
+        customers: {
+          retrieve: jest.fn().mockResolvedValue({ id: 'cus_123' }),
+        },
+        checkout: { sessions: { create } },
+      },
     });
 
     await expect(
@@ -90,6 +95,48 @@ describe('BillingService', () => {
         line_items: [{ price: 'price_single', quantity: 1 }],
         metadata: { userId: 'user-1', product: 'single_saga' },
       }),
+    );
+  });
+
+  it('replaces a customer saved from a different Stripe mode', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'user-1',
+      email: 'reader@example.com',
+      displayName: 'Saga Reader',
+      stripeCustomerId: 'cus_test_mode',
+    });
+    prisma.user.update.mockResolvedValue({});
+    const retrieve = jest.fn().mockRejectedValue({
+      code: 'resource_missing',
+      param: 'customer',
+    });
+    const createCustomer = jest.fn().mockResolvedValue({ id: 'cus_live_mode' });
+    const createCheckout = jest.fn().mockResolvedValue({
+      id: 'cs_live',
+      url: 'https://checkout.stripe.com/live-session',
+    });
+    const service = new BillingService(prisma as never, credits as never);
+    Object.defineProperty(service, 'stripe', {
+      value: {
+        customers: { retrieve, create: createCustomer },
+        checkout: { sessions: { create: createCheckout } },
+      },
+    });
+
+    await expect(
+      service.createCheckout('user-1', 'single_saga'),
+    ).resolves.toEqual({ url: 'https://checkout.stripe.com/live-session' });
+    expect(createCustomer).toHaveBeenCalledWith({
+      email: 'reader@example.com',
+      name: 'Saga Reader',
+      metadata: { userId: 'user-1' },
+    });
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      data: { stripeCustomerId: 'cus_live_mode' },
+    });
+    expect(createCheckout).toHaveBeenCalledWith(
+      expect.objectContaining({ customer: 'cus_live_mode' }),
     );
   });
 

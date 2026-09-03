@@ -108,7 +108,7 @@ describe('BillingService', () => {
     prisma.user.update.mockResolvedValue({});
     const retrieve = jest.fn().mockRejectedValue({
       code: 'resource_missing',
-      param: 'customer',
+      param: 'id',
     });
     const createCustomer = jest.fn().mockResolvedValue({ id: 'cus_live_mode' });
     const createCheckout = jest.fn().mockResolvedValue({

@@ -377,10 +377,10 @@ export class BillingService {
 
   private isMissingStripeCustomer(error: unknown): boolean {
     if (!error || typeof error !== 'object') return false;
-    const candidate = error as { code?: unknown; param?: unknown };
-    return (
-      candidate.code === 'resource_missing' && candidate.param === 'customer'
-    );
+    const candidate = error as { code?: unknown };
+    // This helper is called only around customers.retrieve(). Stripe reports
+    // that endpoint's identifier parameter as "id", not "customer".
+    return candidate.code === 'resource_missing';
   }
 
   private subscriptionPriceIds(): string[] {

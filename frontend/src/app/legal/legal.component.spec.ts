@@ -20,6 +20,9 @@ describe('LegalComponent', () => {
 
   it('discloses AI generation and public visibility in the terms', async () => {
     const text = await render('terms');
+    expect(text).toContain('Cream of the Crop LLC');
+    expect(text).toContain('121 Thornhill Ct, Dover, DE 19904, USA');
+    expect(text).toContain('at least 13 years old');
     expect(text).toContain('uses artificial intelligence');
     expect(text).toContain('publicly visible by default');
     expect(text).toContain('Automatic generation, correction, and validation retries');
@@ -28,6 +31,8 @@ describe('LegalComponent', () => {
 
   it('provides account and data-deletion instructions', async () => {
     const text = await render('privacy');
+    expect(text).toContain('Cream of the Crop LLC');
+    expect(text).toContain('intended for users age 13 and older');
     expect(text).toContain('delete your account directly from My public profile');
     expect(text).toContain('don@creamofthecrop.tech');
     expect(text).toContain('Public saga records remain available but are de-identified');

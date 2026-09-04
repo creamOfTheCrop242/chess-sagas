@@ -18,7 +18,9 @@ interface LegalPage {
   sections: LegalSection[];
 }
 
-const EFFECTIVE_DATE = 'August 11, 2026';
+const EFFECTIVE_DATE = 'September 4, 2026';
+const OPERATOR_NAME = 'Cream of the Crop LLC';
+const OPERATOR_ADDRESS = '121 Thornhill Ct, Dover, DE 19904, USA';
 
 const PAGES: Record<LegalPageKey, LegalPage> = {
   terms: {
@@ -30,9 +32,16 @@ const PAGES: Record<LegalPageKey, LegalPage> = {
       'Chess Sagas uses artificial intelligence. Generated sagas may be inaccurate, inconsistent, incomplete, or offensive. Every newly generated saga is publicly visible by default.',
     sections: [
       {
+        heading: 'Service operator',
+        paragraphs: [
+          `Chess Sagas is operated by ${OPERATOR_NAME}, a Delaware limited liability company. Our mailing address is ${OPERATOR_ADDRESS}. In these Terms, “Chess Sagas,” “we,” “us,” and “our” refer to ${OPERATOR_NAME}.`,
+        ],
+      },
+      {
         heading: 'Who may use Chess Sagas',
         paragraphs: [
-          'You must be legally able to enter into this agreement. If you use Chess Sagas for an organization, you represent that you have authority to bind that organization. The service contains fictional battlefield violence and may not be suitable for every audience.',
+          'You must be at least 13 years old to use Chess Sagas. If you are under the age of legal majority where you live, you may use the service only with permission from a parent or legal guardian who agrees to these Terms on your behalf. You must also be legally able to enter into this agreement. If you use Chess Sagas for an organization, you represent that you have authority to bind that organization.',
+          'The service contains fictional battlefield violence, including descriptions of fantasy injuries and deaths, and may not be suitable for every audience.',
         ],
       },
       {
@@ -118,7 +127,7 @@ const PAGES: Record<LegalPageKey, LegalPage> = {
       {
         heading: 'Changes and contact',
         paragraphs: [
-          `These Terms are effective ${EFFECTIVE_DATE}. We may update them as the service or law changes. Material changes will be announced through the service or another reasonable method. Questions may be submitted through the Contact Support page or sent to don@creamofthecrop.tech.`,
+          `These Terms are effective ${EFFECTIVE_DATE}. We may update them as the service or law changes. Material changes will be announced through the service or another reasonable method. Questions may be submitted through the Contact Support page, sent to don@creamofthecrop.tech, or mailed to ${OPERATOR_NAME}, ${OPERATOR_ADDRESS}.`,
         ],
       },
     ],
@@ -131,6 +140,12 @@ const PAGES: Record<LegalPageKey, LegalPage> = {
     notice:
       'New sagas are publicly visible by default. PGN headers, player names, generated text, and the creator identity you choose to display may be seen by anyone.',
     sections: [
+      {
+        heading: 'Who operates Chess Sagas',
+        paragraphs: [
+          `${OPERATOR_NAME}, a Delaware limited liability company, operates Chess Sagas and is responsible for the personal information described in this policy. Our mailing address is ${OPERATOR_ADDRESS}.`,
+        ],
+      },
       {
         heading: 'Information we collect',
         paragraphs: ['Depending on how you use Chess Sagas, we collect:'],
@@ -215,13 +230,13 @@ const PAGES: Record<LegalPageKey, LegalPage> = {
       {
         heading: 'Children',
         paragraphs: [
-          'Chess Sagas is not directed to children under 13, and we do not knowingly collect personal information from them. If you believe a child has provided personal information, contact us so we can investigate and delete it as appropriate.',
+          'Chess Sagas is intended for users age 13 and older. We do not knowingly collect personal information from children under 13. If you believe a child under 13 has provided personal information, contact us so we can investigate and delete it as appropriate. Users under the age of legal majority where they live should use Chess Sagas only with permission from a parent or legal guardian.',
         ],
       },
       {
         heading: 'Changes and contact',
         paragraphs: [
-          `This policy is effective ${EFFECTIVE_DATE}. We may update it as practices or law change. Material changes will be announced through the service or another reasonable method. Privacy questions and requests may be submitted through Contact Support or sent to don@creamofthecrop.tech.`,
+          `This policy is effective ${EFFECTIVE_DATE}. We may update it as practices or law change. Material changes will be announced through the service or another reasonable method. Privacy questions and requests may be submitted through Contact Support, sent to don@creamofthecrop.tech, or mailed to ${OPERATOR_NAME}, ${OPERATOR_ADDRESS}.`,
         ],
       },
     ],
@@ -234,6 +249,12 @@ const PAGES: Record<LegalPageKey, LegalPage> = {
     notice:
       'A failed saga generation returns the reserved credit after terminal failure. That credit return is automatic and is separate from a refund of money.',
     sections: [
+      {
+        heading: 'Service operator',
+        paragraphs: [
+          `This policy is provided by ${OPERATOR_NAME}, the Delaware limited liability company that operates Chess Sagas. Our mailing address is ${OPERATOR_ADDRESS}.`,
+        ],
+      },
       {
         heading: 'One-time credit purchases',
         paragraphs: [
@@ -266,7 +287,7 @@ const PAGES: Record<LegalPageKey, LegalPage> = {
       {
         heading: 'How to request help or a refund',
         paragraphs: [
-          'Open Contact Support, choose “Billing,” and include the account email, purchase date, amount, and a short explanation. Do not send card numbers, bank details, passwords, or private keys. You may also email don@creamofthecrop.tech.',
+          `Open Contact Support, choose “Billing,” and include the account email, purchase date, amount, and a short explanation. Do not send card numbers, bank details, passwords, or private keys. You may also email don@creamofthecrop.tech or write to ${OPERATOR_NAME}, ${OPERATOR_ADDRESS}.`,
           'We may request reasonable information to verify the account and transaction. Refund timing after approval is controlled by the payment processor and financial institution.',
         ],
       },

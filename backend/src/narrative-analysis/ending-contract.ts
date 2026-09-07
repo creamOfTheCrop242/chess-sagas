@@ -22,6 +22,12 @@ export const LATER_CHRONICLE_LENSES = [
   'the-landscape-preserving-the-wars-scars',
   'a-folk-tradition-distorting-the-battles-memory',
   'a-scavenger-misunderstanding-a-dangerous-discovery',
+  'a-surviving-warrior-facing-the-battles-legacy',
+  'a-surviving-ruler-confronting-the-seals-cost',
+  'an-ascended-character-facing-the-transformations-price',
+  'a-wounded-survivor-returning-to-the-battlefield',
+  'former-rivals-meeting-after-the-war',
+  'a-dead-characters-legacy-haunting-a-survivor',
 ] as const;
 
 export const ENDING_GENRES = [
@@ -48,108 +54,105 @@ const ENDING_GENRE_WEIGHTS: ReadonlyArray<
   ['uneasy-survival', 100],
 ];
 
-const GENRE_AFTERMATH_FOCUSES: Record<
-  EndingGenre,
-  readonly AftermathFocus[]
-> = {
-  'magical-catastrophe': [
-    'survivor-grief-and-personal-reckoning',
-    'wounded-veterans-and-memorial-rites',
-    'the-battlefields-environmental-transformation',
-  ],
-  'supernatural-horror': [
-    'survivor-grief-and-personal-reckoning',
-    'wounded-veterans-and-memorial-rites',
-    'the-battlefields-environmental-transformation',
-  ],
-  'personal-tragedy': [
-    'survivor-grief-and-personal-reckoning',
-    'prisoners-reconciliation-and-revenge',
-    'wounded-veterans-and-memorial-rites',
-    'disbanded-armies-and-returning-soldiers',
-  ],
-  'environmental-ruin': [
-    'civilian-survival-and-reconstruction',
-    'disbanded-armies-and-returning-soldiers',
-    'the-battlefields-environmental-transformation',
-  ],
-  'military-collapse': [
-    'prisoners-reconciliation-and-revenge',
-    'wounded-veterans-and-memorial-rites',
-    'disbanded-armies-and-returning-soldiers',
-  ],
-  rebellion: [
-    'political-succession-and-accountability',
-    'civilian-survival-and-reconstruction',
-    'prisoners-reconciliation-and-revenge',
-    'occupation-and-the-victors-burden',
-  ],
-  'political-horror': [
-    'political-succession-and-accountability',
-    'prisoners-reconciliation-and-revenge',
-    'occupation-and-the-victors-burden',
-  ],
-  'uneasy-survival': [
-    'survivor-grief-and-personal-reckoning',
-    'civilian-survival-and-reconstruction',
-    'wounded-veterans-and-memorial-rites',
-    'disbanded-armies-and-returning-soldiers',
-    'the-battlefields-environmental-transformation',
-  ],
-};
+const GENRE_AFTERMATH_FOCUSES: Record<EndingGenre, readonly AftermathFocus[]> =
+  {
+    'magical-catastrophe': [
+      'survivor-grief-and-personal-reckoning',
+      'wounded-veterans-and-memorial-rites',
+      'the-battlefields-environmental-transformation',
+    ],
+    'supernatural-horror': [
+      'survivor-grief-and-personal-reckoning',
+      'wounded-veterans-and-memorial-rites',
+      'the-battlefields-environmental-transformation',
+    ],
+    'personal-tragedy': [
+      'survivor-grief-and-personal-reckoning',
+      'prisoners-reconciliation-and-revenge',
+      'wounded-veterans-and-memorial-rites',
+      'disbanded-armies-and-returning-soldiers',
+    ],
+    'environmental-ruin': [
+      'survivor-grief-and-personal-reckoning',
+      'disbanded-armies-and-returning-soldiers',
+      'the-battlefields-environmental-transformation',
+    ],
+    'military-collapse': [
+      'prisoners-reconciliation-and-revenge',
+      'wounded-veterans-and-memorial-rites',
+      'disbanded-armies-and-returning-soldiers',
+    ],
+    rebellion: [
+      'political-succession-and-accountability',
+      'survivor-grief-and-personal-reckoning',
+      'prisoners-reconciliation-and-revenge',
+      'occupation-and-the-victors-burden',
+    ],
+    'political-horror': [
+      'political-succession-and-accountability',
+      'prisoners-reconciliation-and-revenge',
+      'occupation-and-the-victors-burden',
+    ],
+    'uneasy-survival': [
+      'survivor-grief-and-personal-reckoning',
+      'prisoners-reconciliation-and-revenge',
+      'wounded-veterans-and-memorial-rites',
+      'disbanded-armies-and-returning-soldiers',
+      'the-battlefields-environmental-transformation',
+    ],
+  };
 
 const GENRE_LATER_CHRONICLE_LENSES: Record<
   EndingGenre,
   readonly LaterChronicleLens[]
 > = {
   'magical-catastrophe': [
-    'the-landscape-preserving-the-wars-scars',
-    'a-scavenger-misunderstanding-a-dangerous-discovery',
-    'craftspeople-repurposing-weapons-and-relics',
+    'a-surviving-ruler-confronting-the-seals-cost',
+    'an-ascended-character-facing-the-transformations-price',
+    'a-wounded-survivor-returning-to-the-battlefield',
   ],
   'supernatural-horror': [
-    'a-descendant-inheriting-an-unwanted-legacy',
-    'a-pilgrim-visiting-a-contested-memorial',
-    'an-exile-returning-to-a-changed-homeland',
-    'a-scavenger-misunderstanding-a-dangerous-discovery',
+    'a-surviving-warrior-facing-the-battles-legacy',
+    'an-ascended-character-facing-the-transformations-price',
+    'a-wounded-survivor-returning-to-the-battlefield',
+    'a-dead-characters-legacy-haunting-a-survivor',
   ],
   'personal-tragedy': [
-    'a-descendant-inheriting-an-unwanted-legacy',
-    'an-exile-returning-to-a-changed-homeland',
     'survivors-relationship-echoing-across-a-generation',
-    'a-pilgrim-visiting-a-contested-memorial',
+    'a-wounded-survivor-returning-to-the-battlefield',
+    'former-rivals-meeting-after-the-war',
+    'a-dead-characters-legacy-haunting-a-survivor',
   ],
   'environmental-ruin': [
-    'a-settlement-built-over-the-battlefield',
-    'an-exile-returning-to-a-changed-homeland',
-    'the-landscape-preserving-the-wars-scars',
-    'a-scavenger-misunderstanding-a-dangerous-discovery',
+    'a-surviving-warrior-facing-the-battles-legacy',
+    'a-surviving-ruler-confronting-the-seals-cost',
+    'an-ascended-character-facing-the-transformations-price',
+    'a-wounded-survivor-returning-to-the-battlefield',
   ],
   'military-collapse': [
-    'a-descendant-inheriting-an-unwanted-legacy',
-    'an-exile-returning-to-a-changed-homeland',
-    'craftspeople-repurposing-weapons-and-relics',
+    'a-surviving-warrior-facing-the-battles-legacy',
     'survivors-relationship-echoing-across-a-generation',
+    'former-rivals-meeting-after-the-war',
+    'a-dead-characters-legacy-haunting-a-survivor',
   ],
   rebellion: [
-    'a-descendant-inheriting-an-unwanted-legacy',
-    'a-historian-disputing-the-official-account',
-    'a-settlement-built-over-the-battlefield',
-    'an-exile-returning-to-a-changed-homeland',
+    'a-surviving-warrior-facing-the-battles-legacy',
+    'a-surviving-ruler-confronting-the-seals-cost',
+    'an-ascended-character-facing-the-transformations-price',
+    'former-rivals-meeting-after-the-war',
   ],
   'political-horror': [
-    'a-descendant-inheriting-an-unwanted-legacy',
-    'a-historian-disputing-the-official-account',
-    'a-pilgrim-visiting-a-contested-memorial',
-    'a-folk-tradition-distorting-the-battles-memory',
+    'a-surviving-ruler-confronting-the-seals-cost',
+    'an-ascended-character-facing-the-transformations-price',
+    'former-rivals-meeting-after-the-war',
+    'a-dead-characters-legacy-haunting-a-survivor',
   ],
   'uneasy-survival': [
-    'a-descendant-inheriting-an-unwanted-legacy',
-    'a-settlement-built-over-the-battlefield',
-    'an-exile-returning-to-a-changed-homeland',
-    'craftspeople-repurposing-weapons-and-relics',
-    'the-landscape-preserving-the-wars-scars',
-    'a-scavenger-misunderstanding-a-dangerous-discovery',
+    'a-surviving-warrior-facing-the-battles-legacy',
+    'a-surviving-ruler-confronting-the-seals-cost',
+    'an-ascended-character-facing-the-transformations-price',
+    'a-wounded-survivor-returning-to-the-battlefield',
+    'former-rivals-meeting-after-the-war',
   ],
 };
 
@@ -246,18 +249,18 @@ const GENRE_INTACT_SEAL_CONSEQUENCES: Record<
 > = {
   'magical-catastrophe': [
     'reality-fracture-opening-along-the-final-battlefield',
-    'children-inheriting-memories-from-other-fractured-realities',
+    'dangerous-relic-being-stolen-or-awakened',
   ],
   'supernatural-horror': [
     'ancient-being-drawn-to-the-strained-but-living-seals',
     'surviving-seal-slowly-corrupting-its-king',
     'dangerous-relic-being-stolen-or-awakened',
-    'children-inheriting-memories-from-other-fractured-realities',
+    'reality-fracture-opening-along-the-final-battlefield',
   ],
   'personal-tragedy': [
     'victorious-queen-challenging-her-kings-rule',
     'surviving-seal-slowly-corrupting-its-king',
-    'children-inheriting-memories-from-other-fractured-realities',
+    'dangerous-relic-being-stolen-or-awakened',
   ],
   'environmental-ruin': [
     'reality-fracture-opening-along-the-final-battlefield',
@@ -286,7 +289,7 @@ const GENRE_INTACT_SEAL_CONSEQUENCES: Record<
     'ancient-being-drawn-to-the-strained-but-living-seals',
     'reality-fracture-opening-along-the-final-battlefield',
     'dangerous-relic-being-stolen-or-awakened',
-    'children-inheriting-memories-from-other-fractured-realities',
+    'surviving-seal-slowly-corrupting-its-king',
   ],
 };
 

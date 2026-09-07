@@ -22,6 +22,17 @@ export type KingDisposition =
   | 'honorable-sovereign'
   | 'calculating-monarch'
   | 'selfish-tyrant';
+export type BattleDisposition =
+  | 'honorable'
+  | 'dutiful'
+  | 'protective'
+  | 'ruthless'
+  | 'sadistic'
+  | 'ambitious'
+  | 'cowardly'
+  | 'vengeful'
+  | 'pragmatic'
+  | 'fanatical';
 
 export const QUIET_BEAT_PURPOSES = [
   'aftermath-reaction',
@@ -54,6 +65,7 @@ export interface PieceIdentity {
   formerRole?: string;
   pronouns?: 'he/him' | 'she/her';
   deathDisposition?: DeathDisposition;
+  battleDisposition?: BattleDisposition;
   kingDisposition?: KingDisposition;
   backstory?: string;
   mythicArm?: {

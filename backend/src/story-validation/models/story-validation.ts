@@ -30,6 +30,7 @@ export const validationFindingTypeSchema = z.enum([
   'coordinate-mentioned-in-prose',
   'chess-terminology',
   'outline-continuity',
+  'pawn-ability-contract',
 ]);
 
 export const validationFindingSchema = z.object({

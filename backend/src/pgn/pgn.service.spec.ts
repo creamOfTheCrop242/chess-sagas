@@ -219,6 +219,44 @@ describe('PgnService deterministic ledger', () => {
     ).toBe(true);
   });
 
+  it('tracks each invasion toward the opposing kingdom heart', () => {
+    const game = service.parse(
+      '[White "Ada"]\n[Black "Turing"]\n[Result "*"]\n\n1. e4 d5 2. e5 d4 *',
+    );
+
+    expect(game.ledger.events[0].kingdomHeartContext).toEqual({
+      destinationKingdom: 'south',
+      distanceFromHeart: 4,
+      zone: 'outer-realm',
+      movedCloserToHeart: true,
+    });
+    expect(game.ledger.events[1].kingdomHeartContext).toEqual({
+      destinationKingdom: 'north',
+      distanceFromHeart: 4,
+      zone: 'outer-realm',
+      movedCloserToHeart: true,
+    });
+    expect(game.ledger.events[2].kingdomHeartContext?.distanceFromHeart).toBe(
+      3,
+    );
+    expect(game.ledger.events[3].kingdomHeartContext?.distanceFromHeart).toBe(
+      3,
+    );
+  });
+
+  it('marks the enemy home edge as its capital heart', () => {
+    const game = service.parse(
+      '[SetUp "1"]\n[FEN "7k/P7/8/8/8/8/7p/K7 w - - 0 1"]\n[Result "*"]\n\n1. a8=Q+ *',
+    );
+
+    expect(game.ledger.events[0].kingdomHeartContext).toEqual({
+      destinationKingdom: 'south',
+      distanceFromHeart: 0,
+      zone: 'capital-heart',
+      movedCloserToHeart: true,
+    });
+  });
+
   it('avoids repeating a quiet purpose across consecutive quiet beats', () => {
     const game = service.parse(
       '[White "Ada"]\n[Black "Turing"]\n[Result "*"]\n\n1. a3 h6 2. b3 g6 3. c3 f6 *',

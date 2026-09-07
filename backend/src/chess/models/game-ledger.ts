@@ -112,6 +112,8 @@ export interface ChessEvent {
 export interface QuietBeatContext {
   purpose: QuietBeatPurpose;
   relatedEventPly?: number;
+  /** Exact ledger characters that can ground this beat's selected purpose. */
+  focusPieceIds?: string[];
 }
 
 export interface TacticalContext {

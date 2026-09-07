@@ -294,6 +294,8 @@ function preserveNarrativeIdentities(
         operatorName: existing.operatorName,
         pronouns: existing.pronouns ?? piece.pronouns,
         deathDisposition: existing.deathDisposition ?? piece.deathDisposition,
+        battleDisposition:
+          existing.battleDisposition ?? piece.battleDisposition,
         backstory: existing.backstory ?? piece.backstory,
       };
     }),

@@ -3,6 +3,7 @@ import type { Chess } from 'chess.js';
 import type {
   ChessColor,
   ChessPieceType,
+  BattleDisposition,
   DeathDisposition,
   FantasyPieceType,
   GameLedger,
@@ -352,6 +353,13 @@ export class PieceIdentityService {
         id,
         seedForIdentityName(characterName, id),
       ),
+      battleDisposition:
+        type === 'k'
+          ? undefined
+          : characterBattleDisposition(
+              id,
+              seedForIdentityName(characterName, id),
+            ),
       alive: true,
     };
   }
@@ -397,6 +405,29 @@ function characterDeathDisposition(
   return DEATH_DISPOSITIONS[
     hashSeed(`${stableId}:${identitySeed}:death-disposition`) %
       DEATH_DISPOSITIONS.length
+  ];
+}
+
+const BATTLE_DISPOSITIONS: readonly BattleDisposition[] = [
+  'honorable',
+  'dutiful',
+  'protective',
+  'ruthless',
+  'sadistic',
+  'ambitious',
+  'cowardly',
+  'vengeful',
+  'pragmatic',
+  'fanatical',
+];
+
+function characterBattleDisposition(
+  stableId: string,
+  identitySeed: string,
+): BattleDisposition {
+  return BATTLE_DISPOSITIONS[
+    hashSeed(`${stableId}:${identitySeed}:battle-disposition`) %
+      BATTLE_DISPOSITIONS.length
   ];
 }
 
@@ -463,6 +494,14 @@ export function normalizePawnViewpoints(ledger: GameLedger): GameLedger {
               ? (piece.kingDisposition ??
                 kingDisposition(piece.id, ledger.initialFen))
               : piece.kingDisposition,
+          battleDisposition:
+            piece.chessType === 'k'
+              ? undefined
+              : (piece.battleDisposition ??
+                characterBattleDisposition(
+                  piece.id,
+                  seedForIdentityName(piece.characterName, piece.id),
+                )),
           backstory:
             piece.backstory ?? pieceBackstory(piece, ledger.initialFen),
         };
@@ -479,6 +518,15 @@ export function normalizePawnViewpoints(ledger: GameLedger): GameLedger {
         companyName: profile.companyName,
         viewpointName: profile.viewpointName,
         viewpointRole: profile.viewpointRole,
+        battleDisposition:
+          piece.battleDisposition ??
+          characterBattleDisposition(
+            piece.id,
+            seedForIdentityName(
+              piece.viewpointName ?? piece.permanentName,
+              piece.id,
+            ),
+          ),
         backstory: piece.backstory ?? pieceBackstory(piece, ledger.initialFen),
       };
     }),

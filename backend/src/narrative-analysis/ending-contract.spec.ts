@@ -79,6 +79,35 @@ describe('buildEndingContract', () => {
     }
   });
 
+  it('keeps newly selected endings centered on established characters', () => {
+    const legacyCivilianLenses = new Set([
+      'a-descendant-inheriting-an-unwanted-legacy',
+      'a-historian-disputing-the-official-account',
+      'a-settlement-built-over-the-battlefield',
+      'a-pilgrim-visiting-a-contested-memorial',
+      'craftspeople-repurposing-weapons-and-relics',
+      'a-folk-tradition-distorting-the-battles-memory',
+      'a-scavenger-misunderstanding-a-dangerous-discovery',
+    ]);
+
+    for (let index = 0; index < 500; index += 1) {
+      const ledger = pgn.parse(
+        `[Date "2026.09.${String((index % 28) + 1).padStart(2, '0')}"]\n[White "NamedNorth${index}"]\n[Black "NamedSouth${index}"]\n[Result "0-1"]\n\n1. f3 e5 2. g4 Qh4# 0-1`,
+      ).ledger;
+      const direction = buildEndingContract(ledger).creativeDirection;
+
+      expect(direction.aftermathFocus).not.toBe(
+        'civilian-survival-and-reconstruction',
+      );
+      expect(legacyCivilianLenses.has(direction.laterChronicleLens)).toBe(
+        false,
+      );
+      expect(direction.intactSealConsequence).not.toBe(
+        'children-inheriting-memories-from-other-fractured-realities',
+      );
+    }
+  });
+
   it('selects consequences compatible with representative genres', () => {
     const allowed: Partial<Record<EndingGenre, Set<string>>> = {
       'magical-catastrophe': new Set([

@@ -896,6 +896,16 @@ describe('PgnService deterministic ledger', () => {
     expect(first.map((piece) => piece.deathDisposition)).toEqual(
       second.map((piece) => piece.deathDisposition),
     );
+    const nonKings = first.filter((piece) => piece.chessType !== 'k');
+    expect(nonKings.every((piece) => Boolean(piece.battleDisposition))).toBe(
+      true,
+    );
+    expect(first.map((piece) => piece.battleDisposition)).toEqual(
+      second.map((piece) => piece.battleDisposition),
+    );
+    expect(
+      new Set(nonKings.map((piece) => piece.battleDisposition)).size,
+    ).toBeGreaterThan(3);
   });
 
   it('marks checks and checkmate and derives termination', () => {

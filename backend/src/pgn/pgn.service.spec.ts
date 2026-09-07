@@ -204,6 +204,11 @@ describe('PgnService deterministic ledger', () => {
 
     expect(quietEvents.length).toBeGreaterThan(0);
     expect(quietEvents.every((event) => event.quietBeatContext)).toBe(true);
+    expect(
+      quietEvents.every((event) =>
+        event.quietBeatContext?.focusPieceIds?.includes(event.pieceId),
+      ),
+    ).toBe(true);
     expect(first.events.map((event) => event.quietBeatContext)).toEqual(
       second.events.map((event) => event.quietBeatContext),
     );
@@ -212,6 +217,36 @@ describe('PgnService deterministic ledger', () => {
         .filter((event) => !event.isQuietMove)
         .every((event) => event.quietBeatContext === undefined),
     ).toBe(true);
+  });
+
+  it('avoids repeating a quiet purpose across consecutive quiet beats', () => {
+    const game = service.parse(
+      '[White "Ada"]\n[Black "Turing"]\n[Result "*"]\n\n1. a3 h6 2. b3 g6 3. c3 f6 *',
+    );
+    const purposes = game.ledger.events.map(
+      (event) => event.quietBeatContext?.purpose,
+    );
+
+    for (let index = 1; index < purposes.length; index += 1) {
+      expect(purposes[index]).not.toBe(purposes[index - 1]);
+    }
+  });
+
+  it('grounds interpersonal quiet beats in exact adjacent allies', () => {
+    const game = service.parse(
+      '[SetUp "1"]\n[FEN "k7/8/8/8/3PR3/8/8/7K w - - 0 1"]\n[Result "*"]\n\n1. Re5 *',
+    );
+    const event = game.ledger.events[0];
+
+    if (
+      event.quietBeatContext?.purpose === 'relationship-development' ||
+      event.quietBeatContext?.purpose === 'human-moment'
+    ) {
+      expect(event.quietBeatContext.focusPieceIds).toEqual([
+        'w-r-e4',
+        'w-p-d4',
+      ]);
+    }
   });
 
   it('uses nearby major events to contextualize quiet beats', () => {

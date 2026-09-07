@@ -242,6 +242,8 @@ export class GameLedgerService {
       event.isCastle ||
       event.isCheckmate;
 
+    const recentPurposes: QuietBeatPurpose[] = [];
+
     for (const event of events) {
       if (!event.isQuietMove) continue;
       const previousMajor = [...events]
@@ -257,32 +259,43 @@ export class GameLedgerService {
         ? nextMajor.ply - event.ply
         : Number.POSITIVE_INFINITY;
       const purposes: QuietBeatPurpose[] = [];
+      const adjacentAllies =
+        event.interactionContext?.adjacentAllyPieceIds ?? [];
+      const tacticalPieces = [
+        ...(event.tacticalContext?.attacksPieceIds ?? []),
+        ...(event.tacticalContext?.attackedByPieceIds ?? []),
+      ];
 
       if (previousDistance <= 2) purposes.push('aftermath-reaction');
       if (nextDistance <= 2) {
         purposes.push('approaching-danger', 'tactical-preparation');
       }
       if (
-        (event.tacticalContext?.attacksPieceIds.length ?? 0) > 0 ||
-        (event.tacticalContext?.attackedByPieceIds.length ?? 0) > 0
+        tacticalPieces.length > 0
       ) {
         purposes.push('threat-recognition', 'enemy-observation');
       }
+      if (adjacentAllies.length > 0) {
+        purposes.push('relationship-development', 'human-moment');
+      }
       purposes.push(
-        'relationship-development',
         'environmental-pressure',
         'backstory-reflection',
-        'enemy-observation',
-        'human-moment',
         'meaningful-travel',
         'tactical-preparation',
       );
 
+      const distinctPurposes = [...new Set(purposes)];
+      const variedPurposes = distinctPurposes.filter(
+        (candidate) => !recentPurposes.includes(candidate),
+      );
+      const eligiblePurposes =
+        variedPurposes.length > 0 ? variedPurposes : distinctPurposes;
       const purpose =
-        purposes[
+        eligiblePurposes[
           stableIndex(
             `${identitySeed}|quiet-beat|${event.ply}|${event.pieceId}`,
-            purposes.length,
+            eligiblePurposes.length,
           )
         ];
       const relatedEventPly =
@@ -292,7 +305,21 @@ export class GameLedgerService {
               nextDistance <= 2
             ? nextMajor?.ply
             : undefined;
-      event.quietBeatContext = { purpose, relatedEventPly };
+      const focusPieceIds = [
+        event.pieceId,
+        ...(purpose === 'relationship-development' || purpose === 'human-moment'
+          ? adjacentAllies.slice(0, 2)
+          : purpose === 'threat-recognition' || purpose === 'enemy-observation'
+            ? tacticalPieces.slice(0, 2)
+            : []),
+      ];
+      event.quietBeatContext = {
+        purpose,
+        relatedEventPly,
+        focusPieceIds: [...new Set(focusPieceIds)],
+      };
+      recentPurposes.push(purpose);
+      if (recentPurposes.length > 2) recentPurposes.shift();
     }
   }
 

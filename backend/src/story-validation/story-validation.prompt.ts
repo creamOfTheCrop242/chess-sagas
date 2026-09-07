@@ -1,4 +1,4 @@
-export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v43';
+export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v44';
 
 export const STORY_VALIDATION_INSTRUCTIONS = `Validate the supplied story against the complete deterministic chess ledger, narrative analysis, outline, and deterministic findings.
 
@@ -9,6 +9,7 @@ Report:
 - multiple physical prototype Ascension Seals, relic chambers, or ascension sites belonging to the same kingdom; failure to reuse that kingdom's one persistent prototype for every enemy promotion; or, after repeated use, failure of a later ascendant and every living prior ascendant to acknowledge the shared transformation through observation, communication, or magical sensation rather than generic tactical coordination
 - any claim that a Moving Fortress pilot can be extracted, transferred, cut free, or survive outside the machine; unnecessary Fortress-centered ending material when the pilot was not central to the story or selected consequence
 - any mage acolyte who remains purely a conventional soldier throughout the story without at least one visible, meaningful use of limited apprentice magic, and any mage acolyte incorrectly given teleportation or Archwizard-level power
+- any pawn whose actions contradict that character's pawnAbilityContract before promotion. In particular, report a non-caster personally casting a spell, creating a magical attack, or raising a personal ward, and report a Mage Acolyte using magic beyond the listed apprentice scale. Distinguish the pawn performing magic from merely carrying ordinary equipment, physically resisting magic, being affected by magic, or standing near another character's spell. Always report pawn-ability-contract findings with severity warning. These findings are diagnostic only: never return a scene patch for them, never convert them to errors, and never make them block the pipeline.
 - every missing or invented capture and every wrong captor
 - a quiet event that ignores or contradicts its deterministic quietBeatContext, fails to change knowledge, emotion, preparation, relationship, danger, environment, backstory relevance, observation, humanity, or position as selected, prematurely reveals the outcome at relatedEventPly, or invents combat, injury, or death
 - contradicting interactionContext by claiming a character witnessed a capture when absent from witnessedCapture.witnessPieceIds, labeling a capture revenge when avengesDeaths is empty or when it was not chosen in outline.selectedRevengePayoffs, omitting or avenging a different victim from a selected payoff, reversing the killer and avenger, or treating adjacentAllyPieceIds as compulsory repetitive chatter rather than an optional grounded interaction opportunity

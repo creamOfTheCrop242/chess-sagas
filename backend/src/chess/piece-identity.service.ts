@@ -12,6 +12,7 @@ import type {
   Side,
 } from './models/game-ledger';
 import { mythicArmForCommander } from './mythic-arms';
+import { pawnAbilityContract } from './pawn-ability-contract';
 
 const PAWN_COMPANIES = [
   'Dawn Company',
@@ -342,6 +343,9 @@ export class PieceIdentityService {
       companyName: pawnProfile?.companyName,
       viewpointName: pawnProfile?.viewpointName,
       viewpointRole: pawnProfile?.viewpointRole,
+      pawnAbilityContract: pawnProfile?.viewpointRole
+        ? pawnAbilityContract(pawnProfile.viewpointRole)
+        : undefined,
       operatorName: type === 'r' ? fortressOperatorName : undefined,
       pronouns: characterPronouns(
         type,
@@ -518,6 +522,7 @@ export function normalizePawnViewpoints(ledger: GameLedger): GameLedger {
         companyName: profile.companyName,
         viewpointName: profile.viewpointName,
         viewpointRole: profile.viewpointRole,
+        pawnAbilityContract: pawnAbilityContract(profile.viewpointRole),
         battleDisposition:
           piece.battleDisposition ??
           characterBattleDisposition(

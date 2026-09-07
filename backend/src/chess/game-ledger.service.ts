@@ -178,6 +178,11 @@ export class GameLedgerService {
           : undefined,
         isEnPassant,
         isQuietMove: !result.captured && !isCheck && !isCastle && !isPromotion,
+        kingdomHeartContext: kingdomHeartContext(
+          result.color,
+          result.from,
+          result.to,
+        ),
         boardFenAfterMove: replay.fen(),
         tacticalContext,
         interactionContext: {
@@ -462,6 +467,29 @@ export class GameLedgerService {
       termination,
     };
   }
+}
+
+function kingdomHeartContext(
+  moverColor: 'w' | 'b',
+  from: string,
+  to: string,
+): ChessEvent['kingdomHeartContext'] {
+  const destinationKingdom = moverColor === 'w' ? 'south' : 'north';
+  const distanceFromHeart =
+    moverColor === 'w' ? 8 - Number(to[1]) : Number(to[1]) - 1;
+  const previousDistance =
+    moverColor === 'w' ? 8 - Number(from[1]) : Number(from[1]) - 1;
+  return {
+    destinationKingdom,
+    distanceFromHeart,
+    zone:
+      distanceFromHeart === 0
+        ? 'capital-heart'
+        : distanceFromHeart <= 2
+          ? 'inner-realm'
+          : 'outer-realm',
+    movedCloserToHeart: distanceFromHeart < previousDistance,
+  };
 }
 
 function distanceBasedTravelMode<

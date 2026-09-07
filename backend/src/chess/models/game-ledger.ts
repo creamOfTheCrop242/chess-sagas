@@ -61,6 +61,7 @@ export interface PieceIdentity {
   companyName?: string;
   viewpointName?: string;
   viewpointRole?: string;
+  pawnAbilityContract?: import('../pawn-ability-contract').PawnAbilityContract;
   operatorName?: string;
   formerRole?: string;
   pronouns?: 'he/him' | 'she/her';
@@ -103,10 +104,18 @@ export interface ChessEvent {
   isEnPassant: boolean;
   isQuietMove: boolean;
   quietBeatContext?: QuietBeatContext;
+  kingdomHeartContext?: KingdomHeartContext;
   boardFenAfterMove: string;
   tacticalContext?: TacticalContext;
   interactionContext?: InteractionContext;
   checkmateExplanation?: CheckmateExplanation;
+}
+
+export interface KingdomHeartContext {
+  destinationKingdom: Side;
+  distanceFromHeart: number;
+  zone: 'outer-realm' | 'inner-realm' | 'capital-heart';
+  movedCloserToHeart: boolean;
 }
 
 export interface QuietBeatContext {

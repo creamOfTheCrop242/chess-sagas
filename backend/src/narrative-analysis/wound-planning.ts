@@ -76,7 +76,7 @@ export function selectRequiredWoundEvents(
       throw new Error(`Cannot select wound for unknown piece ${event.pieceId}`);
     }
     const compatible = eligibleWoundCatalogEntries(
-      attacker.fantasyType,
+      event.pieceType,
       causeType,
       causeType === 'victim-retaliation'
         ? pieces.get(event.capturedPieceId)?.viewpointRole
@@ -84,7 +84,7 @@ export function selectRequiredWoundEvents(
     );
     if (compatible.length === 0) {
       throw new Error(
-        `No wound catalog entry supports ${attacker.fantasyType}/${causeType}`,
+        `No wound catalog entry supports ${event.pieceType}/${causeType}`,
       );
     }
     const used = usedCatalogIdsByPiece.get(event.pieceId) ?? new Set<string>();

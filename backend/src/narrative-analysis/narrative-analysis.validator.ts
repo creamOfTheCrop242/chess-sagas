@@ -3,7 +3,10 @@ import type { GameLedger } from '../chess/models/game-ledger';
 import { isSurrenderKingFate } from '../chess/models/story-ending';
 import type { NarrativeAnalysis } from './models/narrative-analysis';
 import { selectRequiredWoundEvents } from './wound-planning';
-import { woundCatalogEntry } from './wound-catalog';
+import {
+  eligibleWoundCatalogEntries,
+  woundCatalogEntry,
+} from './wound-catalog';
 import { isSpoilerFreeBattleTitle } from '../story-outline/story-title';
 import { selectBattlefieldEnvironment } from '../chess/battlefield-environment';
 import {
@@ -144,9 +147,28 @@ export class NarrativeAnalysisValidator {
           `Wound contract for ${wound.pieceId} at ply ${wound.inflictedAtPly} must match the seeded catalog selection`,
         );
       }
-      if (wound.woundCatalogId && !woundCatalogEntry(wound.woundCatalogId)) {
+      const catalogEntry = wound.woundCatalogId
+        ? woundCatalogEntry(wound.woundCatalogId)
+        : undefined;
+      if (wound.woundCatalogId && !catalogEntry) {
         errors.push(
           `Unknown wound catalog ID ${wound.woundCatalogId} for ${wound.pieceId}`,
+        );
+      }
+      if (
+        event &&
+        catalogEntry &&
+        !eligibleWoundCatalogEntries(
+          event.pieceType,
+          wound.causeType,
+          wound.causeType === 'victim-retaliation'
+            ? ledger.pieces.find((piece) => piece.id === wound.sourcePieceId)
+                ?.viewpointRole
+            : undefined,
+        ).some((entry) => entry.id === catalogEntry.id)
+      ) {
+        errors.push(
+          `Wound catalog ID ${wound.woundCatalogId} is incompatible with ${event.pieceType} at ply ${wound.inflictedAtPly}`,
         );
       }
       if (

@@ -105,6 +105,45 @@ describe('wound planning', () => {
       );
     }
   });
+
+  it("selects wounds using a promoted character's form at the injury ply", () => {
+    const promotedPawn = piece('w-p-a2', 'Helena');
+    promotedPawn.fantasyType = 'moving-fortress';
+    promotedPawn.currentChessType = 'r';
+    promotedPawn.promotedFromPawnId = promotedPawn.id;
+    const victim = piece('b-q-d8', 'Vesper');
+    const promotionLedger = {
+      metadata: {
+        date: 'promotion-wound-test',
+        whitePlayer: 'Ada',
+        blackPlayer: 'Turing',
+      },
+      survivors: [promotedPawn.id],
+      pieces: [promotedPawn, victim],
+      events: [capture(1, promotedPawn.id, 'grunt', victim.id, 'queen')],
+    } as GameLedger;
+
+    // Find a deterministic seed that selects the high-probability wound event.
+    for (let seed = 0; seed < 100; seed += 1) {
+      promotionLedger.metadata.date = `promotion-wound-test-${seed}`;
+      if (
+        deterministicWoundRoll(
+          promotionLedger,
+          promotionLedger.events[0],
+          promotedPawn,
+          victim,
+        ) < woundProbability('grunt', 'queen')
+      ) {
+        break;
+      }
+    }
+
+    const [wound] = selectRequiredWoundEvents(promotionLedger);
+    expect(wound).toBeDefined();
+    const catalog = woundCatalogEntry(wound.woundCatalogId);
+    expect(catalog?.ownerTypes).toContain('grunt');
+    expect(catalog?.ownerTypes).not.toEqual(['moving-fortress']);
+  });
 });
 
 function piece(

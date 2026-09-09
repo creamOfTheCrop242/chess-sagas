@@ -6,12 +6,14 @@ import { filter } from 'rxjs';
 import { AuthService } from './auth/auth.service';
 import { BillingClientService } from './billing/billing.service';
 import { PgnApiService } from './pgn-viewer/pgn-api.service';
+import { PwaInstallComponent } from './pwa-install.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterLink, RouterOutlet],
+  imports: [RouterLink, RouterOutlet, PwaInstallComponent],
   template: `
+    <app-pwa-install />
     <nav class="account-bar" aria-label="Account navigation">
       <a class="home-link" routerLink="/">Chess Sagas</a>
       <div class="account-actions">

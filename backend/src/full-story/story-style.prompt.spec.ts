@@ -49,7 +49,7 @@ describe('plain-language story prompt contract', () => {
     expect(FULL_STORY_INSTRUCTIONS).toContain('Do not invent a supply crisis');
   });
   it('plans stories in plain contemporary English from narrative analysis onward', () => {
-    expect(NARRATIVE_ANALYSIS_PROMPT_VERSION).toBe('phase-2-v87');
+    expect(NARRATIVE_ANALYSIS_PROMPT_VERSION).toBe('phase-2-v88');
     expect(NARRATIVE_ANALYSIS_INSTRUCTIONS).toContain(
       'plain contemporary English throughout the saga',
     );
@@ -62,7 +62,7 @@ describe('plain-language story prompt contract', () => {
   });
 
   it('prevents the outline from planning obscure poetic events', () => {
-    expect(STORY_OUTLINE_PROMPT_VERSION).toBe('phase-3-v88');
+    expect(STORY_OUTLINE_PROMPT_VERSION).toBe('phase-3-v90');
     expect(STORY_OUTLINE_INSTRUCTIONS).toContain('plain modern English');
     expect(STORY_OUTLINE_INSTRUCTIONS).toContain(
       'Mystery may surround the ultimate origin or future of a threat, but never the action the reader just witnessed',
@@ -70,7 +70,7 @@ describe('plain-language story prompt contract', () => {
   });
 
   it('requires final prose and endings to explain literal cause and effect', () => {
-    expect(FULL_STORY_PROMPT_VERSION).toBe('story-package-v105');
+    expect(FULL_STORY_PROMPT_VERSION).toBe('story-package-v107');
     expect(FULL_STORY_INSTRUCTIONS).toContain(
       'plain modern English that a reader can understand on the first pass',
     );

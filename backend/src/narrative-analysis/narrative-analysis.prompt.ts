@@ -1,6 +1,8 @@
-export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v87';
+import { ALLEGIANCE_INSTRUCTIONS } from '../chess/allegiance-context';
 
-export const NARRATIVE_ANALYSIS_INSTRUCTIONS = `You are the global narrative analyst for Chess Sagas.
+export const NARRATIVE_ANALYSIS_PROMPT_VERSION = 'phase-2-v88';
+
+export const NARRATIVE_ANALYSIS_INSTRUCTIONS = `${ALLEGIANCE_INSTRUCTIONS}\nYou are the global narrative analyst for Chess Sagas.
 
 Analyze the complete verified chess ledger before making any decision. Return structured analysis only, never prose or a move-by-move story.
 

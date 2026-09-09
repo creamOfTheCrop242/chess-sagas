@@ -12,6 +12,7 @@ import type {
   Side,
 } from './models/game-ledger';
 import { mythicArmForCommander } from './mythic-arms';
+import { battleTemperament } from './battle-characterization';
 import { pawnAbilityContract } from './pawn-ability-contract';
 
 const PAWN_COMPANIES = [
@@ -547,6 +548,14 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
     piece.permanentName;
   const choice = (values: readonly string[], key: string): string =>
     values[hashSeed(`${seed}:${piece.id}:${key}`) % values.length];
+  const temperament = battleTemperament(
+    piece.battleDisposition ??
+      characterBattleDisposition(
+        piece.id,
+        seedForIdentityName(piece.characterName, piece.id),
+      ),
+    `${seed}:${piece.id}:temperament`,
+  );
   const personalize = (text: string): string =>
     applyCharacterPronouns(text, piece.pronouns ?? 'he/him');
 
@@ -613,7 +622,7 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
         'Her old community celebrates her selection, unaware that she still dreams of returning without a title',
       ];
       return personalize(
-        `${piece.permanentName} came from ${choice(candidateOrigins, 'candidate-origin')}. ${choice(discoveries, 'candidate-discovery')}. ${choice(aptitudes, 'candidate-aptitude')}. ${choice(responses, 'candidate-response')}. ${choice(queenDynamics, 'candidate-queen-dynamic')}. ${choice(fieldTrials, 'candidate-field-trial')} with ${piece.companyName ?? `${kingdom} army`}. ${choice(sacrifices, 'candidate-sacrifice')}.`,
+        `${piece.permanentName} came from ${choice(candidateOrigins, 'candidate-origin')}. ${choice(discoveries, 'candidate-discovery')}. ${choice(aptitudes, 'candidate-aptitude')}. ${choice(responses, 'candidate-response')}. ${choice(queenDynamics, 'candidate-queen-dynamic')}. ${choice(fieldTrials, 'candidate-field-trial')} with ${piece.companyName ?? `${kingdom} army`}. ${choice(sacrifices, 'candidate-sacrifice')}. ${temperament}.`,
       );
     }
     const origins = [
@@ -655,18 +664,6 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       'volunteered after years of watching nobles ask sacrifices they would not make themselves',
       'entered the ranks to prove their disgraced household could still serve the realm honorably',
       'joined believing that one trained soldier could spare ten frightened civilians from fighting',
-    ];
-    const temperaments = [
-      'They are patient under pressure but slow to forgive careless orders',
-      'They hide fear behind dry humor and remember every promise made to the wounded',
-      'They are fiercely practical, suspicious of glory, and protective of inexperienced soldiers',
-      'They speak little in camp but become decisive when plans begin to collapse',
-      'They crave recognition more than they admit and take dangerous failures personally',
-      'They distrust courtly magic yet will risk anything for the people sustained by it',
-      'They are generous with supplies, ruthless about discipline, and terrified of being abandoned',
-      'They carry a quiet faith in ordinary soldiers rather than kings or prophecies',
-      'They are curious about enemy customs and ashamed that compassion sometimes feels like disloyalty',
-      'They meet danger with stubborn calm but struggle to ask others for help',
     ];
     const roleHistories: Record<string, readonly string[]> = {
       scout: [
@@ -724,7 +721,7 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       'role-history',
     );
     return personalize(
-      `${piece.permanentName} came from ${choice(origins, 'origin')}. ${choice(formativeEvents, 'formative')}. They ${choice(motives, 'motive')}. ${roleHistory} of ${company}. ${choice(temperaments, 'temperament')}.`,
+      `${piece.permanentName} came from ${choice(origins, 'origin')}. ${choice(formativeEvents, 'formative')}. They ${choice(motives, 'motive')}. ${roleHistory} of ${company}. ${temperament}.`,
     );
   }
 
@@ -750,14 +747,6 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       formerRole === 'queen candidate'
         ? ' Before the injury, the court had selected her in childhood as a possible replacement for the reigning Queen. Implantation saved her life but ended any ordinary path to the throne, leaving a trained successor permanently bound to a Fortress instead.'
         : '';
-    const attitudes = [
-      'The transformation saved a life but left the pilot grieving every ordinary sensation the cradle replaced',
-      'The pilot treats the fortress as a second body and fears the day its voice becomes easier to hear than human voices',
-      'They accepted entombment willingly, though they still resent those who call the machine a gift',
-      'They endure the cradle through fierce loyalty to the soldiers who fight outside beside the fortress',
-      'They conceal recurring panic beneath precise commands and meticulous maintenance rituals',
-      'They consider every shot a debt because the machine consumes magic civilians also need',
-    ];
     const primaryWeapons = [
       'a turreted heavy cannon that fires single armor-breaking magic rounds',
       'a rotary gatling gun that saturates advancing formations with rapid volleys of smaller magic rounds',
@@ -781,7 +770,7 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       'A ward-siphon array steals a brief pulse of hostile magic to strengthen the next shot or impact',
     ];
     return personalize(
-      `${name} once ${choice(formerService, `former-service:${formerRole}`)}.${formerCalling} ${choice(injuries, 'injury')}. With death otherwise certain, the kingdom’s Archwizards placed the soldier’s living body inside ${piece.permanentName}; its magical cradle now sustains the pilot, who cannot survive apart from the Moving Fortress. The machine carries ${choice(primaryWeapons, 'primary-weapon')}. ${choice(attachments, 'specialized-attachment')}. Its armored mass and reinforced prow also make the entire Fortress a devastating ram. ${choice(attitudes, 'attitude')}.`,
+      `${name} once ${choice(formerService, `former-service:${formerRole}`)}.${formerCalling} ${choice(injuries, 'injury')}. With death otherwise certain, the kingdom’s Archwizards placed the soldier’s living body inside ${piece.permanentName}; its magical cradle now sustains the pilot, who cannot survive apart from the Moving Fortress. The machine carries ${choice(primaryWeapons, 'primary-weapon')}. ${choice(attachments, 'specialized-attachment')}. Its armored mass and reinforced prow also make the entire Fortress a devastating ram. ${temperament}.`,
     );
   }
 
@@ -858,14 +847,6 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       'Years speaking with permanently embedded Fortress pilots taught her the human cost hidden inside enchanted armor',
       'She learned diplomacy by settling disputes between companies that distrusted the royal court',
     ];
-    const conflicts = [
-      'She fears becoming a weapon so useful that nobody remembers she must one day rule',
-      'She is compassionate toward ordinary soldiers but merciless toward officers who waste their lives',
-      'She envies people free to choose lives outside the fate designed for them',
-      'She believes the King conceals the true price of drawing power across realities',
-      'She takes pride in her strength while quietly wondering which parts of her remain unaltered',
-      'She is determined to inherit a living kingdom rather than merely avenge a dying one',
-    ];
     const combatDisciplines = [
       'Her combat discipline is arcane dueling: precise swordplay interwoven with tightly controlled spells that expose and punish a single opponent’s mistakes',
       'Her combat discipline is defensive guardianship: she uses fortress-grade armor, wards, and disciplined blade work to hold ground and shelter the soldiers behind her',
@@ -873,7 +854,9 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       'Her combat discipline is battlefield control: bindings, barriers, altered terrain, and measured blade work constrain enemy movement before she commits to a decisive attack',
       'Her combat discipline is tactical command: she fights as the moving center of a coordinated formation, using blade, magic, and signals to make the entire army act as one',
     ];
-    return `${name} ${choice(selections, 'selection')}. Trained from childhood by the King, Archwizards, Knight Commanders, and soldier companies, her magically augmented body can bear nearly indestructible fortress-grade armor and fight with superhuman speed. ${choice(combatDisciplines, 'combat-discipline')}. ${choice(definingLessons, 'lesson')}. ${choice(conflicts, 'conflict')}.`;
+    return personalize(
+      `${name} ${choice(selections, 'selection')}. Trained from childhood by the King, Archwizards, Knight Commanders, and soldier companies, her magically augmented body can bear nearly indestructible fortress-grade armor and fight with superhuman speed. ${choice(combatDisciplines, 'combat-discipline')}. ${choice(definingLessons, 'lesson')}. ${temperament}.`,
+    );
   }
 
   if (piece.chessType === 'b') {
@@ -909,16 +892,8 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       'A wandering circle of healers, ward-makers, and weather-workers provided many teachers but no single doctrine to obey',
       'Exceptional natural ability opened doors at court, but mastery came from seeking rival mentors and combining traditions long declared incompatible',
     ];
-    const convictions = [
-      'They regard teleportation as transportation, not a substitute for the wider magic they command',
-      'They distrust the Royal Seal but remain because abandoning it would condemn millions',
-      'They teach apprentices that power without restraint merely repeats the Calamity',
-      'They pursue victory partly to recover knowledge held by the rival kingdom',
-      'They are brilliant in crisis and notoriously impatient with court ceremony',
-      'They keep meticulous records because reality itself can no longer be trusted to remember correctly',
-    ];
     return personalize(
-      `${name} first drew royal notice after they ${choice(awakenings, 'awakening')}. ${choice(pathsToMastery, 'path-to-mastery')}. The Archwizard became a master of ${choice(specialties, 'specialty')}, alongside the broad disciplines required of their rank. Teleportation lets them cross the battlefield almost instantly. ${choice(convictions, 'conviction')}.`,
+      `${name} first drew royal notice after they ${choice(awakenings, 'awakening')}. ${choice(pathsToMastery, 'path-to-mastery')}. The Archwizard became a master of ${choice(specialties, 'specialty')}, alongside the broad disciplines required of their rank. Teleportation lets them cross the battlefield almost instantly. ${temperament}.`,
     );
   }
 
@@ -943,14 +918,6 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       'held three separate commands together after their officers fell in the same ambush',
       'defeated a celebrated rival by refusing the obvious route into battle',
     ];
-    const styles = [
-      'They prize initiative but carry guilt for soldiers unable to match their pace',
-      'They plan several escape routes and trust none of them until the final soldier is safe',
-      'They cultivate an image of reckless confidence to conceal a deeply methodical mind',
-      'They demand honesty from scouts and tolerate disagreement better than flattery',
-      'They believe surprise is valuable only when it protects slower formations',
-      'They are intensely loyal to their soldiers and openly skeptical of distant royal strategy',
-    ];
     const augmentations = [
       'Archwizard rites reinforced their bones and muscles and sharpened their reflexes beyond those of any ordinary soldier',
       'Measured infusions of Seal-power gave them exceptional strength, endurance, and bursts of inhuman speed',
@@ -965,13 +932,13 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       'After saving a warhorse during their first campaign, they received one of its shed iron shoes from a grateful spirit-tender; the enchanted horseshoe summons that animal’s spectral likeness',
       'The King granted them a rune-cut spectral bridle once reserved for a fallen royal champion; mastering the artifact and the steed it summons became the final trial of their commission',
       'An Archwizard forged a route-finding spur after they repeatedly crossed terrain that maps and ordinary mounts could not survive; striking the artifact against the earth summons their spectral steed',
-      'They found a small bronze saddle bell at a battlefield shrine after refusing to abandon trapped soldiers; ringing the relic summons the spectral steed of an oathbound forgotten rider',
+      'They found a small bronze saddle bell at a battlefield shrine after tracking a lost company to the shrine; ringing the relic summons the spectral steed of an oathbound forgotten rider',
       'They inherited a family signet carved with a rearing horse, dormant for generations until their company service restored the household’s honor and awakened the steed-summoning artifact',
-      'Inside a reality fracture they recovered a cracked obsidian bit and guided its frightened spirit back to stable ground rather than dominating it; the artifact now summons their spectral steed',
-      'Royal artificers captured the last stored motion of a destroyed cavalry ward inside a crystal hoof pendant, which summons a spectral steed because they used speed to rescue soldiers rather than pursue glory',
-      'A dying frontier master entrusted them with a bone whistle bearing one forbidden name; sounding the artifact summons a particular spectral steed that serves judgment but refuses vanity',
+      'Inside a reality fracture they recovered a cracked obsidian bit and guided its frightened spirit back to stable ground through the fracture; the artifact now summons their spectral steed',
+      'Royal artificers captured the last stored motion of a destroyed cavalry ward inside a crystal hoof pendant, which summons a spectral steed after they survived the collapse of that ward',
+      'A dying frontier master entrusted them with a bone whistle bearing one forbidden name; sounding the artifact summons a particular spectral steed bound to the whistle',
       'A mourning smith forged the broken tack of every mount lost under their former command into a chain of iron reins; grasping the artifact summons a spectral steed formed from their shared memory',
-      'They recovered a palm-sized waystone token from a pre-Calamity road and awakened it by swearing never to use its power to abandon the wounded; the artifact summons its dormant spectral steed',
+      'They recovered a palm-sized waystone token from a pre-Calamity road and awakened it by tracing its forgotten road markings; the artifact summons its dormant spectral steed',
     ];
     const commanderSquares = ['b1', 'g1', 'b8', 'g8'];
     const commanderIndex = Math.max(
@@ -993,7 +960,7 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       'Its legendary reputation crosses both kingdoms, though their chronicles violently disagree about the deeds that made it famous',
     ];
     return personalize(
-      `${name} ${choice(origins, 'order-origin')} and ${choice(feats, 'command-feat')}. Chosen from the kingdom’s most elite captains, they became a Knight Commander. ${choice(augmentations, 'commander-augmentation')}; formidable, but nowhere near the Queen’s complete transformation. ${spectralSteedOrigin}. They wield ${mythicArm}, their personal Mythic Arm. ${choice(weaponLegacies, 'weapon-legacy')}. ${choice(styles, 'command-style')}.`,
+      `${name} ${choice(origins, 'order-origin')} and ${choice(feats, 'command-feat')}. Chosen from the kingdom’s most elite captains, they became a Knight Commander. ${choice(augmentations, 'commander-augmentation')}; formidable, but nowhere near the Queen’s complete transformation. ${spectralSteedOrigin}. They wield ${mythicArm}, their personal Mythic Arm. ${choice(weaponLegacies, 'weapon-legacy')}. ${temperament}.`,
     );
   }
 

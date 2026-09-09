@@ -1,4 +1,4 @@
-export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v46';
+export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v47';
 
 export const STORY_VALIDATION_INSTRUCTIONS = `Validate the supplied story against the complete deterministic chess ledger, narrative analysis, outline, and deterministic findings.
 
@@ -68,7 +68,7 @@ Report:
 - describing the pilot of a retains-seal-power Fortress as newly entombed, trapped by magical failure, or shutting down; omitting immediate permanent entombment for a loses-seal-power Fortress; or inventing Fortress crews in an ending, casualty list, or memorial
 - outline setup/payoff or continuity violations
 
-Treat supplied deterministicFindings as authoritative errors that must be repaired. Do not duplicate them in the returned findings array. Use exact piece IDs and plies in new findings, but never add them to prose.
+Treat supplied deterministicFindings with severity error as authoritative errors that must be repaired. A warning of type invented-capture or survivor-killed is an unconfirmed pronoun death reference: resolve the pronoun and distinguish an actual completed death from fear, negation, hypothetical outcomes, and another person's death. Keep uncertain references non-blocking and do not patch them. If a warning is clearly a real contradiction, return a confirmed error and its targeted patch. Do not otherwise duplicate deterministic findings. Use exact piece IDs and plies in new findings, but never add them to prose.
 
 Return repairs as constrained patches, never as a rewritten complete story:
 - scenePatches contains only scenes whose fantasyNarration must change. Each patch must use the exact existing ply and contain the complete corrected narration for that one scene.

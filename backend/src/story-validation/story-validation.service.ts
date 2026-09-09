@@ -130,6 +130,7 @@ export class StoryValidationService {
             !deterministicFindings.some(
               (existing) =>
                 existing.type === finding.type &&
+                existing.severity === finding.severity &&
                 existing.excerpt === finding.excerpt,
             ),
         ),

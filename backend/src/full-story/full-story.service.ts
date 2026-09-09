@@ -385,7 +385,9 @@ export class FullStoryService {
           ...sceneValidation.captureAttributionFindings,
           ...sceneValidation.checkStrainFindings,
           ...sceneValidation.revengePayoffFindings,
-          ...sceneValidation.timedFateFindings,
+          ...sceneValidation.timedFateFindings.filter(
+            (finding) => finding.severity === 'error',
+          ),
           ...sceneValidation.checkmateDeathFindings,
           ...sceneValidation.fortressPowerFindings,
           ...sceneValidation.mythicArmFindings,
@@ -617,7 +619,7 @@ export class FullStoryService {
             .join('; ')}`,
         );
       }
-      if (timedFateFindings.length > 0) {
+      if (timedFateFindings.some((finding) => finding.severity === 'error')) {
         throw new Error(
           `Generated story package contains premature character deaths: ${timedFateFindings
             .map(
@@ -1193,9 +1195,11 @@ export class FullStoryService {
         result.findings.map((finding) => [finding.findingIndex, finding]),
       );
       const cleared = new Set<ValidationFinding>();
+      const confirmed = new Set<ValidationFinding>();
       candidates.forEach((finding, findingIndex) => {
         const decision = decisions.get(findingIndex);
         if (decision && !decision.contradiction) cleared.add(finding);
+        if (decision?.contradiction) confirmed.add(finding);
       });
       if (cleared.size > 0) {
         this.logger.log(
@@ -1204,12 +1208,20 @@ export class FullStoryService {
       }
       return {
         ...validation,
-        timedFateFindings: validation.timedFateFindings.filter(
-          (finding) => !cleared.has(finding),
-        ),
-        findings: validation.findings.filter(
-          (finding) => !cleared.has(finding),
-        ),
+        timedFateFindings: validation.timedFateFindings
+          .filter((finding) => !cleared.has(finding))
+          .map((finding) =>
+            confirmed.has(finding)
+              ? { ...finding, severity: 'error' as const }
+              : finding,
+          ),
+        findings: validation.findings
+          .filter((finding) => !cleared.has(finding))
+          .map((finding) =>
+            confirmed.has(finding)
+              ? { ...finding, severity: 'error' as const }
+              : finding,
+          ),
       };
     } catch (error) {
       this.logger.warn(
@@ -1295,6 +1307,9 @@ export function isAmbiguousTimedFateFinding(
     return false;
   }
   if (!finding.excerpt) return false;
+  // Pronoun references are candidates until their meaning is confirmed,
+  // even though they contain explicit death vocabulary.
+  if (finding.severity === 'warning') return true;
   return !/\b(?:dead|death|dies?|died|dying|slain|slew|killed|lifeless|corpse|remains|grave|funeral|beheaded|decapitated|last breath|final breath)\b/i.test(
     finding.excerpt,
   );

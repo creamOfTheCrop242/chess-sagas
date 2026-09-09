@@ -20,6 +20,31 @@ describe('PgnViewerComponent character inspection', () => {
         expect(component.gameTitle).not.toContain('0-1');
     });
 
+    it('includes the captured piece even when a different piece is selected for sharing', () => {
+        component.gameId = 'test';
+        component.currentPly = 3;
+        component.selectedPieceId = 'w-p-e2';
+        component.scenes = [{ startPly: 3, endPly: 3, fantasyNarration: 'Mara defeated Nessa.' }] as never;
+        expect(component.shareSnapshot?.capture).toMatchObject({
+            victim: expect.stringContaining('Nessa'), captor: expect.stringContaining('Mara'), symbol: 'p', square: 'd5', enPassant: false,
+        });
+        component.currentPly = 2;
+        expect(component.shareSnapshot?.capture).toBeNull();
+    });
+
+    it('uses the captured square for en passant and the pre-capture artwork for promoted pieces', () => {
+        component.gameId = 'test';
+        component.currentPly = 3;
+        component.scenes = [{ startPly: 3, endPly: 3, fantasyNarration: 'The attack landed.' }] as never;
+        const capture = component.game!.ledger.events[2];
+        capture.isEnPassant = true;
+        capture.from = 'e5'; capture.to = 'd6';
+        expect(component.shareSnapshot?.capture).toMatchObject({ square: 'd5', symbol: 'p', enPassant: true });
+        capture.isEnPassant = false; capture.to = 'd5';
+        component.game!.positions[1].fen = '8/8/8/3q4/4P3/8/8/8 w - - 0 2';
+        expect(component.shareSnapshot?.capture?.symbol).toBe('q');
+    });
+
     it('puts White at the top by default and flips on request', () => {
         expect(component.boardOrientation).toBe('black');
 

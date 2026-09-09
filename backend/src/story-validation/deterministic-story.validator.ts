@@ -327,20 +327,23 @@ export class DeterministicStoryValidator {
         const resolvedExcerpt =
           excerpt ??
           localPronounDeathExcerpt(scene.fantasyNarration, piece, ledger);
-        if (!resolvedExcerpt) continue;
+        const possibleReference = !resolvedExcerpt
+          ? possessiveDeathReference(scene.fantasyNarration, piece)
+          : undefined;
+        if (!resolvedExcerpt && !possibleReference) continue;
         findings.push({
           type:
             piece.capturedAtPly === undefined
               ? 'survivor-killed'
               : 'invented-capture',
-          severity: 'error',
+          severity: resolvedExcerpt ? 'error' : 'warning',
           message:
             piece.capturedAtPly === undefined
               ? `${piece.permanentName} survives the ledger but is described as dead`
               : `${piece.permanentName} is described as dead before capture at ply ${piece.capturedAtPly}`,
           ply: scene.ply,
           pieceId: piece.id,
-          excerpt: resolvedExcerpt,
+          excerpt: resolvedExcerpt ?? possibleReference!,
         });
       }
     }
@@ -1975,12 +1978,33 @@ function prematureDeathExcerpt(
     .find((match): match is string => Boolean(match));
 }
 
-/**
- * Resolves only a tightly scoped death pronoun: the character must be named
- * earlier in the same clause and no other character with the same pronouns may
- * appear between that name and the fatal verb. This catches an unauthorized
- * second death without guessing across sentences or ambiguous confrontations.
- */
+function possessiveDeathReference(
+  narration: string,
+  piece: GameLedger['pieces'][number],
+): string | undefined {
+  const pronoun =
+    piece.pronouns === 'he/him'
+      ? 'his'
+      : piece.pronouns === 'she/her'
+        ? 'her'
+        : undefined;
+  if (!pronoun) return undefined;
+  const reference = new RegExp(
+    `\\b${pronoun}\\s+(?:death|corpse|grave|funeral|remains)\\b`,
+    'i',
+  );
+  // Candidate discovery only. The semantic adjudicator resolves the owner,
+  // hypotheticals, negation, and memories using the complete scene.
+  return narration
+    .match(/[^.!?]+[.!?]?/g)
+    ?.find(
+      (sentence) =>
+        mentionsCharacter(sentence, characterAliases(piece)) &&
+        reference.test(sentence),
+    )
+    ?.trim();
+}
+
 function localPronounDeathExcerpt(
   narration: string,
   piece: GameLedger['pieces'][number],

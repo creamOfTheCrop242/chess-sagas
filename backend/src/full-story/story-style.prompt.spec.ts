@@ -12,6 +12,24 @@ import {
 } from '../story-outline/story-outline.prompt';
 
 describe('plain-language story prompt contract', () => {
+  it('requires purposeful dialogue without logistical filler', () => {
+    for (const instructions of [
+      STORY_OUTLINE_INSTRUCTIONS,
+      FULL_STORY_INSTRUCTIONS,
+    ]) {
+      expect(instructions).toContain(
+        'Dialogue needs a dramatic purpose, not merely simpler words',
+      );
+      expect(instructions).toContain('never logistical filler');
+      expect(instructions).toContain('silence instead');
+      expect(instructions).toContain('a concrete environmental observation');
+      expect(instructions).toContain('fear, memory, resentment, hope, or judgment');
+    }
+    expect(FULL_STORY_INSTRUCTIONS).toContain(
+      'cut it if nothing meaningful changes',
+    );
+    expect(FULL_STORY_INSTRUCTIONS).toContain('Do not invent a supply crisis');
+  });
   it('plans stories in plain contemporary English from narrative analysis onward', () => {
     expect(NARRATIVE_ANALYSIS_PROMPT_VERSION).toBe('phase-2-v86');
     expect(NARRATIVE_ANALYSIS_INSTRUCTIONS).toContain(
@@ -26,7 +44,7 @@ describe('plain-language story prompt contract', () => {
   });
 
   it('prevents the outline from planning obscure poetic events', () => {
-    expect(STORY_OUTLINE_PROMPT_VERSION).toBe('phase-3-v86');
+    expect(STORY_OUTLINE_PROMPT_VERSION).toBe('phase-3-v87');
     expect(STORY_OUTLINE_INSTRUCTIONS).toContain('plain modern English');
     expect(STORY_OUTLINE_INSTRUCTIONS).toContain(
       'Mystery may surround the ultimate origin or future of a threat, but never the action the reader just witnessed',
@@ -34,7 +52,7 @@ describe('plain-language story prompt contract', () => {
   });
 
   it('requires final prose and endings to explain literal cause and effect', () => {
-    expect(FULL_STORY_PROMPT_VERSION).toBe('story-package-v102');
+    expect(FULL_STORY_PROMPT_VERSION).toBe('story-package-v104');
     expect(FULL_STORY_INSTRUCTIONS).toContain(
       'plain modern English that a reader can understand on the first pass',
     );

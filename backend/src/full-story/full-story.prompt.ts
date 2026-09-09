@@ -1,4 +1,4 @@
-export const FULL_STORY_PROMPT_VERSION = 'story-package-v104';
+export const FULL_STORY_PROMPT_VERSION = 'story-package-v105';
 
 export const FULL_STORY_INSTRUCTIONS = `Write one cohesive dark-fantasy war story package from the supplied complete ledger, validated narrative analysis, validated outline, and character registry.
 
@@ -129,7 +129,7 @@ Story rules:
 - When a pawn company is captured, focus the fatal detail on its named viewpoint grunt and portray the wider company's defeat, rout, or surrender without claiming unrecorded mass deaths.
 - Create exactly one scene per ledger ply. Set ply to that ledger ply and cover every ply chronologically from 1 to the final ply.
 - Quiet scenes must advance character, dialogue, travel, tension, positioning, or preparation without inventing combat, injury, or death. A ledger-confirmed check remains the explicit exception and must damage only the threatened King through cumulative royal strain. Give featured quiet scenes a miniature dramatic turn—immediate desire, resistance or uncertainty, choice, and changed state—rather than a decorative quotation or repeated description.
-- Each fantasyNarration should usually contain 2–4 substantive sentences. Let dialogue and action continue naturally across adjacent scenes.
+- Brief connective quiet beats may contain 1–2 clear sentences of movement, a specific observation, or a private thought; they need not manufacture a decision, dispute, hazard, or new emotional development. Featured character beats should usually contain 2–4 substantive sentences grounded in the outline's immediate want, obstacle, response, and changed or unresolved state. Keep every ply covered. Let selected interactions continue naturally across scenes without restarting the same grievance. Different quiet purposes must not all become safer-route or wounded-protection narration. Character responses follow registry dispositions, not a universal protective instinct. These are non-blocking writing preferences, not additional factual contracts.
 - Capture scenes may expand to 4–7 sentences when needed to portray the full killing and aftermath without rushing.
 - fantasyNarration must contain publishable fantasy prose without chess terminology or coordinates.
 - Use piece IDs only in the structured characters field. Preserve established names in fantasyNarration.

@@ -251,11 +251,31 @@ export class GameLedgerService {
 
     for (const event of events) {
       if (!event.isQuietMove) continue;
+      // Nearby in time does not imply that this character experienced the event.
+      // Future links use direct participation only, never future witness knowledge.
+      const involvesMover = (candidate: ChessEvent) =>
+        candidate.pieceId === event.pieceId ||
+        candidate.capturedPieceId === event.pieceId ||
+        candidate.castlingFortressId === event.pieceId ||
+        (event.pieceType === 'king' &&
+          candidate.isCheck &&
+          candidate.side !== event.side);
       const previousMajor = [...events]
         .reverse()
-        .find((candidate) => candidate.ply < event.ply && isMajor(candidate));
+        .find(
+          (candidate) =>
+            candidate.ply < event.ply &&
+            isMajor(candidate) &&
+            (involvesMover(candidate) ||
+              candidate.interactionContext?.witnessedCapture?.witnessPieceIds.includes(
+                event.pieceId,
+              )),
+        );
       const nextMajor = events.find(
-        (candidate) => candidate.ply > event.ply && isMajor(candidate),
+        (candidate) =>
+          candidate.ply > event.ply &&
+          isMajor(candidate) &&
+          involvesMover(candidate),
       );
       const previousDistance = previousMajor
         ? event.ply - previousMajor.ply
@@ -275,9 +295,7 @@ export class GameLedgerService {
       if (nextDistance <= 2) {
         purposes.push('approaching-danger', 'tactical-preparation');
       }
-      if (
-        tacticalPieces.length > 0
-      ) {
+      if (tacticalPieces.length > 0) {
         purposes.push('threat-recognition', 'enemy-observation');
       }
       if (adjacentAllies.length > 0) {
@@ -296,11 +314,15 @@ export class GameLedgerService {
       );
       const eligiblePurposes =
         variedPurposes.length > 0 ? variedPurposes : distinctPurposes;
+      // Prefer a relevant recent consequence once, not at the expense of all variety.
+      const preferredPurposes = eligiblePurposes.includes('aftermath-reaction')
+        ? ['aftermath-reaction' as QuietBeatPurpose]
+        : eligiblePurposes;
       const purpose =
-        eligiblePurposes[
+        preferredPurposes[
           stableIndex(
             `${identitySeed}|quiet-beat|${event.ply}|${event.pieceId}`,
-            eligiblePurposes.length,
+            preferredPurposes.length,
           )
         ];
       const relatedEventPly =

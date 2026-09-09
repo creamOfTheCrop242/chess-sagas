@@ -110,6 +110,9 @@ export interface FullStoryRequest {
   narrativeAnalysis: NarrativeAnalysis;
   outline: StoryOutline;
   characterRegistry: PieceIdentity[];
+  relationshipSceneGuide?: ReturnType<
+    typeof import('./relationship-scene-guide').buildRelationshipSceneGuide
+  >;
   captureManifest: CaptureDirective[];
   deathContracts: DeathBeatDirective[];
   endingDeathContract: DeathBeatDirective | null;

@@ -1,3 +1,4 @@
+import { buildAllegianceContext } from '../chess/allegiance-context';
 import {
   BadGatewayException,
   Injectable,
@@ -78,7 +79,13 @@ export class OpenAiFullStoryProvider implements FullStoryProvider {
     }
     const startedAt = Date.now();
     const input = serializeRequestWithCharacterRegistry(
-      request,
+      {
+        ...request,
+        allegianceContext: buildAllegianceContext(
+          request.ledger,
+          request.narrativeAnalysis.relationshipPlans,
+        ),
+      },
       this.payloadOptions,
     );
     const callTelemetry = {

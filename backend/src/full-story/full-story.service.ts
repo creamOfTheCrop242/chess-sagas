@@ -30,6 +30,7 @@ import { NARRATIVE_ANALYSIS_PROMPT_VERSION } from '../narrative-analysis/narrati
 import { SceneBreakdownValidator } from '../scene-breakdown/scene-breakdown.validator';
 import type { SceneBreakdown } from '../scene-breakdown/models/scene-breakdown';
 import { storyOutlineSchema } from '../story-outline/models/story-outline';
+import { buildRelationshipSceneGuide } from './relationship-scene-guide';
 import { STORY_OUTLINE_PROMPT_VERSION } from '../story-outline/story-outline.prompt';
 import { canonicalTitleKey } from '../story-outline/story-title';
 import {
@@ -176,6 +177,11 @@ export class FullStoryService {
           narrativeAnalysis,
           outline,
           characterRegistry: ledger.pieces,
+          relationshipSceneGuide: buildRelationshipSceneGuide(
+            ledger,
+            narrativeAnalysis,
+            outline,
+          ),
           captureManifest,
           deathContracts,
           endingDeathContract,

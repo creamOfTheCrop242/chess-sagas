@@ -567,6 +567,7 @@ export class DeterministicStoryValidator {
       const woundText = [wound.injury, ...wound.lastingEffects].join(' ');
       const aliases = [
         piece.permanentName,
+        piece.characterName,
         piece.viewpointName,
         piece.operatorName,
       ].filter(
@@ -585,7 +586,12 @@ export class DeterministicStoryValidator {
         ) {
           continue;
         }
-        const excerpt = matchingCharacterWoundExcerpt(
+        const explicitSeverance = prematureSeveranceExcerpt(
+          scene.fantasyNarration,
+          wound.woundCatalogId,
+          aliases,
+        );
+        const excerpt = explicitSeverance ?? matchingCharacterWoundExcerpt(
           scene.fantasyNarration,
           woundText,
           aliases,
@@ -594,7 +600,7 @@ export class DeterministicStoryValidator {
         if (!excerpt) continue;
         findings.push({
           type: 'wound-continuity',
-          severity: 'warning',
+          severity: explicitSeverance ? 'error' : 'warning',
           message: `${piece.permanentName}'s wound is inflicted at ply ${wound.inflictedAtPly} but appears prematurely at ply ${scene.ply}`,
           ply: scene.ply,
           pieceId: wound.pieceId,
@@ -1613,6 +1619,33 @@ function attributedMythicArms(
   }
 
   return [...attributed.values()];
+}
+
+/** Narrow affirmative event check: the named possessive is the limb's owner,
+ * not the nearest character to the attack verb. Leave uncertain prose to the
+ * existing warning/repair path rather than broadening its blocking rules. */
+function prematureSeveranceExcerpt(
+  narration: string,
+  catalogId: string | null | undefined,
+  aliases: string[],
+): string | undefined {
+  const limb = catalogId === 'severed-hand' ? 'hands?'
+    : catalogId === 'severed-arm' ? 'arms?'
+    : catalogId === 'severed-leg' ? 'legs?'
+    : null;
+  if (!limb) return undefined;
+  return narration.split(/(?<=[.!?])\s+/).find((sentence) => {
+    // Hypothetical, attempted, negated, and reported events are not proof.
+    if (/\b(?:not|never|no|almost|nearly|could|would|might|may|if|unless|before|tried|threatened|feared|imagined|remembered|claimed|said)\b|n['’]t\b|[“”"]/i.test(sentence)) return false;
+    return aliases.some((alias) => {
+      const owner = `${escapeRegex(alias)}['’]s`;
+      return new RegExp(
+        `\\bsevered\\s+(?:one\\s+of\\s+)?${owner}\\s+${limb}\\b(?=\\s*(?:[,.!;?]|$|at\\s+the\\s+wrist\\b|from\\s+(?:the|her|his)\\s+arm\\b))`, 'i',
+      ).test(sentence) || new RegExp(
+        `\\b${owner}\\s+${limb}\\s+(?:was|were)\\s+severed\\b`, 'i',
+      ).test(sentence);
+    });
+  });
 }
 
 function matchingCharacterWoundExcerpt(

@@ -26,6 +26,7 @@ import {
   narrativeAnalysisSchema,
   type NarrativeAnalysis,
 } from './models/narrative-analysis';
+import { buildAllegianceContext } from '../chess/allegiance-context';
 import { NARRATIVE_ANALYSIS_INSTRUCTIONS } from './narrative-analysis.prompt';
 
 @Injectable()
@@ -70,6 +71,7 @@ export class OpenAiNarrativeAnalysisProvider implements NarrativeAnalysisProvide
         true,
         this.payloadOptions,
       ),
+      allegianceContext: buildAllegianceContext(ledger),
       requiredWoundEvents,
       battlefieldEnvironment,
       surrenderContext,

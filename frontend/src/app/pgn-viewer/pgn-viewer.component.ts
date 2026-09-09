@@ -13,6 +13,8 @@ import { forkJoin, map, of, switchMap } from 'rxjs';
 import { BillingClientService } from '../billing/billing.service';
 import { AuthService } from '../auth/auth.service';
 import { ChessboardComponent } from './chessboard.component';
+import { SagaShareComponent } from './saga-share.component';
+import { shareBoardSquares, type SagaShareSnapshot } from './saga-share';
 import { PgnApiService } from './pgn-api.service';
 import {
   ParsedPgn,
@@ -73,7 +75,7 @@ type SagaPageOption = {
 @Component({
   selector: 'app-pgn-viewer',
   standalone: true,
-  imports: [FormsModule, RouterLink, ChessboardComponent],
+  imports: [FormsModule, RouterLink, ChessboardComponent, SagaShareComponent],
   templateUrl: './pgn-viewer.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './pgn-viewer.component.css',
@@ -148,6 +150,37 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
     return this.currentPly === 0
       ? this.game.startFen
       : this.game.positions[this.currentPly - 1].fen;
+  }
+  get shareSnapshot(): SagaShareSnapshot | null {
+    if (!this.game || !this.gameId || this.sagaGenerating || !this.scenes.length) return null;
+    const url = new URL(`/records/${encodeURIComponent(this.gameId)}`, window.location.origin);
+    url.searchParams.set('beat', String(this.currentPly));
+    url.searchParams.set('orientation', this.boardOrientation);
+    const piece = this.game.ledger.pieces.find(p => p.id === this.selectedPieceId) ?? null;
+    if (piece) url.searchParams.set('piece', piece.id);
+    const event = this.game.ledger.events.find(e => e.ply === this.currentPly && e.isCapture);
+    const victim = this.game.ledger.pieces.find(p => p.id === event?.capturedPieceId);
+    const captor = this.game.ledger.pieces.find(p => p.id === event?.pieceId);
+    let capture: SagaShareSnapshot['capture'] = null;
+    if (event && victim && captor && this.currentMove) {
+      const square = event.isEnPassant ? `${event.to[0]}${event.from[1]}` : event.to;
+      const beforeFen = this.currentPly === 1 ? this.game.startFen : this.game.positions[this.currentPly - 2]?.fen;
+      capture = {
+        victim: `${this.pieceDisplayName(victim)} · ${this.pieceRole(victim)} · ${this.pieceKingdom(victim)}`,
+        captor: this.pieceDisplayName(captor), square, enPassant: event.isEnPassant,
+        symbol: beforeFen ? shareBoardSquares(beforeFen, this.boardOrientation).find(s => s.square === square)?.piece ?? null : null,
+      };
+    }
+    return {
+      url: url.toString(), title: this.gameTitle,
+      page: this.isEpiloguePage ? this.currentMoveLabel : `Beat ${this.currentPly} · ${this.currentMoveLabel}`,
+      location: this.battlefieldEnvironment?.name ?? '', fen: this.currentFen,
+      orientation: this.boardOrientation, activeSquare: this.currentBeatSquare,
+      selectedSquare: piece ? [...this.piecesBySquare.entries()].find(([, id]) => id === piece.id)?.[0] ?? null : null,
+      story: this.currentStory,
+      capture,
+      character: piece ? { name: this.pieceDisplayName(piece), role: this.pieceRole(piece), description: this.pieceDescription(piece), status: this.pieceStatus(piece).label } : null,
+    };
   }
   get currentMove(): ParsedPosition | null {
     return !this.game ||
@@ -613,6 +646,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
           this.defeatedKingFate = playback.defeatedKingFate ?? '';
           this.defeatedSealFate = playback.defeatedSealFate ?? '';
           this.restoreReadingBookmark();
+          this.restoreSharedView();
           this.loading = false;
         },
         error: (error: unknown) => {
@@ -883,6 +917,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
   @HostListener('window:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
     if (!this.game) return;
+    if ((event.target as HTMLElement | null)?.closest('dialog')) return;
     if (event.key === 'Escape' && this.battlefieldDescriptionOpen) {
       event.preventDefault();
       this.closeBattlefieldDescription();
@@ -965,6 +1000,19 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
     } catch {
       // Ignore unavailable storage and malformed bookmarks.
     }
+  }
+  private restoreSharedView(): void {
+    const query = this.route?.snapshot.queryParamMap;
+    const beat = query?.get('beat');
+    if (!this.game || beat == null || !/^\d+$/.test(beat)) return;
+    const ply = Number(beat);
+    if (!Number.isSafeInteger(ply) || ply > this.finalPlaybackPly) return;
+    this.currentPly = ply;
+    const orientation = query?.get('orientation');
+    if (orientation === 'white' || orientation === 'black') this.boardOrientation = orientation;
+    const piece = query?.get('piece');
+    this.selectedPieceId = this.game.ledger.pieces.some(p => p.id === piece) ? piece! : null;
+    this.hoveredPieceId = null;
   }
   private fallenPiecesFor(side: 'north' | 'south'): FallenPiece[] {
     if (!this.game) return [];

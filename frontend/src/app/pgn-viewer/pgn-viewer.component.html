@@ -176,6 +176,7 @@
                     <p class="piece-company">{{ piece.companyName }}</p>
                   }
                   <p class="piece-description">{{ pieceDescription(piece) }}</p>
+                  @if (selectedPieceId) { <app-saga-share [snapshot]="shareSnapshot" /> }
                   <p class="piece-kills">
                     <span>Kills</span>
                     <strong>{{ inspectedPieceKills }}</strong>
@@ -267,6 +268,7 @@
           </div>
 
           <div class="playback-meta">
+            <app-saga-share [snapshot]="shareSnapshot" />
             <p class="move-label">{{ currentMoveLabel }}</p>
             <p class="ply-meta">
               @if (isEpiloguePage) {

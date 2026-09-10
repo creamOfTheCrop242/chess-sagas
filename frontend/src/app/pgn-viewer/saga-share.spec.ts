@@ -159,14 +159,15 @@ describe('shared replay restoration', () => {
     ledger: {
       finalFen: snapshot.fen,
       events: [],
-      pieces: [{ id: 'w-p-e2', permanentName: 'Mara' }],
+      pieces: [{ id: 'w-p-e2', permanentName: 'Mara', fantasyType: 'grunt', chessType: 'p', side: 'north' }],
     },
   } as unknown as ParsedPgn;
   function replay(query: Record<string, string>) {
     const api = {
       getRecord: () =>
         of({
-          id: 'test',
+          id: 'underlying-game',
+          sagaId: 'canonical-saga',
           rawPgn: '',
           ledger: { data: game.ledger },
           sceneBreakdown: {
@@ -215,5 +216,24 @@ describe('shared replay restoration', () => {
     const viewer = replay({ beat: '3', piece: 'unknown' });
     expect(viewer.isLaterChroniclePage).toBe(true);
     expect(viewer.selectedPieceId).toBeNull();
+  });
+  it('shares the canonical saga ID while preserving beat, piece, and orientation', () => {
+    const viewer = replay({ beat: '1', piece: 'w-p-e2', orientation: 'white' });
+    const url = new URL(viewer.shareSnapshot!.url);
+    expect(viewer.gameId).toBe('underlying-game');
+    expect(url.pathname).toBe('/records/canonical-saga');
+    expect(url.searchParams.get('beat')).toBe('1');
+    expect(url.searchParams.get('piece')).toBe('w-p-e2');
+    expect(url.searchParams.get('orientation')).toBe('white');
+  });
+  it('does not create a broken share link before the saga ID is available', () => {
+    const viewer = replay({ beat: '1' });
+    viewer.sagaId = null;
+    expect(viewer.shareSnapshot).toBeNull();
+  });
+  it('uses the published saga ID after generation completes', () => {
+    const viewer = replay({ beat: '1' });
+    (viewer as any).applySagaResponse({ sagaId: 'new-saga', sceneBreakdown: { data: { scenes: viewer.scenes } } });
+    expect(new URL(viewer.shareSnapshot!.url).pathname).toBe('/records/new-saga');
   });
 });

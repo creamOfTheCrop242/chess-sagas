@@ -22,6 +22,7 @@ describe('PgnViewerComponent character inspection', () => {
 
     it('includes the captured piece even when a different piece is selected for sharing', () => {
         component.gameId = 'test';
+        component.sagaId = 'saga-test';
         component.currentPly = 3;
         component.selectedPieceId = 'w-p-e2';
         component.scenes = [{ startPly: 3, endPly: 3, fantasyNarration: 'Mara defeated Nessa.' }] as never;
@@ -34,6 +35,7 @@ describe('PgnViewerComponent character inspection', () => {
 
     it('uses the captured square for en passant and the pre-capture artwork for promoted pieces', () => {
         component.gameId = 'test';
+        component.sagaId = 'saga-test';
         component.currentPly = 3;
         component.scenes = [{ startPly: 3, endPly: 3, fantasyNarration: 'The attack landed.' }] as never;
         const capture = component.game!.ledger.events[2];

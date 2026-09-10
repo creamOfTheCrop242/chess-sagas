@@ -132,8 +132,14 @@ export class SceneBreakdownService {
     if (!run)
       throw new NotFoundException('No completed scene breakdown exists');
     const analysis = analysisRun?.narrativeAnalysis?.data;
+    const saga = await this.prisma.saga.findFirst({
+      where: { gameId, visibility: 'PUBLIC' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      select: { id: true },
+    });
     return {
       ...run,
+      sagaId: saga?.id ?? null,
       battlefieldEnvironment:
         analysis && typeof analysis === 'object'
           ? ((analysis as { battlefieldEnvironment?: unknown })

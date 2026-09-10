@@ -315,11 +315,14 @@ export class SagasService {
   async findAccessible(id: string, userId?: string) {
     const saga = await this.prisma.saga.findFirst({
       where: {
-        id,
+        // Older share links used the underlying game ID. Keep access rules
+        // independent of the identifier match so aliases cannot bypass privacy.
+        AND: [{ OR: [{ id }, { gameId: id }] }],
         ...(userId
           ? { OR: [{ visibility: 'PUBLIC' }, { creatorId: userId }] }
           : { visibility: 'PUBLIC' }),
       },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       include: {
         ...sagaInclude,
         game: {

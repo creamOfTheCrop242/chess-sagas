@@ -214,7 +214,7 @@ export class PgnApiService {
     );
   }
 
-  getRecord(gameId: string): Observable<ArchivedRecord> {
+  getRecord(sagaId: string): Observable<ArchivedRecord> {
     return this.http
       .get<{
         id: string;
@@ -228,10 +228,11 @@ export class PgnApiService {
         ledger: ArchivedRecord['ledger']['data'];
         sceneBreakdown: ArchivedRecord['sceneBreakdown']['data'];
         battlefieldEnvironment: ArchivedRecord['battlefieldEnvironment'];
-      }>(`${this.apiBase}/sagas/${gameId}`, { withCredentials: true })
+      }>(`${this.apiBase}/sagas/${sagaId}`, { withCredentials: true })
       .pipe(
         map((record) => ({
           id: record.gameId,
+          sagaId: record.id,
           rawPgn: record.rawPgn,
           whitePlayer: record.whitePlayer,
           blackPlayer: record.blackPlayer,

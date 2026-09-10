@@ -34,6 +34,14 @@ describe('PgnApiService', () => {
 
     afterEach(() => http.verify());
 
+    it('retains the canonical saga ID separately from the game ID', () => {
+        let record: any;
+        api.getRecord('old-game-link').subscribe(value => record = value);
+        http.expectOne('/api/sagas/old-game-link').flush({ id: 'saga-1', gameId: 'game-1', ledger: {}, sceneBreakdown: {} });
+        expect(record.id).toBe('game-1');
+        expect(record.sagaId).toBe('saga-1');
+    });
+
     it('starts one background job and polls until its scenes are ready', async () => {
         const states: string[] = [];
         let completed = false;

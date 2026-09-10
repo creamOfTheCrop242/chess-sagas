@@ -100,7 +100,7 @@ describe('SagasService', () => {
     );
     expect(prisma.saga.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 'private-saga', visibility: 'PUBLIC' },
+        where: { AND: [{ OR: [{ id: 'private-saga' }, { gameId: 'private-saga' }] }], visibility: 'PUBLIC' },
       }),
     );
   });
@@ -115,11 +115,22 @@ describe('SagasService', () => {
     expect(prisma.saga.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
-          id: 'private-saga',
+          AND: [{ OR: [{ id: 'private-saga' }, { gameId: 'private-saga' }] }],
           OR: [{ visibility: 'PUBLIC' }, { creatorId: 'creator-1' }],
         },
       }),
     );
+  });
+
+  it('resolves old game-ID links to a canonical saga without relaxing visibility', async () => {
+    const row = sagaRow();
+    prisma.saga.findFirst.mockResolvedValue({ ...row, game: { ...row.game, generationRuns: [] } });
+    const result = await new SagasService(prisma as never).findAccessible('game-1');
+    expect(result).toMatchObject({ id: 'saga-1', gameId: 'game-1' });
+    expect(prisma.saga.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      where: { AND: [{ OR: [{ id: 'game-1' }, { gameId: 'game-1' }] }], visibility: 'PUBLIC' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    }));
   });
 
   it('only bookmarks sagas that are publicly visible', async () => {

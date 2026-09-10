@@ -86,6 +86,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
   error: string | null = null;
   game: ParsedPgn | null = null;
   gameId: string | null = null;
+  sagaId: string | null = null;
   currentPly = 0;
   boardOrientation: 'white' | 'black' = 'black';
   hoveredPieceId: string | null = null;
@@ -152,8 +153,8 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
       : this.game.positions[this.currentPly - 1].fen;
   }
   get shareSnapshot(): SagaShareSnapshot | null {
-    if (!this.game || !this.gameId || this.sagaGenerating || !this.scenes.length) return null;
-    const url = new URL(`/records/${encodeURIComponent(this.gameId)}`, window.location.origin);
+    if (!this.game || !this.sagaId || this.sagaGenerating || !this.scenes.length) return null;
+    const url = new URL(`/records/${encodeURIComponent(this.sagaId)}`, window.location.origin);
     url.searchParams.set('beat', String(this.currentPly));
     url.searchParams.set('orientation', this.boardOrientation);
     const piece = this.game.ledger.pieces.find(p => p.id === this.selectedPieceId) ?? null;
@@ -587,6 +588,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
           }
           this.game = { ...parsed, ledger: saved.ledger.data };
           this.gameId = saved.id;
+          this.sagaId = null;
           this.readingBookmarkId = saved.id;
           this.currentPly = 0;
           this.hoveredPieceId = null;
@@ -633,6 +635,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
           this.pgnText = record.rawPgn;
           this.game = { ...parsed, ledger: record.ledger.data };
           this.gameId = record.id;
+          this.sagaId = record.sagaId ?? recordId;
           this.readingBookmarkId = recordId;
           this.currentPly = 0;
           this.scenes = playback.scenes;
@@ -777,6 +780,7 @@ export class PgnViewerComponent implements OnInit, OnDestroy {
   }
 
   private applySagaResponse(response: SceneBreakdownResponse): void {
+    this.sagaId = response.sagaId ?? null;
     this.battlefieldDescriptionOpen = false;
     this.battlefieldEnvironment = response.battlefieldEnvironment ?? null;
     this.scenes = response.sceneBreakdown.data.scenes;

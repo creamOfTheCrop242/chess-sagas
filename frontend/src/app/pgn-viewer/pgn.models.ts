@@ -199,6 +199,7 @@ export type BattlefieldEnvironment = {
 };
 
 export type SceneBreakdownResponse = {
+  sagaId?: string | null;
   status: 'COMPLETED';
   battlefieldEnvironment?: BattlefieldEnvironment | null;
   sceneBreakdown: {
@@ -235,6 +236,7 @@ export type ArchiveRecordSummary = {
 
 export type ArchivedRecord = {
   id: string;
+  sagaId?: string;
   rawPgn: string;
   whitePlayer: string;
   blackPlayer: string;

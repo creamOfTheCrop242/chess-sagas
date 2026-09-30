@@ -226,14 +226,10 @@ const GENRE_DESTROYED_SEAL_CONSEQUENCES: Record<
     'surviving-character-leading-an-uprising-against-the-victor',
     'victorious-seal-absorbing-the-collapse-and-corrupting-its-king',
   ],
-  rebellion: [
-    'surviving-character-leading-an-uprising-against-the-victor',
-    'civilian-third-power-rising-against-both-crowns',
-  ],
+  rebellion: ['surviving-character-leading-an-uprising-against-the-victor'],
   'political-horror': [
     'surviving-character-leading-an-uprising-against-the-victor',
     'victorious-seal-absorbing-the-collapse-and-corrupting-its-king',
-    'civilian-third-power-rising-against-both-crowns',
   ],
   'uneasy-survival': [
     'reality-fracture-scattering-survivors-across-worlds',
@@ -275,13 +271,11 @@ const GENRE_INTACT_SEAL_CONSEQUENCES: Record<
     'surviving-character-leading-an-uprising-against-the-victor',
     'defeated-kingdom-reorganizing-beneath-a-hidden-leader',
     'victorious-queen-challenging-her-kings-rule',
-    'civilian-third-power-rising-against-both-crowns',
   ],
   'political-horror': [
     'defeated-kingdom-reorganizing-beneath-a-hidden-leader',
     'victorious-queen-challenging-her-kings-rule',
     'occupation-hardening-the-victor-into-a-harsher-regime',
-    'civilian-third-power-rising-against-both-crowns',
     'surviving-seal-slowly-corrupting-its-king',
   ],
   'uneasy-survival': [

@@ -461,6 +461,9 @@ export function normalizeStoryOutlineWounds(
         pieceId: wound.pieceId,
         inflictedAtPly: wound.inflictedAtPly,
         woundCatalogId: wound.woundCatalogId,
+        ...(wound.injurySite !== undefined
+          ? { injurySite: wound.injurySite }
+          : {}),
         injury: wound.injury,
         continuityPlies: [...continuityPlies].sort(
           (left, right) => left - right,

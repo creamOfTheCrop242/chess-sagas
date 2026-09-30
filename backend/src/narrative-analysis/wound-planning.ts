@@ -7,7 +7,12 @@ import type {
 import {
   eligibleWoundCatalogEntries,
   type WoundCatalogId,
+  type WoundBodyArea,
 } from './wound-catalog';
+import {
+  attackCapabilities,
+  woundMechanismCompatible,
+} from '../chess/equipment-capabilities';
 
 export interface RequiredWoundEvent {
   pieceId: string;
@@ -17,6 +22,7 @@ export interface RequiredWoundEvent {
   causeType: WoundCauseType;
   sourcePieceId: string | null;
   woundCatalogId: WoundCatalogId;
+  injurySite: WoundBodyArea;
   woundCatalog: {
     label: string;
     bodyArea: string;
@@ -75,12 +81,21 @@ export function selectRequiredWoundEvents(
     if (!attacker) {
       throw new Error(`Cannot select wound for unknown piece ${event.pieceId}`);
     }
+    const capabilities =
+      causeType === 'victim-retaliation'
+        ? attackCapabilities(
+            pieces.get(event.capturedPieceId),
+            event.capturedPieceType,
+          )
+        : null;
     const compatible = eligibleWoundCatalogEntries(
       event.pieceType,
       causeType,
       causeType === 'victim-retaliation'
         ? pieces.get(event.capturedPieceId)?.viewpointRole
         : undefined,
+    ).filter((entry) =>
+      woundMechanismCompatible(entry.id as WoundCatalogId, capabilities),
     );
     if (compatible.length === 0) {
       throw new Error(
@@ -93,6 +108,21 @@ export function selectRequiredWoundEvents(
     const roll = deterministicSeededRoll(ledger, event, 'wound-catalog');
     const selected =
       pool[Math.min(pool.length - 1, Math.floor(roll * pool.length))];
+    // Armor is protection, not an anatomical location. Resolve variable burns
+    // once, before prose exists, and carry that site through all later stages.
+    const sites: WoundBodyArea[] =
+      selected.id === 'deep-burns'
+        ? ['chest', 'arm', 'shoulder', 'back', 'leg']
+        : [selected.bodyArea];
+    const injurySite =
+      sites[
+        Math.min(
+          sites.length - 1,
+          Math.floor(
+            deterministicSeededRoll(ledger, event, 'wound-site') * sites.length,
+          ),
+        )
+      ];
     used.add(selected.id);
     usedCatalogIdsByPiece.set(event.pieceId, used);
 
@@ -105,13 +135,14 @@ export function selectRequiredWoundEvents(
       sourcePieceId:
         causeType === 'victim-retaliation' ? event.capturedPieceId : null,
       woundCatalogId: selected.id as WoundCatalogId,
+      injurySite,
       woundCatalog: {
         label: selected.label,
         bodyArea: selected.bodyArea,
         severity: selected.severity,
         effects: selected.effects,
         recoverability: selected.recoverability,
-        narrationGuidance: selected.narrationGuidance,
+        narrationGuidance: `${selected.narrationGuidance} The established injury site is ${injurySite}; preserve it in subsequent prose and endings.`,
       },
     };
   });

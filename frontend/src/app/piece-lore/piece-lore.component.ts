@@ -166,7 +166,7 @@ export class PieceLoreComponent {
       sigil: '♞',
       oath: 'Chosen from the kingdom’s most elite captains, each Knight Commander leads from the front and stands above every ordinary soldier in strength, speed, resilience, and authority.',
       movement:
-        'A Knight Commander can walk nearby ground or summon a spectral mount for longer movement. The steed carries its rider and leaps across the battlefield along routes ordinary cavalry cannot follow; neither rider nor mount teleports. It is transportation only: the Commander dismounts and fights on foot with the Mythic Arm while the steed dissolves or withdraws.',
+        'A Knight Commander can travel on foot or summon a spectral mount. The steed carries its rider and leaps across the battlefield along routes ordinary cavalry cannot follow; neither rider nor mount teleports. The Commander can fight from the saddle or dismount and fight on foot with the assigned Mythic Arm. The steed carries its rider but does not attack or shield them. Once dismissed, it must be summoned again before the Commander remounts.',
       warfare:
         'Every Knight Commander carries a Mythic Arm: a singular legendary magic-powered weapon such as a great hammer, greatsword, mace, poleaxe, glaive, war axe, or matched pair of dual-wielded swords. Mythic Arms have histories and reputations of their own, and soldiers may recognize one before they recognize its bearer.',
       fate: 'Their loss is both personal and tactical: soldiers lose a champion, and an entire wing of the army may lose its direction.',

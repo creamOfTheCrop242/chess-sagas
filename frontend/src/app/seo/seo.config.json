@@ -1,0 +1,20 @@
+{
+  "origin": "https://chesssagas.com",
+  "image": "/icons/icon-1024.png",
+  "pages": {
+    "/": { "title": "Chess Sagas | Turn Chess Games into Fantasy Stories", "description": "Turn your chess games into immersive fantasy sagas. Import a PGN, replay every move, and follow the heroes of the Light and Dark Kingdoms." },
+    "/lore": { "title": "Chess Piece Characters & Lore | Chess Sagas", "description": "Meet the characters behind the chess pieces. Explore the heroes, rivalries, and lore of the Light and Dark Kingdoms in Chess Sagas." },
+    "/lore/calamity": { "title": "The Calamity: Origins of the Kingdoms | Chess Sagas", "description": "Discover the Calamity and the origins of the Light and Dark Kingdoms, the fantasy world where your chess games become stories." },
+    "/records": { "title": "Hall of Records: Community Chess Stories | Chess Sagas", "description": "Explore public chess sagas in the Hall of Records. Discover community stories and replay the chess games that inspired them." },
+    "/champions": { "title": "Hall of Champions | Chess Sagas", "description": "Explore the Hall of Champions in Chess Sagas and discover the chess heroes whose battles become fantasy stories." },
+    "/guide": { "title": "How to Turn a Chess Game into a Story | Chess Sagas", "description": "Learn how to use Chess Sagas, import your chess PGN, generate a fantasy story, and replay the moves behind your saga." },
+    "/pricing": { "title": "Saga Credits & Pricing | Chess Sagas", "description": "Explore Chess Sagas credit packs and monthly plans. Choose how you want to turn your chess games into immersive fantasy stories." },
+    "/contact": { "title": "Contact & Support | Chess Sagas", "description": "Contact Chess Sagas for help with your account, saga generation, or billing. Send feedback, suggestions, and bug reports." },
+    "/terms": { "title": "Terms of Service | Chess Sagas", "description": "Read the Chess Sagas terms of service for accounts, generated stories, saga credits, and use of the platform." },
+    "/privacy": { "title": "Privacy Policy | Chess Sagas", "description": "Learn how Chess Sagas handles personal information, account data, and privacy requests." },
+    "/refunds": { "title": "Refunds & Cancellations | Chess Sagas", "description": "Read the Chess Sagas policy for refunds, saga credits, subscriptions, and cancellations." },
+    "/login": { "title": "Sign In | Chess Sagas", "description": "Sign in to your Chess Sagas account.", "noindex": true },
+    "/profile": { "title": "Your Profile | Chess Sagas", "description": "Manage your Chess Sagas profile and account.", "noindex": true },
+    "/admin/reports": { "title": "Reports | Chess Sagas", "description": "Chess Sagas administrative reports.", "noindex": true }
+  }
+}

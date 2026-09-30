@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { WOUND_BODY_AREAS } from '../../narrative-analysis/wound-catalog';
 import { DEFEATED_KING_FATES } from '../../chess/models/story-ending';
 import { battlefieldEnvironmentSchema } from '../../narrative-analysis/models/narrative-analysis';
 
@@ -13,6 +14,7 @@ export const storyWoundSchema = z.object({
   pieceId: z.string().min(1),
   inflictedAtPly: z.number().int().positive(),
   woundCatalogId: z.string().min(1).nullable().default(null),
+  injurySite: z.enum(WOUND_BODY_AREAS).nullable().optional(),
   injury: z.string().min(1),
   lastingEffects: z.array(z.string().min(1)).min(1),
   recoveryPly: z.number().int().positive().nullable(),

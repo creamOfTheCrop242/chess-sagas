@@ -1,4 +1,5 @@
 import { buildAllegianceContext } from '../chess/allegiance-context';
+import { buildCharacterEventContext } from '../chess/character-event-context';
 import {
   BadGatewayException,
   Injectable,
@@ -22,7 +23,11 @@ import type {
   StoryOutlineProvider,
   StoryOutlineRequest,
 } from './story-outline.provider';
-import { storyOutlineSchema, type StoryOutline } from './models/story-outline';
+import {
+  storyOutlineSchema,
+  storyOutlineGenerationSchema,
+  type StoryOutline,
+} from './models/story-outline';
 import { STORY_OUTLINE_INSTRUCTIONS } from './story-outline.prompt';
 
 @Injectable()
@@ -52,6 +57,7 @@ export class OpenAiStoryOutlineProvider implements StoryOutlineProvider {
     const input = serializeRequestWithCharacterRegistry(
       {
         ...request,
+        characterEventContext: buildCharacterEventContext(request.ledger),
         allegianceContext: buildAllegianceContext(
           request.ledger,
           request.narrativeAnalysis.relationshipPlans,
@@ -71,7 +77,7 @@ export class OpenAiStoryOutlineProvider implements StoryOutlineProvider {
         instructions: STORY_OUTLINE_INSTRUCTIONS,
         input,
         text: {
-          format: zodTextFormat(storyOutlineSchema, 'story_outline'),
+          format: zodTextFormat(storyOutlineGenerationSchema, 'story_outline'),
         },
       });
       if (!response.output_parsed) {

@@ -55,5 +55,9 @@ export const storyValidationResultSchema = z.object({
   laterEpiloguePatch: z.string().min(1).nullable(),
 });
 
-export type ValidationFinding = z.infer<typeof validationFindingSchema>;
+export type ValidationFinding = z.infer<typeof validationFindingSchema> & {
+  // Internal candidate-discovery metadata, not part of the model output schema.
+  deathAttribution?: 'pronoun-inferred';
+  factId?: string;
+};
 export type StoryValidationResult = z.infer<typeof storyValidationResultSchema>;

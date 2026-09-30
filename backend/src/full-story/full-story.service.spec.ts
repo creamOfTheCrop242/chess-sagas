@@ -6,6 +6,7 @@ import {
   type ScenePackageValidation,
 } from '../story-validation/deterministic-story.validator';
 import {
+  FullStoryService,
   applyMissingCheckmateDeathFallback,
   buildDeathContracts,
   buildEndingDeathContract,
@@ -133,7 +134,7 @@ describe('deterministic checkmate death completion', () => {
         ply: 122,
         san: 'Ra1#',
         pieceId: 'b-r-a8',
-        pieceType: 'rook',
+        pieceType: 'moving-fortress',
         isCapture: false,
         isCheckmate: true,
         checkmateExplanation: { kingId: 'w-k-e1' },
@@ -229,6 +230,74 @@ describe('deterministic checkmate death completion', () => {
 });
 
 describe('semantic premature-death fallback selection', () => {
+  it.each([false, true])(
+    'uses the semantic victim decision (contradiction=%s)',
+    async (contradiction) => {
+      const ledger = {
+        pieces: [
+          {
+            id: 'w-p-a2',
+            permanentName: 'Petra',
+            pronouns: 'she/her',
+            capturedAtPly: 65,
+          },
+        ],
+      } as GameLedger;
+      const narration = 'Petra had killed her.';
+      const findings =
+        new DeterministicStoryValidator().validateTimedCharacterFates(
+          [{ ply: 64, fantasyNarration: narration }],
+          ledger,
+        );
+      const adjudicate = jest
+        .fn()
+        .mockResolvedValue({
+          findings: [{ findingIndex: 0, contradiction, confidence: 'high' }],
+        });
+      const service = Object.assign(Object.create(FullStoryService.prototype), {
+        provider: { adjudicatePossiblePrematureDeaths: adjudicate },
+        logger: { log: jest.fn(), warn: jest.fn() },
+      }) as FullStoryService;
+      const result = await service['adjudicateAmbiguousTimedFates'](
+        { timedFateFindings: findings, findings } as ScenePackageValidation,
+        [{ startPly: 64, fantasyNarration: narration }],
+        ledger,
+        'game',
+        'run',
+        1,
+      );
+      expect(adjudicate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          findings: [
+            expect.objectContaining({
+              characterName: 'Petra',
+              sceneNarration: narration,
+              capturedAtPly: 65,
+            }),
+          ],
+        }),
+      );
+      expect(result.timedFateFindings).toEqual(
+        contradiction
+          ? [expect.objectContaining({ pieceId: 'w-p-a2', severity: 'error' })]
+          : [],
+      );
+      expect(result.findings).toEqual(result.timedFateFindings);
+    },
+  );
+  it('routes inferred victims to AI even when the excerpt says killed', () => {
+    expect(
+      isAmbiguousTimedFateFinding({
+        type: 'invented-capture',
+        severity: 'error',
+        deathAttribution: 'pronoun-inferred',
+        message: 'Possible premature death',
+        ply: 64,
+        pieceId: 'w-p-a2',
+        excerpt: 'Petra had killed her.',
+      }),
+    ).toBe(true);
+  });
   it('sends ambiguous recoil language for semantic adjudication', () => {
     expect(
       isAmbiguousTimedFateFinding({
@@ -353,6 +422,17 @@ describe('full-story wound timing preparation', () => {
     } as NarrativeAnalysis;
 
     expect(buildEndingWorldState(ledger, analysis)).toEqual({
+      defeatedKingFate: 'spends-seal-to-save-subjects',
+      characterPowerStates: [
+        {
+          pieceId: 'b-r-a8',
+          name: 'Leoric',
+          side: 'south',
+          sealPowerAvailable: true,
+          personalCastingAvailable: false,
+          realmPoweredEquipmentAvailable: true,
+        },
+      ],
       termination: 'resignation',
       defeatedSide: 'north',
       defeatedSealFate: 'destroyed',
@@ -443,11 +523,13 @@ describe('full-story wound timing preparation', () => {
       {
         ply: 2,
         newlyInflictedWoundIds: ['wound:w-q-d1:2'],
+        enteringWoundIds: [],
         activeWoundIds: ['wound:w-q-d1:2'],
       },
       {
         ply: 3,
         newlyInflictedWoundIds: [],
+        enteringWoundIds: ['wound:w-q-d1:2'],
         activeWoundIds: ['wound:w-q-d1:2'],
       },
     ]);
@@ -547,16 +629,23 @@ describe('full-story wound timing preparation', () => {
     expect(contracts).toMatchObject([
       {
         ply: 1,
-        authorizedVictimId: 'w-k-e1',
-        authorizedVictimNames: ['Orin', 'Northern King'],
-        noOtherDeaths: true,
-        eventKind: 'checkmate',
-        decisiveActorId: 'b-q-d8',
+        authorizedDeaths: [
+          {
+            authorizedVictimId: 'w-k-e1',
+            authorizedVictimNames: ['Orin', 'Northern King'],
+            eventKind: 'checkmate',
+            decisiveActorId: 'b-q-d8',
+          },
+        ],
       },
     ]);
-    expect(contracts[0].deathCatalogId).not.toBeNull();
-    expect(contracts[0].targetArea).not.toBe('royal-seal-bond');
-    expect(contracts[0].narrationGuidance).toContain('King');
+    expect(contracts[0].authorizedDeaths[0].deathCatalogId).not.toBeNull();
+    expect(contracts[0].authorizedDeaths[0].targetArea).not.toBe(
+      'royal-seal-bond',
+    );
+    expect(contracts[0].authorizedDeaths[0].narrationGuidance).toContain(
+      'King',
+    );
   });
 
   it('catalogs a rejected-surrender execution as an ending death', () => {

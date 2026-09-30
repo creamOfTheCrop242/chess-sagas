@@ -178,6 +178,7 @@ export function normalizeWoundCatalogPlans(
       return {
         ...plan,
         woundCatalogId: required.woundCatalogId,
+        injurySite: required.injurySite,
         causeType: required.causeType,
         sourcePieceId: required.sourcePieceId,
         recoveryPly:

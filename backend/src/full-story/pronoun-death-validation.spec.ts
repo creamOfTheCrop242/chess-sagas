@@ -82,7 +82,13 @@ describe('Possessive death references', () => {
           findings:
             decision === undefined
               ? []
-              : [{ findingIndex: 0, contradiction: decision }],
+              : [
+                  {
+                    findingIndex: 0,
+                    contradiction: decision,
+                    confidence: 'high',
+                  },
+                ],
         };
       }),
     };

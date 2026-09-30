@@ -1,4 +1,8 @@
 import type { FantasyPieceType } from '../chess/models/game-ledger';
+import {
+  deathMechanismCompatible,
+  type AttackCapability,
+} from '../chess/equipment-capabilities';
 
 export const DEATH_EVENT_KINDS = [
   'capture',
@@ -588,12 +592,13 @@ export function selectDeathCatalogEntry(
   eventKind: DeathEventKind,
   killerType: FantasyPieceType | undefined,
   seed: string,
+  capabilities: AttackCapability[] | null = null,
 ): DeathCatalogEntry {
   const compatible = eligibleDeathCatalogEntries(
     victimType,
     eventKind,
     killerType,
-  );
+  ).filter((entry) => deathMechanismCompatible(entry.method, capabilities));
   if (compatible.length === 0) {
     throw new Error(
       `No death catalog entry supports ${victimType}/${eventKind}/${killerType ?? 'no-killer'}`,

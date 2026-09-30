@@ -7,6 +7,7 @@ import { AuthService } from './auth/auth.service';
 import { BillingClientService } from './billing/billing.service';
 import { PgnApiService } from './pgn-viewer/pgn-api.service';
 import { PwaInstallComponent } from './pwa-install.component';
+import { SeoService } from './seo/seo.service';
 
 @Component({
   selector: 'app-root',
@@ -354,6 +355,7 @@ import { PwaInstallComponent } from './pwa-install.component';
   ],
 })
 export class AppComponent {
+  private readonly seo = inject(SeoService);
   readonly auth = inject(AuthService);
   readonly billing = inject(BillingClientService);
   readonly pgnApi = inject(PgnApiService);

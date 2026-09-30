@@ -102,23 +102,25 @@ export const MYTHIC_ARMS = [
 export type MythicArmId = (typeof MYTHIC_ARMS)[number]['id'];
 export type MythicArm = (typeof MYTHIC_ARMS)[number];
 
+/** Resolve persisted equipment only. Assignment belongs to identity creation. */
+export function establishedMythicArm(
+  piece: Pick<PieceIdentity, 'backstory' | 'mythicArm'>,
+): MythicArm | null {
+  if (piece.mythicArm)
+    return MYTHIC_ARMS.find((arm) => arm.id === piece.mythicArm!.id) ?? null;
+  const text = piece.backstory?.toLowerCase() ?? '';
+  const matches = MYTHIC_ARMS.filter((arm) =>
+    arm.signatures.some((signature) => text.includes(signature.toLowerCase())),
+  );
+  return matches.length === 1 ? matches[0] : null;
+}
+
 export function mythicArmForCommander(
   piece: Pick<PieceIdentity, 'originalSquare' | 'backstory' | 'mythicArm'>,
   seed: string,
 ): MythicArm {
-  if (piece.mythicArm) {
-    const structured = MYTHIC_ARMS.find(
-      (arm) => arm.id === piece.mythicArm?.id,
-    );
-    if (structured) return structured;
-  }
-  const backstory = piece.backstory?.toLowerCase() ?? '';
-  const legacy = MYTHIC_ARMS.find((arm) =>
-    arm.signatures.some((signature) =>
-      backstory.includes(signature.toLowerCase()),
-    ),
-  );
-  if (legacy) return legacy;
+  const existing = establishedMythicArm(piece);
+  if (existing) return existing;
   const squares = ['b1', 'g1', 'b8', 'g8'];
   const index = Math.max(0, squares.indexOf(piece.originalSquare));
   return MYTHIC_ARMS[

@@ -1,0 +1,617 @@
+{
+  "source": {
+    "gameId": "cmtyodhsg00002xuqoo42ws6z",
+    "runId": "cmtyog7qd00092xuquc68cm77",
+    "version": "story-package-v111",
+    "note": "Ledger and analysis wound plans retained; full failed draft/repair packages were not persisted. Quoted passages are from terminal logs, not full scene reconstructions."
+  },
+  "ledger": {
+    "metadata": {
+      "date": "2026.08.15",
+      "result": "0-1",
+      "blackPlayer": "BigRei1997",
+      "termination": "checkmate",
+      "whitePlayer": "HaMMaM_69"
+    },
+    "pieces": [
+      {
+        "id": "b-r-a8",
+        "side": "south",
+        "fantasyType": "moving-fortress",
+        "permanentName": "Southeast Fortress",
+        "characterName": "Nerys",
+        "operatorName": "Nerys"
+      },
+      {
+        "id": "b-n-b8",
+        "side": "south",
+        "fantasyType": "knight-commander",
+        "permanentName": "Southeast Knight Commander",
+        "characterName": "Yorick",
+        "capturedAtPly": 21
+      },
+      {
+        "id": "b-b-c8",
+        "side": "south",
+        "fantasyType": "archwizard",
+        "permanentName": "Southeast Archwizard",
+        "characterName": "Hadrian",
+        "capturedAtPly": 29
+      },
+      {
+        "id": "b-q-d8",
+        "side": "south",
+        "fantasyType": "queen",
+        "permanentName": "Southern Queen",
+        "characterName": "Gwendolyn"
+      },
+      {
+        "id": "b-k-e8",
+        "side": "south",
+        "fantasyType": "king",
+        "permanentName": "Southern King",
+        "characterName": "Ulric"
+      },
+      {
+        "id": "b-b-f8",
+        "side": "south",
+        "fantasyType": "archwizard",
+        "permanentName": "Southwest Archwizard",
+        "characterName": "Quillan",
+        "capturedAtPly": 27
+      },
+      {
+        "id": "b-n-g8",
+        "side": "south",
+        "fantasyType": "knight-commander",
+        "permanentName": "Southwest Knight Commander",
+        "characterName": "Gareth"
+      },
+      {
+        "id": "b-r-h8",
+        "side": "south",
+        "fantasyType": "moving-fortress",
+        "permanentName": "Southwest Fortress",
+        "characterName": "Tamsin",
+        "operatorName": "Tamsin"
+      },
+      {
+        "id": "b-p-a7",
+        "side": "south",
+        "fantasyType": "grunt",
+        "permanentName": "Kerra",
+        "characterName": "Kerra"
+      },
+      {
+        "id": "b-p-b7",
+        "side": "south",
+        "fantasyType": "grunt",
+        "permanentName": "Darius",
+        "characterName": "Darius"
+      },
+      {
+        "id": "b-p-c7",
+        "side": "south",
+        "fantasyType": "grunt",
+        "permanentName": "Kael",
+        "characterName": "Kael",
+        "capturedAtPly": 15
+      },
+      {
+        "id": "b-p-d7",
+        "side": "south",
+        "fantasyType": "grunt",
+        "permanentName": "Veyra",
+        "characterName": "Veyra",
+        "capturedAtPly": 45
+      },
+      {
+        "id": "b-p-e7",
+        "side": "south",
+        "fantasyType": "grunt",
+        "permanentName": "Xanthe",
+        "characterName": "Xanthe"
+      },
+      {
+        "id": "b-p-f7",
+        "side": "south",
+        "fantasyType": "grunt",
+        "permanentName": "Fiora",
+        "characterName": "Fiora"
+      },
+      {
+        "id": "b-p-g7",
+        "side": "south",
+        "fantasyType": "grunt",
+        "permanentName": "Aveline",
+        "characterName": "Aveline"
+      },
+      {
+        "id": "b-p-h7",
+        "side": "south",
+        "fantasyType": "grunt",
+        "permanentName": "Jessamine",
+        "characterName": "Jessamine"
+      },
+      {
+        "id": "w-p-a2",
+        "side": "north",
+        "fantasyType": "grunt",
+        "permanentName": "Corwin",
+        "characterName": "Corwin",
+        "capturedAtPly": 44
+      },
+      {
+        "id": "w-p-b2",
+        "side": "north",
+        "fantasyType": "grunt",
+        "permanentName": "Percival",
+        "characterName": "Percival",
+        "capturedAtPly": 34
+      },
+      {
+        "id": "w-p-c2",
+        "side": "north",
+        "fantasyType": "grunt",
+        "permanentName": "Ivor",
+        "characterName": "Ivor"
+      },
+      {
+        "id": "w-p-d2",
+        "side": "north",
+        "fantasyType": "grunt",
+        "permanentName": "Catrin",
+        "characterName": "Catrin",
+        "capturedAtPly": 16
+      },
+      {
+        "id": "w-p-e2",
+        "side": "north",
+        "fantasyType": "grunt",
+        "permanentName": "Dain",
+        "characterName": "Dain"
+      },
+      {
+        "id": "w-p-f2",
+        "side": "north",
+        "fantasyType": "grunt",
+        "permanentName": "Isabeau",
+        "characterName": "Isabeau"
+      },
+      {
+        "id": "w-p-g2",
+        "side": "north",
+        "fantasyType": "grunt",
+        "permanentName": "Nessa",
+        "characterName": "Nessa"
+      },
+      {
+        "id": "w-p-h2",
+        "side": "north",
+        "fantasyType": "grunt",
+        "permanentName": "Helena",
+        "characterName": "Helena",
+        "capturedAtPly": 32
+      },
+      {
+        "id": "w-r-a1",
+        "side": "north",
+        "fantasyType": "moving-fortress",
+        "permanentName": "Northeast Fortress",
+        "characterName": "Sabine",
+        "operatorName": "Sabine"
+      },
+      {
+        "id": "w-n-b1",
+        "side": "north",
+        "fantasyType": "knight-commander",
+        "permanentName": "Northeast Knight Commander",
+        "characterName": "Lucan"
+      },
+      {
+        "id": "w-b-c1",
+        "side": "north",
+        "fantasyType": "archwizard",
+        "permanentName": "Northeast Archwizard",
+        "characterName": "Yvette",
+        "capturedAtPly": 26
+      },
+      {
+        "id": "w-q-d1",
+        "side": "north",
+        "fantasyType": "queen",
+        "permanentName": "Northern Queen",
+        "characterName": "Zinnia"
+      },
+      {
+        "id": "w-k-e1",
+        "side": "north",
+        "fantasyType": "king",
+        "permanentName": "Northern King",
+        "characterName": "Stellan"
+      },
+      {
+        "id": "w-b-f1",
+        "side": "north",
+        "fantasyType": "archwizard",
+        "permanentName": "Northwest Archwizard",
+        "characterName": "Zephyr",
+        "capturedAtPly": 20
+      },
+      {
+        "id": "w-n-g1",
+        "side": "north",
+        "fantasyType": "knight-commander",
+        "permanentName": "Northwest Knight Commander",
+        "characterName": "Leoric",
+        "capturedAtPly": 28
+      },
+      {
+        "id": "w-r-h1",
+        "side": "north",
+        "fantasyType": "moving-fortress",
+        "permanentName": "Northwest Fortress",
+        "characterName": "Petra",
+        "operatorName": "Petra"
+      }
+    ],
+    "events": [
+      {
+        "ply": 1,
+        "pieceId": "w-p-e2",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 2,
+        "pieceId": "b-p-d7",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 3,
+        "pieceId": "w-n-b1",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 4,
+        "pieceId": "b-n-g8",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 5,
+        "pieceId": "w-n-g1",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 6,
+        "pieceId": "b-p-g7",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 7,
+        "pieceId": "w-p-d2",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 8,
+        "pieceId": "b-b-f8",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 9,
+        "pieceId": "w-p-d2",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 10,
+        "pieceId": "b-k-e8",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 11,
+        "pieceId": "w-b-f1",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 12,
+        "pieceId": "b-b-c8",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 13,
+        "pieceId": "w-p-h2",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 14,
+        "pieceId": "b-p-c7",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 15,
+        "pieceId": "w-p-d2",
+        "capturedPieceId": "b-p-c7",
+        "isCapture": true,
+        "isCheckmate": false
+      },
+      {
+        "ply": 16,
+        "pieceId": "b-n-b8",
+        "capturedPieceId": "w-p-d2",
+        "isCapture": true,
+        "isCheckmate": false
+      },
+      {
+        "ply": 17,
+        "pieceId": "w-b-c1",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 18,
+        "pieceId": "b-n-b8",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 19,
+        "pieceId": "w-p-b2",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 20,
+        "pieceId": "b-n-b8",
+        "capturedPieceId": "w-b-f1",
+        "isCapture": true,
+        "isCheckmate": false
+      },
+      {
+        "ply": 21,
+        "pieceId": "w-p-b2",
+        "capturedPieceId": "b-n-b8",
+        "isCapture": true,
+        "isCheckmate": false
+      },
+      {
+        "ply": 22,
+        "pieceId": "b-r-h8",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 23,
+        "pieceId": "w-q-d1",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 24,
+        "pieceId": "b-p-e7",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 25,
+        "pieceId": "w-b-c1",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 26,
+        "pieceId": "b-b-f8",
+        "capturedPieceId": "w-b-c1",
+        "isCapture": true,
+        "isCheckmate": false
+      },
+      {
+        "ply": 27,
+        "pieceId": "w-q-d1",
+        "capturedPieceId": "b-b-f8",
+        "isCapture": true,
+        "isCheckmate": false
+      },
+      {
+        "ply": 28,
+        "pieceId": "b-b-c8",
+        "capturedPieceId": "w-n-g1",
+        "isCapture": true,
+        "isCheckmate": false
+      },
+      {
+        "ply": 29,
+        "pieceId": "w-p-g2",
+        "capturedPieceId": "b-b-c8",
+        "isCapture": true,
+        "isCheckmate": false
+      },
+      {
+        "ply": 30,
+        "pieceId": "b-r-a8",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 31,
+        "pieceId": "w-p-h2",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 32,
+        "pieceId": "b-n-g8",
+        "capturedPieceId": "w-p-h2",
+        "isCapture": true,
+        "isCheckmate": false
+      },
+      {
+        "ply": 33,
+        "pieceId": "w-k-e1",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 34,
+        "pieceId": "b-r-a8",
+        "capturedPieceId": "w-p-b2",
+        "isCapture": true,
+        "isCheckmate": false
+      },
+      {
+        "ply": 35,
+        "pieceId": "w-n-b1",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 36,
+        "pieceId": "b-q-d8",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 37,
+        "pieceId": "w-q-d1",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 38,
+        "pieceId": "b-r-h8",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 39,
+        "pieceId": "w-r-a1",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 40,
+        "pieceId": "b-n-g8",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 41,
+        "pieceId": "w-n-b1",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 42,
+        "pieceId": "b-r-a8",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 43,
+        "pieceId": "w-n-b1",
+        "isCapture": false,
+        "isCheckmate": false
+      },
+      {
+        "ply": 44,
+        "pieceId": "b-r-a8",
+        "capturedPieceId": "w-p-a2",
+        "isCapture": true,
+        "isCheckmate": false
+      },
+      {
+        "ply": 45,
+        "pieceId": "w-n-b1",
+        "capturedPieceId": "b-p-d7",
+        "isCapture": true,
+        "isCheckmate": false
+      },
+      {
+        "ply": 46,
+        "pieceId": "b-q-d8",
+        "isCapture": false,
+        "isCheckmate": true
+      }
+    ]
+  },
+  "wounds": [
+    {
+      "injury": "Several ribs are cracked, making breathing, twisting, and exertion painful without puncturing a lung.",
+      "pieceId": "b-n-b8",
+      "causeType": "victim-retaliation",
+      "recoveryPly": null,
+      "sourcePieceId": "w-b-f1",
+      "inflictedAtPly": 20,
+      "lastingEffects": [
+        "Persistent-pain",
+        "Breathing-difficulty"
+      ],
+      "woundCatalogId": "cracked-ribs"
+    },
+    {
+      "injury": "One eye is badly injured or obscured, causing reduced vision and persistent pain.",
+      "pieceId": "w-p-b2",
+      "causeType": "victim-retaliation",
+      "recoveryPly": null,
+      "sourcePieceId": "b-n-b8",
+      "inflictedAtPly": 21,
+      "lastingEffects": [
+        "Reduced-vision",
+        "Persistent-pain"
+      ],
+      "woundCatalogId": "impaired-eye"
+    },
+    {
+      "injury": "One forearm is fractured, leaving persistent pain, reduced grip, and poor weapon control.",
+      "pieceId": "b-b-f8",
+      "causeType": "victim-retaliation",
+      "recoveryPly": null,
+      "sourcePieceId": "w-b-c1",
+      "inflictedAtPly": 26,
+      "lastingEffects": [
+        "Persistent-pain",
+        "Reduced-grip",
+        "Reduced-weapon-control"
+      ],
+      "woundCatalogId": "fractured-forearm"
+    },
+    {
+      "injury": "One ankle is crushed or badly broken, preventing normal footing and rapid changes of direction.",
+      "pieceId": "w-q-d1",
+      "causeType": "victim-retaliation",
+      "recoveryPly": null,
+      "sourcePieceId": "b-b-f8",
+      "inflictedAtPly": 27,
+      "lastingEffects": [
+        "Persistent-pain",
+        "Reduced-mobility"
+      ],
+      "woundCatalogId": "crushed-ankle"
+    },
+    {
+      "injury": "A visible but non-disabling cut crosses the brow, causing persistent pain and bleeding.",
+      "pieceId": "w-p-g2",
+      "causeType": "environmental-hazard",
+      "recoveryPly": null,
+      "sourcePieceId": null,
+      "inflictedAtPly": 29,
+      "lastingEffects": [
+        "Persistent-pain",
+        "Bleeding"
+      ],
+      "woundCatalogId": "facial-cut"
+    }
+  ]
+}

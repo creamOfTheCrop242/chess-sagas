@@ -32,7 +32,8 @@ export interface DeathBeatDirective {
   ply: number;
   authorizedVictimId: string | null;
   authorizedVictimNames: string[];
-  noOtherDeaths: true;
+  /** Only used for the standalone rejected-surrender ending contract. */
+  noOtherDeaths?: true;
   deathCatalogId: DeathCatalogId | null;
   eventKind: DeathEventKind | null;
   decisiveActorId: string | null;
@@ -41,6 +42,12 @@ export interface DeathBeatDirective {
   targetArea: DeathTargetArea | null;
   narrationGuidance: string | null;
   forbiddenClaims: readonly string[];
+}
+
+export interface SceneDeathDirective {
+  ply: number;
+  authorizedDeaths: DeathBeatDirective[];
+  noOtherDeaths: true;
 }
 
 export interface WoundTimelineDirective {
@@ -58,6 +65,7 @@ export interface WoundTimelineDirective {
   sourceNames: string[];
   woundCatalogId: WoundCatalogId;
   bodyArea: WoundBodyArea;
+  injurySite?: WoundBodyArea | null;
   severity: WoundSeverity;
   requiredEffects: readonly WoundEffect[];
   recoverability: 'recoverable-with-scar' | 'persistent' | 'permanent';
@@ -98,6 +106,15 @@ export interface FortressOperatingDirective {
 }
 
 export interface EndingWorldState {
+  defeatedKingFate?: NarrativeAnalysis['endingPlan']['defeatedKingFate'];
+  characterPowerStates?: Array<{
+    pieceId: string;
+    name: string;
+    side: string;
+    sealPowerAvailable: boolean;
+    personalCastingAvailable: boolean;
+    realmPoweredEquipmentAvailable: boolean;
+  }>;
   termination: GameLedger['metadata']['termination'];
   defeatedSide: 'north' | 'south' | null;
   defeatedSealFate: 'destroyed' | 'intact';
@@ -106,6 +123,11 @@ export interface EndingWorldState {
 }
 
 export interface FullStoryRequest {
+  sceneFactContracts?: import('./scene-fact-contracts').SceneFactContract[];
+  sceneObligations?: import('./scene-obligations').SceneObligation[];
+  revengeRoles?: ReturnType<
+    typeof import('./scene-obligations').buildRevengeRoles
+  >;
   ledger: GameLedger;
   narrativeAnalysis: NarrativeAnalysis;
   outline: StoryOutline;
@@ -114,14 +136,18 @@ export interface FullStoryRequest {
     typeof import('./relationship-scene-guide').buildRelationshipSceneGuide
   >;
   captureManifest: CaptureDirective[];
-  deathContracts: DeathBeatDirective[];
+  deathContracts: SceneDeathDirective[];
   endingDeathContract: DeathBeatDirective | null;
   woundTimeline: WoundTimelineDirective[];
   woundStateByPly: Array<{
     ply: number;
     newlyInflictedWoundIds: string[];
+    enteringWoundIds: string[];
     activeWoundIds: string[];
   }>;
+  quietSceneGuide?: ReturnType<
+    typeof import('./relationship-scene-guide').buildQuietSceneGuide
+  >;
   checkStrainTimeline: CheckStrainDirective[];
   fortressOperatingTimeline: FortressOperatingDirective[];
   endingWorldState: EndingWorldState;
@@ -130,6 +156,17 @@ export interface FullStoryRequest {
 }
 
 export interface WoundSceneRepairRequest {
+  characterContext?: ReturnType<
+    typeof import('./relationship-scene-guide').buildCharacterRepairContext
+  >;
+  characterIntent?: ReturnType<
+    typeof import('./relationship-scene-guide').buildCharacterRepairGuide
+  >;
+  sceneObligations?: import('./scene-obligations').SceneObligation[];
+  checkStrainTimeline?: CheckStrainDirective[];
+  deathContracts?: SceneDeathDirective[];
+  fortressOperatingTimeline?: FortressOperatingDirective[];
+  woundStateByPly?: FullStoryRequest['woundStateByPly'];
   scenes: Array<{
     ply: number;
     fantasyNarration: string;
@@ -159,10 +196,21 @@ export interface WoundSceneRepairRequest {
 }
 
 export interface WoundSceneRepairResult {
+  obligationFindings?: import('../story-validation/models/story-validation').ValidationFinding[];
   scenes: Array<{ ply: number; fantasyNarration: string }>;
 }
 
 export interface StorySceneRepairRequest {
+  sceneFactContracts?: import('./scene-fact-contracts').SceneFactContract[];
+  validationManagedByCaller?: boolean;
+  characterContext?: ReturnType<
+    typeof import('./relationship-scene-guide').buildCharacterRepairContext
+  >;
+  characterIntent?: ReturnType<
+    typeof import('./relationship-scene-guide').buildCharacterRepairGuide
+  >;
+  sceneObligations?: import('./scene-obligations').SceneObligation[];
+  woundStateByPly?: FullStoryRequest['woundStateByPly'];
   scenes: Array<{
     ply: number;
     fantasyNarration: string;
@@ -184,7 +232,7 @@ export interface StorySceneRepairRequest {
   }>;
   captureManifest: CaptureDirective[];
   deathContracts: Array<
-    DeathBeatDirective & {
+    SceneDeathDirective & {
       mustRemainAlive: Array<{ pieceId: string; names: string[] }>;
     }
   >;
@@ -213,6 +261,7 @@ export interface StorySceneRepairRequest {
 }
 
 export interface StorySceneRepairResult {
+  obligationFindings?: import('../story-validation/models/story-validation').ValidationFinding[];
   scenes: Array<{ ply: number; fantasyNarration: string }>;
 }
 
@@ -239,6 +288,8 @@ export interface SemanticDeathAdjudicationResult {
 }
 
 export interface StorySectionRepairRequest {
+  endingFactContracts?: import('./scene-fact-contracts').SceneFactContract[];
+  contextSections?: Array<{ sectionId: string; text: string }>;
   sections: Array<{
     sectionId: string;
     sectionPurpose: string;
@@ -262,6 +313,12 @@ export interface StorySectionRepairResult {
 export interface FullStoryProvider {
   readonly model: string;
   generate(request: FullStoryRequest): Promise<GeneratedStoryPackage>;
+  reviewSceneFacts(request: {
+    contracts: import('./scene-fact-contracts').SceneFactContract[];
+    scenes: import('./scene-fact-contracts').FactScene[];
+    contextScenes: import('./scene-fact-contracts').FactScene[];
+    telemetry: GenerationTelemetryContext;
+  }): Promise<import('./scene-fact-contracts').SceneFactReview>;
   repairWoundScenes(
     request: WoundSceneRepairRequest,
   ): Promise<WoundSceneRepairResult>;

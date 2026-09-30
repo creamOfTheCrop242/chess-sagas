@@ -69,6 +69,12 @@ describe('buildEndingContract', () => {
         `[Date "2026.08.${String((index % 28) + 1).padStart(2, '0')}"]\n[White "North${index}"]\n[Black "South${index}"]\n[Result "0-1"]\n\n1. f3 e5 2. g4 Qh4# 0-1`,
       ).ledger;
       const direction = buildEndingContract(ledger).creativeDirection;
+      expect(direction.destroyedSealConsequence).not.toBe(
+        'civilian-third-power-rising-against-both-crowns',
+      );
+      expect(direction.intactSealConsequence).not.toBe(
+        'civilian-third-power-rising-against-both-crowns',
+      );
 
       if (
         direction.endingGenre !== 'political-horror' &&

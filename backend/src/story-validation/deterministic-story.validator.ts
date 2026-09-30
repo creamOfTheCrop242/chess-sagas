@@ -3,10 +3,11 @@ import type { GameLedger } from '../chess/models/game-ledger';
 import type { GeneratedStoryPackage } from '../full-story/models/generated-story';
 import type { StoryOutline } from '../story-outline/models/story-outline';
 import type { ValidationFinding } from './models/story-validation';
+import { woundCatalogEntry } from '../narrative-analysis/wound-catalog';
 import {
   mentionsIncompatibleWeaponKind,
   mentionedMythicArms,
-  mythicArmForCommander,
+  establishedMythicArm,
   type MythicArm,
 } from '../chess/mythic-arms';
 
@@ -144,7 +145,11 @@ export class DeterministicStoryValidator {
       ];
       for (const commander of commanders) {
         if (!scene.characters.includes(commander.id)) continue;
-        const assignedArm = mythicArmForCommander(commander, ledger.initialFen);
+        const assignedArm = establishedMythicArm(commander);
+        const promotion = ledger.events?.find(
+          (event) => event.pieceId === commander.id && event.isPromotion,
+        );
+        if (!assignedArm || (promotion && promotion.ply > scene.ply)) continue;
         const sceneCommanders = commanders.filter((candidate) =>
           scene.characters.includes(candidate.id),
         );
@@ -324,26 +329,27 @@ export class DeterministicStoryValidator {
         const excerpt = names
           .map((name) => prematureDeathExcerpt(scene.fantasyNarration, name))
           .find((match): match is string => Boolean(match));
-        const resolvedExcerpt =
-          excerpt ??
-          localPronounDeathExcerpt(scene.fantasyNarration, piece, ledger);
-        const possibleReference = !resolvedExcerpt
-          ? possessiveDeathReference(scene.fantasyNarration, piece)
+        const possibleReference = !excerpt
+          ? (localPronounDeathExcerpt(scene.fantasyNarration, piece) ??
+            possessiveDeathReference(scene.fantasyNarration, piece))
           : undefined;
-        if (!resolvedExcerpt && !possibleReference) continue;
+        if (!excerpt && !possibleReference) continue;
         findings.push({
           type:
             piece.capturedAtPly === undefined
               ? 'survivor-killed'
               : 'invented-capture',
-          severity: resolvedExcerpt ? 'error' : 'warning',
+          severity: excerpt ? 'error' : 'warning',
+          ...(!excerpt
+            ? { deathAttribution: 'pronoun-inferred' as const }
+            : {}),
           message:
             piece.capturedAtPly === undefined
               ? `${piece.permanentName} survives the ledger but is described as dead`
               : `${piece.permanentName} is described as dead before capture at ply ${piece.capturedAtPly}`,
           ply: scene.ply,
           pieceId: piece.id,
-          excerpt: resolvedExcerpt ?? possibleReference!,
+          excerpt: excerpt ?? possibleReference!,
         });
       }
     }
@@ -388,6 +394,8 @@ export class DeterministicStoryValidator {
     });
   }
 
+  /** Candidate discovery only. Death words are not victim attribution;
+   * mandatory per-victim scene-fact review is authoritative in the coordinator. */
   validateCheckmateKingDeath(
     scenes: Array<{ ply: number; fantasyNarration: string }>,
     ledger: GameLedger,
@@ -591,12 +599,14 @@ export class DeterministicStoryValidator {
           wound.woundCatalogId,
           aliases,
         );
-        const excerpt = explicitSeverance ?? matchingCharacterWoundExcerpt(
-          scene.fantasyNarration,
-          woundText,
-          aliases,
-          otherCharacterAliases,
-        );
+        const excerpt =
+          explicitSeverance ??
+          matchingCharacterWoundExcerpt(
+            scene.fantasyNarration,
+            woundText,
+            aliases,
+            otherCharacterAliases,
+          );
         if (!excerpt) continue;
         findings.push({
           type: 'wound-continuity',
@@ -631,7 +641,12 @@ export class DeterministicStoryValidator {
         piece.fantasyType === 'knight-commander' &&
         inflictionScene?.characters.includes(piece.id)
       ) {
-        const assignedArm = mythicArmForCommander(piece, ledger.initialFen);
+        const assignedArm = establishedMythicArm(piece);
+        const promotion = ledger.events?.find(
+          (event) => event.pieceId === piece.id && event.isPromotion,
+        );
+        if (!assignedArm || (promotion && promotion.ply > wound.inflictedAtPly))
+          continue;
         const sentences = inflictionScene.fantasyNarration.match(
           /[^.!?]+[.!?]?/g,
         ) ?? [inflictionScene.fantasyNarration];
@@ -854,12 +869,27 @@ export class DeterministicStoryValidator {
         if (event?.isCapture && event.capturedPieceId === targetId) continue;
         const targetAliases = characterAliases(target);
         if (!mentionsCharacter(scene.fantasyNarration, targetAliases)) continue;
-        const targetWoundTexts = relevantWounds
-          .filter(
-            (wound) =>
-              wound.pieceId === targetId && wound.inflictedAtPly <= scene.ply,
-          )
-          .map((wound) => [wound.injury, ...wound.lastingEffects].join(' '));
+        const targetWounds = relevantWounds.filter(
+          (wound) =>
+            wound.pieceId === targetId && wound.inflictedAtPly <= scene.ply,
+        );
+        if (
+          targetWounds.some((wound) => wound.woundCatalogId === 'impaired-eye')
+        ) {
+          const removedEye = explicitEyeRemovalExcerpt(
+            scene.fantasyNarration,
+            targetAliases,
+          );
+          if (removedEye)
+            findings.push({
+              type: 'invented-wound',
+              severity: 'error',
+              ply: scene.ply,
+              pieceId: targetId,
+              excerpt: removedEye,
+              message: `${target.permanentName}'s impaired-eye contract does not authorize removal of the eye`,
+            });
+        }
         const scenePieces = scene.characters
           .map((pieceId) => pieces.get(pieceId))
           .filter((piece): piece is GameLedger['pieces'][number] =>
@@ -925,8 +955,13 @@ export class DeterministicStoryValidator {
                 ),
               ];
               if (
-                targetWoundTexts.some((woundText) =>
-                  highConfidenceWoundSignature(clause, woundText),
+                targetWounds.some(
+                  (wound) =>
+                    catalogSupportsWoundEvidence(clause, wound) ||
+                    highConfidenceWoundSignature(
+                      clause,
+                      [wound.injury, ...wound.lastingEffects].join(' '),
+                    ),
                 )
               ) {
                 return null;
@@ -1232,6 +1267,8 @@ function highConfidenceWoundSignature(
   narration: string,
   woundDescription: string,
 ): boolean {
+  // A weapon's head is not a character's injured head.
+  narration = bodilyEvidenceText(narration);
   const sharedFortressComponents = FORTRESS_COMPONENT_TERMS.filter(
     (term) => hasAny(woundDescription, [term]) && hasAny(narration, [term]),
   );
@@ -1260,6 +1297,67 @@ function highConfidenceWoundSignature(
       (hasGenericInjury || specificInjuryMatches.length > 0)) ||
     (anatomyMatches.length >= 1 && specificInjuryMatches.length >= 1)
   );
+}
+
+function bodilyEvidenceText(text: string): string {
+  return text.replace(
+    /\b(?:axe|ax|hammer|mace|spear|arrow)[- ]heads?\b/gi,
+    'weapon',
+  );
+}
+
+function explicitEyeRemovalExcerpt(
+  text: string,
+  aliases: string[],
+): string | undefined {
+  return text.split(/(?<=[.!?;])\s+/).find((clause) => {
+    // Only affirmative, explicitly owned removal; never infer from loss of sight.
+    if (
+      /\b(?:not|never|no|almost|nearly|could|would|might|if|feared|remembered)\b|n['’]t\b/i.test(
+        clause,
+      )
+    )
+      return false;
+    return aliases.some((alias) => {
+      const ownedEye = `${escapeRegex(alias)}['’]s\\s+(?:(?:left|right)\\s+)?eye`;
+      return (
+        new RegExp(
+          `\\b${ownedEye}\\s+(?:was|had been)\\s+(?:removed|torn out|gouged out|plucked out)\\b`,
+          'i',
+        ).test(clause) ||
+        new RegExp(
+          `\\b(?:removed|gouged out|plucked out)\\s+${ownedEye}\\b`,
+          'i',
+        ).test(clause)
+      );
+    });
+  });
+}
+
+/** Compatibility only prevents a false ownership accusation. It does not
+ * authorize a wound or bypass timing, required effects, or severity checks. */
+function catalogSupportsWoundEvidence(
+  clause: string,
+  wound: GeneratedStoryPackage['wounds'][number],
+): boolean {
+  const entry = wound.woundCatalogId
+    ? woundCatalogEntry(wound.woundCatalogId)
+    : undefined;
+  if (!entry || entry.bodyArea.startsWith('fortress-')) return false;
+  const text = bodilyEvidenceText(clause);
+  const anatomy = ANATOMY_FAMILIES.filter((family) =>
+    hasAny(entry.bodyArea, family),
+  );
+  if (!anatomy.some((family) => hasAny(text, family))) return false;
+  // Bleeding can accompany an authorized wound without being its distinguishing
+  // injury type. Fracture, severance, burns, etc. must be supported separately.
+  const specific = INJURY_FAMILIES.slice(1).filter(
+    (family) =>
+      !family.some((term) => term === 'blood') && hasAny(text, family),
+  );
+  const contract = `${entry.label} ${wound.injury} ${wound.lastingEffects.join(' ')}`;
+  if (specific.some((family) => !hasAny(contract, family))) return false;
+  return hasAny(text, INJURY_FAMILIES.flat());
 }
 
 function highConfidenceFortressWoundTransfer(
@@ -1629,21 +1727,35 @@ function prematureSeveranceExcerpt(
   catalogId: string | null | undefined,
   aliases: string[],
 ): string | undefined {
-  const limb = catalogId === 'severed-hand' ? 'hands?'
-    : catalogId === 'severed-arm' ? 'arms?'
-    : catalogId === 'severed-leg' ? 'legs?'
-    : null;
+  const limb =
+    catalogId === 'severed-hand'
+      ? 'hands?'
+      : catalogId === 'severed-arm'
+        ? 'arms?'
+        : catalogId === 'severed-leg'
+          ? 'legs?'
+          : null;
   if (!limb) return undefined;
   return narration.split(/(?<=[.!?])\s+/).find((sentence) => {
     // Hypothetical, attempted, negated, and reported events are not proof.
-    if (/\b(?:not|never|no|almost|nearly|could|would|might|may|if|unless|before|tried|threatened|feared|imagined|remembered|claimed|said)\b|n['’]t\b|[“”"]/i.test(sentence)) return false;
+    if (
+      /\b(?:not|never|no|almost|nearly|could|would|might|may|if|unless|before|tried|threatened|feared|imagined|remembered|claimed|said)\b|n['’]t\b|[“”"]/i.test(
+        sentence,
+      )
+    )
+      return false;
     return aliases.some((alias) => {
       const owner = `${escapeRegex(alias)}['’]s`;
-      return new RegExp(
-        `\\bsevered\\s+(?:one\\s+of\\s+)?${owner}\\s+${limb}\\b(?=\\s*(?:[,.!;?]|$|at\\s+the\\s+wrist\\b|from\\s+(?:the|her|his)\\s+arm\\b))`, 'i',
-      ).test(sentence) || new RegExp(
-        `\\b${owner}\\s+${limb}\\s+(?:was|were)\\s+severed\\b`, 'i',
-      ).test(sentence);
+      return (
+        new RegExp(
+          `\\bsevered\\s+(?:one\\s+of\\s+)?${owner}\\s+${limb}\\b(?=\\s*(?:[,.!;?]|$|at\\s+the\\s+wrist\\b|from\\s+(?:the|her|his)\\s+arm\\b))`,
+          'i',
+        ).test(sentence) ||
+        new RegExp(
+          `\\b${owner}\\s+${limb}\\s+(?:was|were)\\s+severed\\b`,
+          'i',
+        ).test(sentence)
+      );
     });
   });
 }
@@ -1747,35 +1859,46 @@ function unplannedFortressDamageFinding(
   captureVictim?: GameLedger['pieces'][number],
 ): { excerpt: string; severity: 'error' | 'warning' } | undefined {
   const sentences = narration.match(/[^.!?]+[.!?]?/g) ?? [narration];
-  const damageSentence = sentences
-    .map((sentence) => sentence.trim())
-    .find((sentence) => {
-      if (
-        /\b(?:without|no)\s+(?:lasting\s+)?damage\b|\bundamaged\b|\b(?:armor|armour|plates?|hull)\s+held\s+intact\b/i.test(
-          sentence,
-        )
-      ) {
-        return false;
-      }
-      if (
-        !mentionsCharacter(sentence, aliases) ||
-        !fortressComponentSustainsDamage(sentence, aliases)
-      ) {
-        return false;
+  const evidence = sentences.flatMap((sentence) => {
+    const clauses = sentence
+      .split(/[,;:]|\b(?:while|but|although)\b/i)
+      .map((clause) => clause.trim())
+      .filter(Boolean);
+    return clauses.flatMap((rawClause, index) => {
+      const clause = rawClause.trim();
+      const previous = clauses[index - 1] ?? '';
+      // Only explicit possessive continuation inherits an owner across clauses.
+      const inheritedOwner =
+        /\b(?:its|her|his)\b/i.test(clause) &&
+        mentionsCharacter(previous, aliases) &&
+        !mentionsCharacter(previous, otherCharacterAliases);
+      const ownerEvidence = mentionsCharacter(clause, aliases)
+        ? 'named'
+        : inheritedOwner
+          ? 'possessive-continuation'
+          : null;
+      if (!ownerEvidence) return [];
+      const damage = fortressComponentSustainsDamage(clause, aliases);
+      if (!damage) {
+        return [];
       }
 
       // A sentence naming several characters can make deterministic ownership
       // ambiguous. Only accept it when the damage language is closer to this
       // Fortress pilot than to every other named character.
-      if (!mentionsCharacter(sentence, otherCharacterAliases)) return true;
-      return nearestWoundMentionBelongsTo(
-        sentence,
-        aliases,
-        otherCharacterAliases,
-        [...FORTRESS_COMPONENT_TERMS, ...SUBSTANTIVE_FORTRESS_DAMAGE_TERMS],
-      );
+      if (
+        mentionsCharacter(clause, otherCharacterAliases) &&
+        !nearestWoundMentionBelongsTo(clause, aliases, otherCharacterAliases, [
+          ...FORTRESS_COMPONENT_TERMS,
+          ...SUBSTANTIVE_FORTRESS_DAMAGE_TERMS,
+        ])
+      )
+        return [];
+      return [{ excerpt: clause, ownerEvidence, ...damage }];
     });
-  if (!damageSentence) return undefined;
+  })[0];
+  if (!evidence) return undefined;
+  const damageSentence = evidence.excerpt;
 
   if (
     captureVictim?.fantasyType === 'moving-fortress' &&
@@ -1873,13 +1996,13 @@ function explicitlyOwnedFortressDamage(
 function fortressComponentSustainsDamage(
   sentence: string,
   aliases: string[],
-): boolean {
+): { matchedText: string; component: string; affirmative: true } | undefined {
   if (
     /\b(?:enemy|enemy's|opposing|hostile)\b[^.!?;]{0,30}\b(?:armor|armour|hull|engine|drive|steering|wheels?|axle|treads?|cannons?|guns?|weapons?|prow|ram|cradle|core)\b/i.test(
       sentence,
     )
   ) {
-    return false;
+    return undefined;
   }
 
   const componentPattern = FORTRESS_COMPONENT_TERMS.map(escapeRegex).join('|');
@@ -1920,13 +2043,31 @@ function fortressComponentSustainsDamage(
     `\\b${determiner}${componentDescriptor}(?:${componentPattern})\\b\\s+(?:split|splintered|broke|buckled|ruptured|cracked|shattered|jammed|collapsed|snapped|failed(?!\\s+to\\b))\\b`,
     'i',
   );
-  return (
-    damagedOwnedComponent.test(sentence) ||
-    directlyDamagedComponent.test(sentence) ||
-    ownedComponentReceivesDamage.test(sentence) ||
-    componentHasDamageState.test(sentence) ||
-    componentSuffersDestructiveEvent.test(sentence)
-  );
+  for (const pattern of [
+    damagedOwnedComponent,
+    directlyDamagedComponent,
+    ownedComponentReceivesDamage,
+    componentHasDamageState,
+    componentSuffersDestructiveEvent,
+  ]) {
+    const matches = sentence.matchAll(new RegExp(pattern.source, 'gi'));
+    for (const match of matches) {
+      const before = sentence.slice(0, match.index);
+      // Negation scopes to this assertion, never the entire sentence.
+      if (
+        /\b(?:not|never|no|without)\s+(?:(?:a|the|any|being|was|were)\s+){0,2}$/i.test(
+          before,
+        )
+      )
+        continue;
+      const component = FORTRESS_COMPONENT_TERMS.find((term) =>
+        hasAny(match[0], [term]),
+      );
+      if (component)
+        return { matchedText: match[0], component, affirmative: true };
+    }
+  }
+  return undefined;
 }
 
 function nearestWoundMentionBelongsTo(
@@ -2041,7 +2182,6 @@ function possessiveDeathReference(
 function localPronounDeathExcerpt(
   narration: string,
   piece: GameLedger['pieces'][number],
-  ledger: GameLedger,
 ): string | undefined {
   const objectPronoun =
     piece.pronouns === 'he/him'
@@ -2068,17 +2208,8 @@ function localPronounDeathExcerpt(
     const deathMatch = deathPattern.exec(afterTarget);
     if (!deathMatch) continue;
 
-    const competingAlias = ledger.pieces
-      .filter(
-        (candidate) =>
-          candidate.id !== piece.id && candidate.pronouns === piece.pronouns,
-      )
-      .flatMap(characterAliases)
-      .some((alias) =>
-        new RegExp(`\\b${escapeRegex(alias)}\\b`, 'i').test(clause),
-      );
-    if (competingAlias) continue;
-
+    // A nearby name can be the attacker, witness, or victim. Even without
+    // competing aliases this is only a candidate for full-scene adjudication.
     return clause.trim();
   }
   return undefined;

@@ -204,14 +204,13 @@ The Southern King poured his strength into the Royal Seal, but every remaining r
     expect(buildDeathContracts(deathLedger)).toMatchObject([
       {
         ply: 1,
-        authorizedVictimId: null,
-        authorizedVictimNames: [],
+        authorizedDeaths: [],
         noOtherDeaths: true,
       },
       {
         ply: 2,
-        authorizedVictimId: 'b-p-h7',
-        authorizedVictimNames: ['Emrys', 'Southern Dusk Company'],
+        authorizedDeaths: [{authorizedVictimId: 'b-p-h7',
+        authorizedVictimNames: ['Emrys', 'Southern Dusk Company']}],
         noOtherDeaths: true,
       },
     ]);

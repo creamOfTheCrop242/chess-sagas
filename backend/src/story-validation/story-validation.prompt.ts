@@ -1,4 +1,4 @@
-export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v47';
+export const STORY_VALIDATION_PROMPT_VERSION = 'phase-5-v48';
 
 export const STORY_VALIDATION_INSTRUCTIONS = `Validate the supplied story against the complete deterministic chess ledger, narrative analysis, outline, and deterministic findings.
 
@@ -45,7 +45,7 @@ Report:
 - any Moving Fortress containing or being operated by an attendant, loader, gunner, mechanic, navigator, officer, passenger, member of staff, crew member, or second living occupant; the named embedded pilot must be alone inside and personally control every system, though allied soldiers may remain outside beside or behind the hull
 - a Knight Commander portrayed as an ordinary soldier rather than an elite augmented captain; as equal or close to the Queen's enhancement; using a signature weapon that contradicts the character registry; teleporting; wearing Fortress-grade armor; or wielding broad Archwizard-level sorcery
 - Archwizard movement contradicting the event's authoritative archwizardTravelMode: a one-square walk portrayed as teleportation, or a two-or-more-square teleport portrayed as walking, running, or riding; danger and tone are not exceptions
-- Knight Commander movement contradicting the event's authoritative knightCommanderTravelMode: a one-square walk portrayed as mounted travel, or a two-or-more-square spectral-mount event portrayed as traveling on foot or teleporting. The spectral steed must be summoned and cross the intervening battlefield, but it is transport only: flag mounted combat or any steed attacking, trampling, shielding, or suffering injury. The Commander must dismount and fight on foot; danger and tone are not exceptions
+- Knight Commanders may travel and fight mounted or on foot with the assigned Mythic Arm. knightCommanderTravelMode is suggested treatment, not a validation requirement. Do not flag mounted combat or foot travel. A spectral steed must be summoned through its artifact and cross intervening ground without teleporting. After dismissal, summon and remount before mounted action. Flag a steed itself attacking, trampling, shielding, or suffering injury.
 - an Archwizard portrayed as possessing only teleportation magic, or repetitive combat that incorrectly turns every Archwizard spell into a portal, blink, or spatial effect
 - an Archwizard's registry-defined training history being contradicted or replaced with generic royal-college education; do not require college attendance when the established path is private apprenticeship, inherited tradition, natural gift, battlefield learning, forbidden research, or self-teaching
 - a Moving Fortress portrayed without magic-powered wheels, with a pilot who is not alive and embedded permanently within it, or as a sentient machine acting independently of its pilot

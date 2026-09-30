@@ -2,7 +2,7 @@ import type { GameLedger, PieceIdentity } from '../chess/models/game-ledger';
 import {
   mentionsIncompatibleWeaponKind,
   mentionedMythicArms,
-  mythicArmForCommander,
+  establishedMythicArm,
 } from '../chess/mythic-arms';
 import type { NarrativeAnalysis } from './models/narrative-analysis';
 
@@ -27,8 +27,17 @@ export function sanitizeWoundStatusText(
         .map((effect) => sanitizeField(effect, ledger.pieces, owner, source))
         .filter(isMeaningfulStatus);
 
-      if (owner?.fantasyType === 'knight-commander') {
-        const assignedArm = mythicArmForCommander(owner, ledger.initialFen);
+      const assignedArm =
+        owner?.fantasyType === 'knight-commander'
+          ? establishedMythicArm(owner)
+          : null;
+      const promotion = ledger.events?.find(
+        (event) => event.pieceId === owner?.id && event.isPromotion,
+      );
+      if (
+        assignedArm &&
+        (!promotion || promotion.ply <= wound.inflictedAtPly)
+      ) {
         const mentionedArms = mentionedMythicArms(
           [injury, ...lastingEffects].join(' '),
         );

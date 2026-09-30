@@ -201,6 +201,24 @@ Never commit `.env`. Restart the backend after changing it.
 
 ## Run locally
 
+### Search metadata
+
+`frontend/src/app/seo/seo.config.json` is the source of page titles,
+descriptions, canonical domain, social image, and indexing policy. The Angular
+SEO service updates these tags when navigating. `npm run build` in `frontend`
+also emits route-specific HTML heads for direct visits and social crawlers,
+plus `/robots.txt`, `/sitemap.xml`, and WebSite structured data. Netlify serves
+these files before the SPA fallback. Login, profile, and reporting pages carry
+`noindex` and are excluded from the sitemap; crawlers may fetch them to see it.
+The existing 1024px app emblem is used for social cards.
+
+This generates metadata, not prerendered page bodies: search engines still
+need JavaScript to render content. Individual saga and chronicler URLs use a
+generic sharing preview and get their canonical URL on client navigation;
+they are not enumerated in the static sitemap. Full content prerendering and
+data-specific social previews would require an additional rendering step.
+After deployment, submit `https://chesssagas.com/sitemap.xml` in Search Console.
+
 ### 1. Backend (NestJS)
 
 ```bash

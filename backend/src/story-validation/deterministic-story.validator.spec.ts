@@ -176,7 +176,7 @@ describe('DeterministicStoryValidator', () => {
     ]);
   });
 
-  it('rejects a second death in a scene by resolving an unambiguous pronoun', () => {
+  it('sends a possible second death with a pronoun for semantic review', () => {
     const fateLedger = {
       pieces: [
         {
@@ -215,13 +215,15 @@ describe('DeterministicStoryValidator', () => {
         type: 'invented-capture',
         ply: 65,
         pieceId: 'w-p-b2',
+        severity: 'warning',
+        deathAttribution: 'pronoun-inferred',
         excerpt:
           'Tarin rushed forward to protect her retreat, and Nerys killed him with a second sweep.',
       }),
     ]);
   });
 
-  it('does not resolve an ambiguous death pronoun', () => {
+  it('retains ambiguous victims as review candidates instead of guessing', () => {
     const fateLedger = {
       pieces: [
         {
@@ -250,7 +252,64 @@ describe('DeterministicStoryValidator', () => {
         ],
         fateLedger,
       ),
-    ).toEqual([]);
+    ).toEqual([
+      expect.objectContaining({
+        pieceId: 'w-p-a2',
+        severity: 'warning',
+        deathAttribution: 'pronoun-inferred',
+      }),
+      expect.objectContaining({
+        pieceId: 'w-p-b2',
+        severity: 'warning',
+        deathAttribution: 'pronoun-inferred',
+      }),
+    ]);
+  });
+
+  it('does not treat the named killer as a confirmed premature victim', () => {
+    const findings = validator.validateTimedCharacterFates(
+      [{ ply: 64, fantasyNarration: 'Petra had killed her.' }],
+      {
+        pieces: [
+          {
+            id: 'w-p-a2',
+            permanentName: 'Petra',
+            pronouns: 'she/her',
+            capturedAtPly: 65,
+          },
+        ],
+      } as GameLedger,
+    );
+    expect(findings).toEqual([
+      expect.objectContaining({
+        pieceId: 'w-p-a2',
+        severity: 'warning',
+        deathAttribution: 'pronoun-inferred',
+      }),
+    ]);
+  });
+
+  it('still blocks a directly named premature victim', () => {
+    const findings = validator.validateTimedCharacterFates(
+      [{ ply: 64, fantasyNarration: 'Nerys killed Petra.' }],
+      {
+        pieces: [
+          {
+            id: 'w-p-a2',
+            permanentName: 'Petra',
+            pronouns: 'she/her',
+            capturedAtPly: 65,
+          },
+        ],
+      } as GameLedger,
+    );
+    expect(findings).toEqual([
+      expect.objectContaining({
+        pieceId: 'w-p-a2',
+        severity: 'error',
+        excerpt: 'killed Petra',
+      }),
+    ]);
   });
 
   it('detects death claims about ledger survivors', () => {

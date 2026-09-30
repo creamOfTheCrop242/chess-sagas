@@ -62,6 +62,7 @@ export interface PieceIdentity {
   viewpointName?: string;
   viewpointRole?: string;
   pawnAbilityContract?: import('../pawn-ability-contract').PawnAbilityContract;
+  fortressLoadout?: import('../equipment-capabilities').FortressLoadout;
   operatorName?: string;
   formerRole?: string;
   pronouns?: 'he/him' | 'she/her';
@@ -90,6 +91,7 @@ export interface ChessEvent {
   pieceType: FantasyPieceType;
   archwizardTravelMode?: 'walk' | 'teleport';
   queenTravelMode?: 'walk' | 'magical-rush';
+  /** Suggested presentation only; Commanders may travel/fight mounted or on foot. */
   knightCommanderTravelMode?: 'walk' | 'spectral-mount';
   isCapture: boolean;
   capturedPieceId?: string;

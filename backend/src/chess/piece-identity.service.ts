@@ -12,6 +12,11 @@ import type {
   Side,
 } from './models/game-ledger';
 import { mythicArmForCommander } from './mythic-arms';
+import {
+  FORTRESS_PRIMARY_WEAPONS,
+  FORTRESS_ATTACHMENTS,
+  fortressLoadout,
+} from './equipment-capabilities';
 import { battleTemperament } from './battle-characterization';
 import { pawnAbilityContract } from './pawn-ability-contract';
 
@@ -290,6 +295,8 @@ export class PieceIdentityService {
           };
         }
         identity.backstory = pieceBackstory(identity, seed);
+        if (identity.chessType === 'r')
+          identity.fortressLoadout = fortressLoadout(identity) ?? undefined;
         pieces.push(identity);
         squareToId.set(square, identity.id);
       }
@@ -747,28 +754,8 @@ function pieceBackstory(piece: PieceIdentity, seed: string): string {
       formerRole === 'queen candidate'
         ? ' Before the injury, the court had selected her in childhood as a possible replacement for the reigning Queen. Implantation saved her life but ended any ordinary path to the throne, leaving a trained successor permanently bound to a Fortress instead.'
         : '';
-    const primaryWeapons = [
-      'a turreted heavy cannon that fires single armor-breaking magic rounds',
-      'a rotary gatling gun that saturates advancing formations with rapid volleys of smaller magic rounds',
-      'twin long-barreled cannons built for precise fire against distant engines and fortifications',
-      'a short-barreled siege bombard that launches unstable magic shells in devastating arcs',
-      'a bank of repeating ward-rifles designed to rake infantry lines without slowing the engine',
-      'a siegebolt cannon whose concentrated magic round detonates only after penetrating armor or masonry',
-      'paired broadside batteries that fire magic rounds to either side while the Fortress advances',
-      'a rotating storm-caster that propels charged magic rounds through smoke, rain, and hostile wards',
-    ];
-    const attachments = [
-      'Its reinforced crushing prow can lower into a wedge for ramming gates, engines, and massed formations',
-      'A frontal siege drill helps its ram bite through warded walls and the armored shells of rival Fortresses',
-      'Retractable stabilizer claws anchor the hull against recoil or let it drag itself across treacherous ground',
-      'A rune-plated shield generator can briefly reinforce one face of the hull while leaving the others exposed',
-      'A deployable bridge frame lets soldiers cross trenches and canals beneath covering fire',
-      'Smoke projectors and false signal lamps conceal its approach before a sudden ramming charge',
-      'A recovery winch can pull trapped soldiers, wreckage, or damaged allied engines out of a killing ground',
-      'An elevated observation mast feeds the pilot range and movement data through enchanted lenses',
-      'Side-mounted blade wheels tear through barricades and punish enemies who crowd the hull during a charge',
-      'A ward-siphon array steals a brief pulse of hostile magic to strengthen the next shot or impact',
-    ];
+    const primaryWeapons = FORTRESS_PRIMARY_WEAPONS;
+    const attachments = FORTRESS_ATTACHMENTS;
     return personalize(
       `${name} once ${choice(formerService, `former-service:${formerRole}`)}.${formerCalling} ${choice(injuries, 'injury')}. With death otherwise certain, the kingdom’s Archwizards placed the soldier’s living body inside ${piece.permanentName}; its magical cradle now sustains the pilot, who cannot survive apart from the Moving Fortress. The machine carries ${choice(primaryWeapons, 'primary-weapon')}. ${choice(attachments, 'specialized-attachment')}. Its armored mass and reinforced prow also make the entire Fortress a devastating ram. ${temperament}.`,
     );
